@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>Cinderwatch</title>
-<meta name="description" content="Cinderwatch: a self-playing 3D isometric tower defense in a single HTML file.">
+<title>烽燧 · Cinderwatch</title>
+<meta name="description" content="烽燧：单个 HTML 文件里的自动对战 3D 等轴测塔防，边关烽火对阵幽冥妖军。">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
 html,body{margin:0;height:100%;background:#020308;overflow:hidden}
@@ -471,6 +471,89 @@ const COL = {
 };
 
 
+// Chinese building vocabulary shared by the towers, the pass and the props.
+Object.assign(COL, {
+  lacq: C(0x8e2a1e), lacqD: C(0x5a1a14), lacqL: C(0xb23a26), tile: C(0x3d4854), tileL: C(0x5a6876), tileD: C(0x272f3a),
+  ram: C(0x9a8462), ramD: C(0x6e5c44), paper: C(0xe8452a), jade: C(0x4fae8c), plaster: C(0xb9ae98), bronzeG: C(0x4f7a5e),
+});
+
+function cnQuadUp(S, a, b, c, d, col, layer, rough, o) {
+  const ux = b[0] - a[0], uz = b[2] - a[2], vx = c[0] - a[0], vz = c[2] - a[2];
+  if (uz * vx - ux * vz < 0) S.quad(a, d, c, b, col, layer, rough, o); else S.quad(a, b, c, d, col, layer, rough, o);
+}
+
+// A hipped roof with a sagging slope and upturned corners. a, b: half size at the eave. ridge: half length of the ridge along x
+// (0 gives a pyramid). t0 > 0 leaves the middle open, which makes a skirt eave around a tower body.
+function cnRoof(S, o) {
+  const x0 = o.x || 0, y0 = o.y || 0, z0 = o.z || 0, a = o.a, b = o.b === undefined ? o.a : o.b, h = o.h, ridge = o.ridge || 0, lift = o.lift === undefined ? .16 : o.lift;
+  const t0 = o.t0 || 0, n = o.n || 4, m = o.m || 4, sag = o.sag === undefined ? 1.7 : o.sag, col = o.col || COL.tile, layer = o.layer === undefined ? L_SLATE : o.layer, gable = ridge >= a - 1e-4;
+  const cs = Math.cos(o.ry || 0), sn = Math.sin(o.ry || 0), start = S.P.length;
+  const W = (lx, ly, lz) => [x0 + lx * cs + lz * sn, y0 + ly, z0 - lx * sn + lz * cs];
+  const hx = t => ridge + (a - ridge) * t, hz = t => b * t, yy = (t, s) => h * Math.pow(Math.max(0, 1 - t), sag) + lift * t * t * Math.pow(Math.abs(s), 2.6);
+  const P = (face, t, s) => face === 0 ? W(s * hx(t), yy(t, s), hz(t)) : face === 1 ? W(-s * hx(t), yy(t, s), -hz(t)) : face === 2 ? W(hx(t), yy(t, s), -s * hz(t)) : W(-hx(t), yy(t, s), s * hz(t));
+  for (let f = 0; f < (gable ? 2 : 4); f++) for (let i = 0; i < n; i++) {
+    const ta = t0 + (1 - t0) * i / n, tb = t0 + (1 - t0) * (i + 1) / n, c = mulC(col, (i & 1 ? .86 : 1.04) * (.9 + .16 * soupRng()));
+    for (let j = 0; j < m; j++) { const sa = -1 + 2 * j / m, sb = -1 + 2 * (j + 1) / m; cnQuadUp(S, P(f, ta, sa), P(f, ta, sb), P(f, tb, sb), P(f, tb, sa), c, layer, .78, { uvs: .5 }); }
+  }
+  S._double(start);
+  if (o.plain) return;
+  const dk = o.ridgeCol || mulC(col, .62), rr0 = o.rr || Math.max(.03, a * .045);
+  if (t0 === 0) {
+    if (ridge > 0) {
+      S.seg(W(-ridge, h + rr0 * .5, 0), W(ridge, h + rr0 * .5, 0), rr0 * 1.25, rr0 * 1.25, dk, { n: 4, l: L_SLATE });
+      for (const sg of [-1, 1]) S.seg(W(sg * ridge * .96, h + rr0, 0), W(sg * (ridge + rr0 * 1.6), h + rr0 * 4.2, 0), rr0 * 1.5, rr0 * .5, dk, { n: 4, l: L_SLATE });
+    } else if (o.finial !== false) {
+      S.cyl(rr0 * 1.6, rr0 * 2, x0, y0 + h + rr0, z0, dk, { n: 6, l: L_SLATE }); S.sph(rr0 * 1.7, x0, y0 + h + rr0 * 3.2, z0, o.finial || COL.brass, { w: 6, h: 4, smooth: false, l: L_METAL, rough: .4 });
+      S.cone(rr0 * .8, rr0 * 3, x0, y0 + h + rr0 * 5.6, z0, o.finial || COL.brass, { n: 4, l: L_METAL, rough: .4 });
+    }
+  }
+  if (!gable) for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    let p = null;
+    for (let i = 0; i <= n; i++) { const t = t0 + (1 - t0) * i / n, q = W(sx * hx(t), yy(t, 1) + rr0 * .5, sz * hz(t)); if (p) S.seg(p, q, rr0, rr0, dk, { n: 4, l: L_SLATE }); p = q; }
+    const e = W(sx * (a + rr0 * 2.4), yy(1, 1) + rr0 * 3.4, sz * (b + rr0 * 2.4)); S.seg(p, e, rr0, rr0 * .35, dk, { n: 4, l: L_SLATE });
+  } else for (const sz of [-1, 1]) for (const sx of [-1, 1]) {
+    let p = null;
+    for (let i = 0; i <= n; i++) { const t = i / n, q = W(sx * a, yy(t, 1) + rr0 * .4, sz * hz(t)); if (p) S.seg(p, q, rr0 * .9, rr0 * .9, dk, { n: 4, l: L_SLATE }); p = q; }
+  }
+}
+
+// Bracket band under an eave: a dark beam with small red blocks.
+function cnBrackets(S, x, y, z, a, b, o = {}) {
+  const c = o.col || COL.lacq, d = o.dark || COL.lacqD, hgt = o.h || .12;
+  for (const sg of [-1, 1]) { S.box(a * 2, hgt, .08, x, y, z + sg * b, d, { l: L_WOOD }); S.box(.08, hgt, b * 2, x + sg * a, y, z, d, { l: L_WOOD }); }
+  const nx = Math.max(2, Math.round(a * 2 / .34)), nz = Math.max(2, Math.round(b * 2 / .34));
+  for (let i = 0; i <= nx; i++) for (const sg of [-1, 1]) S.box(.09, hgt * .8, .14, x - a + 2 * a * i / nx, y + hgt * .8, z + sg * (b + .03), c, { l: L_WOOD });
+  for (let i = 1; i < nz; i++) for (const sg of [-1, 1]) S.box(.14, hgt * .8, .09, x + sg * (a + .03), y + hgt * .8, z - b + 2 * b * i / nz, c, { l: L_WOOD });
+}
+
+// A row of merlons from (x0,z0) to (x1,z1).
+function cnMerlons(S, x0, z0, x1, z1, y, o = {}) {
+  const len = Math.hypot(x1 - x0, z1 - z0), n = Math.max(1, Math.round(len / (o.pitch || .46))), ang = Math.atan2(z1 - z0, x1 - x0), w = o.w || .26, hh = o.h || .3, d = o.d || .16, rng = o.rng || soupRng;
+  for (let i = 0; i < n; i++) {
+    if (o.skip && rng() < o.skip) continue;
+    const u = (i + .5) / n; S.box(w, hh, d, lerp(x0, x1, u), y + hh / 2, lerp(z0, z1, u), o.col || mixC(COL.stoneD, COL.stoneL, rng()), { l: L_MASON, r: [0, -ang, 0] });
+  }
+}
+
+// A hanging paper lantern. Returns the point where its flame sits.
+function cnLantern(S, x, y, z, s = 1) {
+  S.cyl(.045 * s, .03 * s, x, y + .14 * s, z, COL.brass, { n: 6, l: L_METAL }); S.cyl(.1 * s, .08 * s, x, y + .08 * s, z, COL.paper, { n: 8, rt: .6, emis: .5, jit: 0 });
+  S.cyl(.1 * s, .1 * s, x, y - .01 * s, z, COL.paper, { n: 8, emis: .75, jit: 0 }); S.cyl(.06 * s, .08 * s, x, y - .1 * s, z, COL.paper, { n: 8, rt: 1.66, emis: .5, jit: 0 });
+  S.cyl(.045 * s, .03 * s, x, y - .155 * s, z, COL.brass, { n: 6, l: L_METAL }); S.seg([x, y - .17 * s, z], [x, y - .34 * s, z], .012 * s, .02 * s, COL.gold, { n: 3, sway: .3 });
+  return [x, y - .02 * s, z];
+}
+
+// A tall narrow war banner hung from a crossbar, with a spear tip.
+function cnBanner(S, x, y0, y1, z, col, rng, o = {}) {
+  const w = o.w || .42, len = o.len || Math.min(1.5, (y1 - y0) * .62), T = new Soup();
+  S.seg([x, y0, z], [x, y1, z], .04, .028, COL.woodD, { l: L_WOOD, n: 5 }); S.cone(.045, .2, x, y1 + .1, z, COL.steel, { n: 4, l: L_METAL, rough: .4 });
+  S.ico(.07, x, y1 - .02, z, COL.lacqL, { d: 0, sc: [1, 1.4, 1], sway: .2 });
+  S.seg([x - .04, y1 - .16, z], [x + w + .06, y1 - .16, z], .022, .022, COL.woodD, { l: L_WOOD, n: 4 });
+  clothPanel(T, { x0: .03, x1: w, yTop: 0, len, z: 0, col, col2: o.col2 === undefined ? mulC(COL.gold, .7) : o.col2, rng, nx: 3, ny: Math.max(4, Math.round(len / .2)), rag: o.rag === undefined ? .25 : o.rag, sway: o.sway === undefined ? 1 : o.sway });
+  S.merge(T, { p: [x, y1 - .18, z], ao: null });
+}
+
+
 const R = {
   renderer: null, scene: null, cam: null, canvas: null,
   dw: 2, dh: 2, iw: 2, ih: 2, maxIH: 620, quality: 1,
@@ -715,7 +798,7 @@ function renderFrame() {
 const COL0 = Object.assign({}, COL);
 const BIOMES = [
   {
-    key: 'ashen', name: 'Ashen Pass', col: {},
+    key: 'ashen', name: '雁门关', en: 'Yanmen Pass', col: {},
     strata: [0x8f8474, 0x3c3f4c, 0x66564a, 0x767a86, 0x70503f, 0x4c4f5c, 0x9a8e7c, 0x55483e],
     hemi: [0x6d83bd, 0x1c1f2a, 1.15], moon: [0xa9c0f6, 1.55], fill: [0x4a5f96, .3], moonPos: [14, 44, -34],
     clear: [.0035, .005, .011], mistAmb: [.05, .08, .14], mist: [-.3, .42, .75, .1], sky: [.012, .022, .045], lift: [.010, .016, .030], sat: .92, expo: 1, sprAmb: [.05, .065, .1],
@@ -724,10 +807,10 @@ const BIOMES = [
     relief: [1.7, .5, 1, 0], puddles: 11, ponds: 1, sway: 1, wind: 1,
     wx: { n: [.05, 0], velA: [.35, -.12, .18], swayA: [.5, .5], sizeA: [.03, .055], colA: [.75, .8, .95, 1], alA: [.5, 0, 0], yA: [-1, 9], velB: [0, 0, 0], swayB: [0, 0], sizeB: [.05, .05], colB: [1, 1, 1, 1], alB: [0, 0, 0], yB: [0, 1], amb: [.1, .14, .22] },
     mobs: { ghoul: 1.6, wraith: 1.6, necro: 1.5 }, early: { wraith: 3, necro: 5 }, boss: ['giant', 'ogre'], tints: { wisp: [.75, .6, 1.3] }, wispHex: 0xb090ff,
-    trees: [['tree', 13, 2.6, 4.6]], stumps: 6, rocks: 70, tufts: 320, webs: 4,
+    trees: [['tree', 8, 2.6, 4.6], ['song', 6, 3.0, 4.6]], stumps: 6, rocks: 70, tufts: 320, webs: 4,
   },
   {
-    key: 'frost', name: 'Frostfall',
+    key: 'frost', name: '雪岭长城', en: 'Snow Ridge Wall',
     col: { stone: 0x6f7b90, stoneD: 0x454e60, stoneL: 0x9aa7b8, earth: 0x4b4a50, earthD: 0x2f3038, grass: 0x5a6068, grassD: 0x40454e, moss: 0x55606a, road: 0x7a808c, roadD: 0x555a66, mud: 0x3a3e48, bark: 0x2e2a2a, tuftA: 0x6f7a80, tuftB: 0xa9b4bc, leaf: 0x1d382f, leafL: 0x2c4f42 },
     strata: [0x7d8aa0, 0x3a4254, 0x5d6678, 0x9fb4c8, 0x4b5468, 0x6a7890, 0xb8cadb, 0x475062],
     hemi: [0x86a8e0, 0x323c50, 1.1], moon: [0xc6dcff, 1.38], fill: [0x5f7fb4, .28], moonPos: [16, 42, -34],
@@ -737,10 +820,10 @@ const BIOMES = [
     relief: [1.5, .4, 1.15, 0], puddles: 8, ponds: 2, sway: .8, wind: 1.25, beacon: .8,
     wx: { n: [.68, .16], velA: [.55, -1.5, .3], swayA: [.28, 1.1], sizeA: [.055, .1], colA: [1, 1.05, 1.15, 1], alA: [.95, 0, .12], yA: [-3, 15], velB: [2.6, -1.1, 1.3], swayB: [.5, 1.6], sizeB: [.035, .06], colB: [.95, 1, 1.1, 1], alB: [.6, 0, .5], yB: [-2, 9], amb: [.4, .48, .62] },
     mobs: { wolf: 2.4, golem: 1.8, wraith: 1.3, toad: 0, wisp: .5, slime: .6 }, early: { wolf: 2, golem: 6 }, boss: ['jotun'], tints: { wolf: [1.9, 2.0, 2.2], golem: [.8, 1.05, 1.5], wisp: [.5, .9, 1.5], gargoyle: [.9, 1.1, 1.4], toad: [.8, 1.1, 1.4], brute: [1.3, 1.25, 3.0] }, wispHex: 0x80c0ff,
-    trees: [['pine', 17, 2.8, 5.4], ['tree', 4, 2.6, 4.2]], stumps: 4, rocks: 52, tufts: 110, webs: 0,
+    trees: [['pine', 13, 2.8, 5.4], ['song', 5, 3.0, 4.4], ['tree', 3, 2.6, 4.2]], stumps: 4, rocks: 52, tufts: 110, webs: 0,
   },
   {
-    key: 'fen', name: 'Mirefen',
+    key: 'fen', name: '云梦泽', en: 'Yunmeng Marsh',
     col: { stone: 0x5c6858, stoneD: 0x384234, stoneL: 0x84907a, earth: 0x3b3a28, earthD: 0x24261a, grass: 0x40582c, grassD: 0x2c3e22, moss: 0x4c682e, road: 0x6c6a56, roadD: 0x48483a, mud: 0x2a281c, bark: 0x2c2820, tuftA: 0x486a30, tuftB: 0x7a8a40, leaf: 0x2a4626, leafL: 0x4c6c34 },
     strata: [0x5a5a40, 0x2c3226, 0x4a4030, 0x66705a, 0x3a3020, 0x44503a, 0x777a5c, 0x33382a],
     hemi: [0x4f9482, 0x1a2218, 1.05], moon: [0xa6e6c4, 1.3], fill: [0x2f6f66, .3], moonPos: [10, 46, -32],
@@ -753,7 +836,7 @@ const BIOMES = [
     trees: [['willow', 9, 3.0, 4.6], ['tree', 5, 2.6, 4.4]], stumps: 8, rocks: 42, tufts: 420, webs: 3,
   },
   {
-    key: 'ember', name: 'Emberscar',
+    key: 'ember', name: '赤壁', en: 'Red Cliffs',
     col: { stone: 0x403c42, stoneD: 0x242228, stoneL: 0x5e5a62, earth: 0x2e2728, earthD: 0x1c1819, grass: 0x3a2f2c, grassD: 0x261e1c, moss: 0x3a3230, road: 0x5e5652, roadD: 0x3c3634, mud: 0x1e1716, bark: 0x15110f, tuftA: 0x3a2c24, tuftB: 0x6a4a30 },
     strata: [0x3a363c, 0x1c1a20, 0x5a2a22, 0x2a262c, 0x6e3a24, 0x242026, 0x4a4650, 0x301a18],
     hemi: [0x5c5470, 0x2c140e, 1.18], moon: [0xc0b0d0, 1.32], fill: [0xd04a20, .2], moonPos: [18, 40, -32],
@@ -766,7 +849,7 @@ const BIOMES = [
     trees: [['charred', 11, 2.6, 4.4]], stumps: 4, rocks: 80, tufts: 40, webs: 0,
   },
   {
-    key: 'dunes', name: 'Duskmesa',
+    key: 'dunes', name: '玉门关', en: 'Jade Gate',
     col: { stone: 0xb08e6c, stoneD: 0x7a5c48, stoneL: 0xd4b48c, earth: 0xa88c66, earthD: 0x7c6448, grass: 0xbca27a, grassD: 0x927856, moss: 0x7a7444, road: 0xa89478, roadD: 0x786652, mud: 0x64503a, bark: 0x4c3a28, tuftA: 0x8a8048, tuftB: 0xc0a860, leaf: 0x38582e, leafL: 0x66863e },
     strata: [0xb8845c, 0x8e5a40, 0xd6b080, 0x744a38, 0xc89866, 0x9c6a4c, 0xe4cca0, 0x805640],
     hemi: [0x6a6fc0, 0x3c3040, 1.1], moon: [0xd6c8ff, 1.5], fill: [0x2f8f9a, .34], moonPos: [26, 24, -36],
@@ -776,7 +859,7 @@ const BIOMES = [
     relief: [1.4, .25, .8, .55], puddles: 0, ponds: 2, sway: 1.3, wind: 1.2, beacon: .62,
     wx: { n: [.1, .22], velA: [.5, -.05, .25], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .78, .6, 1], alA: [.5, 0, 0], yA: [-1, 8], velB: [4.2, -.1, 1.9], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .72, .55, 1], alB: [.42, 0, .9], yB: [-.5, 4.5], amb: [.3, .22, .3] },
     mobs: { mummy: 3, scarab: 2.4, spider: .6, bomber: 1.3, ghoul: 1.3, toad: 0, slime: .4 }, early: { mummy: 4, scarab: 2 }, boss: ['king'], tints: { golem: [1.5, 1.1, .72], wolf: [1.5, 1.2, .8], wisp: [1.4, 1.0, .4], gargoyle: [1.5, 1.2, .9], toad: [1.3, 1.1, .7] }, wispHex: 0xffc060,
-    trees: [['palm', 9, 3.0, 4.6], ['tree', 2, 2.4, 3.4]], stumps: 2, rocks: 44, tufts: 150, webs: 0,
+    trees: [['huyang', 9, 3.0, 4.4], ['tree', 3, 2.4, 3.4]], stumps: 2, rocks: 44, tufts: 150, webs: 0,
   },
 ];
 const BIOME = { start: 0 };
@@ -1472,11 +1555,11 @@ const PROP = {
   grave(S, rng) {
     const T = new Soup(), w = rng.range(.44, .62), h = rng.range(.62, 1.0), c = mixC(COL.stoneD, COL.stoneL, rng()), kind = rng.int(0, 3);
     if (kind === 0) { T.box(w, h * .8, .15, 0, h * .4, 0, c, { l: L_ROCK }); T.cyl(w / 2, .15, 0, h * .8, 0, c, { n: 8, l: L_ROCK, r: [HPI, 0, 0] }); }
-    else if (kind === 1) { T.box(.15, h * 1.15, .14, 0, h * .57, 0, c, { l: L_ROCK }); T.box(w * 1.1, .15, .14, 0, h * .8, 0, c, { l: L_ROCK }); }
+    else if (kind === 1) { T.box(w * .62, h * 1.1, .13, 0, h * .55, 0, c, { l: L_ROCK }); T.box(w * .86, .1, .2, 0, h * 1.12, 0, mulC(c, 1.15), { l: L_ROCK }); T.box(w * .5, .08, .16, 0, h * 1.2, 0, c, { l: L_ROCK }); T.box(.07, h * .6, .14, 0, h * .6, .005, mulC(COL.lacq, .8), { jit: 0 }); }
     else if (kind === 2) { T.box(w, h * .9, .16, 0, h * .45, 0, c, { l: L_ROCK }); T.box(w * .7, .14, .16, 0, h * .95, 0, c, { l: L_ROCK }); T.box(w * 1.2, .12, .3, 0, .06, 0, mulC(c, .8), { l: L_ROCK }); }
     else { T.box(w * .9, h * .55, .15, 0, h * .27, 0, c, { l: L_ROCK }); T.box(w * .5, h * .2, .15, -w * .18, h * .62, 0, c, { l: L_ROCK, r: [0, 0, .3] }); }
     S.merge(T, { r: [rng.range(-.2, .2), rng.range(-.3, .3), rng.range(-.16, .16)], ao: [0, .4, .55] });
-    S.ico(.5, 0, .0, .62, mulC(COL.earthD, 1.1), { sc: [.75, .22, 1.25], l: L_DIRT, d: 1 });
+    S.ico(.5, 0, .0, -.55, mulC(COL.earthD, 1.1), { sc: [.95, .5, .95], l: L_DIRT, d: 1 });
   },
   cart(S, rng, broken) {
     const w = COL.wood, wd = COL.woodD, o = () => ({ l: L_WOOD });
@@ -1525,10 +1608,50 @@ const PROP = {
     for (let k = 0; k <= 4; k++) S.seg(a, lerp3(b, c, k / 4), th, th, col, { n: 3, emis: .015, jit: 0, sway: .25 });
     for (let r = 1; r <= 3; r++) for (let k = 0; k < 4; k++) S.seg(lerp3(a, lerp3(b, c, k / 4), r / 3.3), lerp3(a, lerp3(b, c, (k + 1) / 4), r / 3.3 - .04), th, th, col, { n: 3, emis: .015, jit: 0, sway: .25 });
   },
-  banner(S, rng, col, h = 2.8) {
-    S.seg([0, 0, 0], [0, h, 0], .055, .04, COL.woodD, { l: L_WOOD }); S.seg([-.08, h - .2, 0], [.82, h - .2, 0], .03, .03, COL.woodD, { l: L_WOOD, n: 5 });
-    S.cone(.07, .2, 0, h + .1, 0, COL.iron, { n: 4, l: L_METAL });
-    clothPanel(S, { x0: .04, x1: .78, yTop: h - .23, len: 1.45, z: 0, col, col2: mulC(COL.gold, .6), rng });
+  banner(S, rng, col, h = 3.0) { cnBanner(S, 0, 0, h, 0, col, rng, { w: .5, len: 1.5, col2: col === COL.clothD ? COL.lacqL : undefined }); },
+  juma(S, rng, len) {
+    const y = .52; S.seg([-len / 2, y, 0], [len / 2, y, 0], .075, .07, mulC(COL.wood, .8), { l: L_WOOD, n: 6 });
+    for (let x = -len / 2 + .2, k = 0; x < len / 2 - .1; x += .34, k++) {
+      const c = mulC(COL.woodL, .7 + .3 * rng()), a = .78 + rng.range(-.08, .08);
+      for (const sg of [-1, 1]) { const dz = Math.sin(a) * .78 * sg, dy = Math.cos(a) * .78; S.seg([x, y - dy, -dz], [x, y + dy, dz], .04, .035, c, { l: L_WOOD, n: 4 }); S.cone(.04, .14, x, y + dy + .05, dz * 1.07, mulC(COL.steel, .8), { n: 4, l: L_METAL, r: [sg * a, 0, 0] }); }
+    }
+  },
+  rack(S, rng) {
+    for (const sg of [-1, 1]) { S.box(.07, 1.0, .07, sg * .6, .5, 0, COL.woodD, { l: L_WOOD }); S.box(.3, .06, .4, sg * .6, .03, 0, COL.woodD, { l: L_WOOD }); }
+    for (const y of [.42, .92]) S.box(1.3, .06, .06, 0, y, 0, COL.wood, { l: L_WOOD });
+    for (let k = 0; k < 5; k++) {
+      const x = -.48 + k * .24, top = 1.75 + rng.range(-.1, .15), kind = k % 3;
+      S.seg([x, .06, .1], [x, top, -.06], .02, .02, k & 1 ? COL.lacqD : COL.woodD, { l: L_WOOD, n: 4 });
+      if (kind === 0) S.cone(.04, .22, x, top + .1, -.07, COL.steel, { n: 4, l: L_METAL, rough: .4 });
+      else if (kind === 1) { S.cone(.035, .2, x, top + .1, -.07, COL.steel, { n: 4, l: L_METAL, rough: .4 }); S.box(.18, .04, .02, x + .05, top - .06, -.06, COL.steel, { l: L_METAL, rough: .4 }); S.box(.03, .12, .02, x + .13, top - .02, -.06, COL.steel, { l: L_METAL, rough: .4 }); }
+      else { S.box(.11, .4, .02, x + .03, top - .08, -.06, COL.steel, { l: L_METAL, rough: .4 }); }
+      S.ico(.04, x, top - .32, -.03, COL.lacqL, { d: 0, sc: [1, 1.5, 1] });
+    }
+  },
+  wardrum(S, rng) {
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) S.seg([sx * .5, 0, sz * .42], [sx * .34, 1.5, sz * .12], .05, .045, COL.lacqD, { l: L_WOOD, n: 5 });
+    for (const sz of [-1, 1]) S.box(.8, .07, .07, 0, 1.46, sz * .12, COL.lacqD, { l: L_WOOD }); for (const sx of [-1, 1]) S.box(.07, .06, .8, sx * .46, .3, 0, COL.woodD, { l: L_WOOD });
+    const o = () => ({ n: 12, r: [HPI, 0, 0] });
+    S.cyl(.52, .2, 0, .98, -.1, COL.lacq, Object.assign(o(), { rt: 1.12, l: L_WOOD })); S.cyl(.52, .2, 0, .98, .1, COL.lacq, Object.assign(o(), { rt: .89, l: L_WOOD })); 
+    for (const z of [-.21, .21]) { S.cyl(.47, .02, 0, .98, z, C(0xd8c49a), o()); S.add(gTorus(12, .05, 4), { s: .49, p: [0, .98, z * .95], c: COL.brass, l: L_METAL, rough: .4 }); }
+    for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; for (const z of [-.16, .16]) S.box(.035, .035, .03, Math.cos(a) * .55, .98 + Math.sin(a) * .55, z, COL.brass, { l: L_METAL, jit: 0 }); }
+    S.seg([.62, .0, .3], [.5, .9, .2], .025, .02, COL.woodD, { l: L_WOOD, n: 4 }); S.ico(.06, .49, .94, .2, COL.lacqL, { d: 0 });
+  },
+  stoneLamp(S, rng) {
+    const c = mixC(COL.stoneD, COL.stoneL, .5 + .3 * rng());
+    S.cyl(.3, .12, 0, .06, 0, mulC(c, .85), { n: 6, l: L_ROCK }); S.cyl(.13, .7, 0, .47, 0, c, { n: 6, l: L_ROCK, rt: .85 }); S.cyl(.2, .08, 0, .86, 0, mulC(c, 1.1), { n: 6, l: L_ROCK, rt: 1.3 });
+    S.box(.3, .3, .3, 0, 1.05, 0, c, { l: L_ROCK }); for (let k = 0; k < 4; k++) { const a = k * HPI; S.box(.16, .18, .02, Math.sin(a) * .151, 1.05, Math.cos(a) * .151, COL.ember, { emis: .7, jit: 0, r: [0, a, 0] }); }
+    cnRoof(S, { y: 1.2, a: .34, h: .22, lift: .08, n: 2, m: 2, col: mulC(c, .8), layer: L_ROCK, rr: .02, finial: mulC(c, 1.1) });
+  },
+  lion(S, rng, flip = 1) {
+    const c = mixC(COL.stone, COL.stoneL, .5), cd = mulC(c, .78), m = () => ({ l: L_ROCK, d: 1 });
+    S.box(.9, .3, 1.1, 0, .15, 0, COL.stoneD, { l: L_MASON }); S.box(.78, .12, .98, 0, .36, 0, COL.stoneL, { l: L_MASON });
+    S.ico(.34, 0, .72, -.2, c, Object.assign(m(), { sc: [.95, .9, 1.1] })); S.ico(.3, 0, .98, .08, c, Object.assign(m(), { sc: [.95, 1.1, .9] }));
+    for (const sg of [-1, 1]) { S.box(.16, .56, .18, sg * .2, .7, .3, cd, { l: L_ROCK }); S.box(.2, .1, .26, sg * .2, .47, .36, c, { l: L_ROCK }); S.ico(.17, sg * .26, .6, -.3, cd, m()); }
+    S.ico(.27, 0, 1.38, .16, c, Object.assign(m(), { sc: [1.05, .95, 1] })); S.box(.26, .14, .16, 0, 1.3, .38, cd, { l: L_ROCK }); S.box(.2, .04, .05, 0, 1.25, .45, COL.black, { jit: 0 });
+    for (let k = 0; k < 9; k++) { const a = (k / 8 - .5) * 3.6; S.ico(.085, Math.sin(a) * .26, 1.42 + Math.cos(a) * .2, .02 - Math.abs(Math.sin(a)) * .04, cd, { d: 0, l: L_ROCK }); }
+    for (const sg of [-1, 1]) { S.ico(.045, sg * .1, 1.44, .39, COL.black, { d: 0, jit: 0 }); S.cone(.06, .12, sg * .18, 1.62, .12, cd, { n: 4, l: L_ROCK }); }
+    S.sph(.13, flip * .2, .55, .5, cd, { w: 6, h: 4, smooth: false, l: L_ROCK }); S.seg([0, .8, -.5], [0, 1.15, -.62], .07, .04, cd, { n: 5, l: L_ROCK });
   },
   fence(S, rng, len) {
     const nP = Math.max(2, Math.round(len) + 1);
@@ -1550,9 +1673,9 @@ const PROP = {
   well(S, rng) {
     for (let k = 0; k < 10; k++) { const a = k / 10 * TAU; S.box(.44, .56, .26, Math.cos(a) * .68, .28, Math.sin(a) * .68, mixC(COL.stoneD, COL.stoneL, rng()), { l: L_MASON, r: [0, -a + HPI, 0] }); }
     S.cyl(.6, .06, 0, .3, 0, COL.black, { n: 10, jit: 0 });
-    for (const s of [-1, 1]) S.box(.1, 1.7, .1, s * .72, .85, 0, COL.woodD, { l: L_WOOD });
+    for (const s of [-1, 1]) S.box(.1, 1.7, .1, s * .72, .85, 0, COL.lacqD, { l: L_WOOD });
     S.seg([-.8, 1.45, 0], [.8, 1.45, 0], .05, .05, COL.wood, { l: L_WOOD });
-    for (const s of [-1, 1]) S.box(1.75, .05, .62, 0, 1.86, s * .26, COL.slate, { l: L_SLATE, r: [s * .62, 0, 0] });
+    S.box(1.6, .07, .07, 0, 1.7, 0, COL.lacqD, { l: L_WOOD }); cnRoof(S, { y: 1.72, a: .98, b: .62, h: .42, ridge: .98, lift: .08, sag: 1.3, n: 3, m: 2, rr: .035 });
     S.seg([.15, 1.45, 0], [.15, .75, 0], .012, .012, COL.rope, { n: 3 }); S.cyl(.12, .2, .15, .68, 0, COL.wood, { n: 7, l: L_WOOD, rt: 1.2 });
   },
   wallRun(S, rng, len, hMax) {
@@ -1569,39 +1692,29 @@ const PROP = {
     S.box(len * .9, .22, .86, 0, .08, 0, COL.stoneD, { l: L_MASON });
   },
   towerRuin(S, rng) {
-    const R = 1.35, n = 10, hs = [];
-    for (let k = 0; k < n; k++) hs.push(clamp(4.4 - k * .42 + rng.range(-.4, .4), .7, 4.6));
-    S.cyl(R + .35, .4, 0, .2, 0, COL.stoneD, { n: 10, l: L_MASON });
-    for (let k = 0; k < n; k++) {
-      if (k === n - 1) continue;
-      const a = k / n * TAU, c = mixC(COL.stoneD, COL.stone, rng());
-      S.box(.92, hs[k], .42, Math.cos(a) * R, hs[k] / 2 + .3, Math.sin(a) * R, c, { l: L_MASON, r: [0, -a + HPI, 0] });
-      if (rng() < .7) S.box(.4, rng.range(.2, .5), .42, Math.cos(a + .1) * R, hs[k] + .5, Math.sin(a + .1) * R, mixC(COL.stoneD, COL.stoneL, rng()), { l: L_MASON, r: [0, -a + HPI, 0] });
-      if (hs[k] > 2.6 && (k & 1)) S.box(.2, .6, .5, Math.cos(a) * R, hs[k] * .65, Math.sin(a) * R, COL.black, { jit: 0, r: [0, -a + HPI, 0] });
+    const A = 1.55, hs = [4.2, 3.4, 1.4, 2.4];
+    S.box(A * 2 + .7, .4, A * 2 + .7, 0, .2, 0, COL.stoneD, { l: L_MASON });
+    for (let k = 0; k < 4; k++) {
+      const ang = k * HPI, cs = Math.cos(ang), sn = Math.sin(ang), n = 4;
+      for (let i = 0; i < n; i++) {
+        if (k === 2 && i === 1) continue;
+        const u = (i + .5) / n * 2 - 1, hh = clamp(hs[k] + (hs[(k + 1) % 4] - hs[k]) * (i / n) + rng.range(-.5, .4), .6, 4.6), wseg = A * 2 / n + .02, x = u * A * cs + A * sn, z = -u * A * sn + A * cs;
+        S.box(wseg, hh, .5, x, .4 + hh / 2, z, mixC(COL.ramD, COL.ram, rng()), { l: L_DIRT, r: [0, ang, 0], jit: .04 });
+        S.box(wseg + .04, .5, .58, x, .62, z, mixC(COL.stoneD, COL.stone, rng()), { l: L_MASON, r: [0, ang, 0] });
+        if (hh > 3.4) S.box(.3, .36, .5, x, .4 + hh + .18, z, mixC(COL.ramD, COL.ram, rng()), { l: L_DIRT, r: [0, ang, 0] });
+        if (hh > 2.6 && (i & 1)) S.box(.2, .6, .56, x, .4 + hh * .62, z, COL.black, { jit: 0, r: [0, ang, 0] });
+      }
     }
-    for (let k = 0; k < 3; k++) { const a = rng() * TAU; S.seg([Math.cos(a) * R, 2.1, Math.sin(a) * R], [Math.cos(a + 2.4) * R * .6, 2.0 - rng() * .8, Math.sin(a + 2.4) * R * .6], .07, .06, COL.woodD, { l: L_WOOD, n: 4 }); }
-    for (let k = 0; k < 7; k++) { const a = rng() * TAU, d = rng.range(1.9, 3.0); S.box(rng.range(.3, .6), rng.range(.2, .4), rng.range(.3, .5), Math.cos(a) * d, .12, Math.sin(a) * d, mixC(COL.stoneD, COL.stone, rng()), { l: L_MASON, r: [rng() * .5, rng() * 3, rng() * .5] }); }
+    for (let k = 0; k < 3; k++) { const a = rng() * TAU; S.seg([Math.cos(a) * A, 2.0, Math.sin(a) * A], [Math.cos(a + 2.4) * A * .6, 1.8 - rng() * .8, Math.sin(a + 2.4) * A * .6], .07, .06, mulC(COL.bark, .7), { l: L_WOOD, n: 4 }); }
+    for (let k = 0; k < 8; k++) { const a = rng() * TAU, d = rng.range(2.2, 3.2); S.box(rng.range(.3, .6), rng.range(.2, .4), rng.range(.3, .5), Math.cos(a) * d, .12, Math.sin(a) * d, mixC(COL.ramD, COL.stone, rng()), { l: L_DIRT, r: [rng() * .5, rng() * 3, rng() * .5] }); }
   },
   signpost(S, rng) {
-    S.box(.1, 1.7, .1, 0, .85, 0, COL.woodD, { l: L_WOOD, r: [0, 0, .06] });
-    S.box(.8, .2, .05, .28, 1.45, .06, COL.woodL, { l: L_WOOD, r: [0, .2, -.08] }); S.box(.7, .18, .05, -.22, 1.15, .06, COL.wood, { l: L_WOOD, r: [0, -.25, .1] });
-  },
-  gibbet(S, rng) {
-    S.box(.16, 3.0, .16, 0, 1.5, 0, COL.woodD, { l: L_WOOD }); S.box(1.2, .13, .13, .5, 2.9, 0, COL.woodD, { l: L_WOOD }); S.seg([0, 2.2, 0], [.6, 2.85, 0], .05, .05, COL.wood, { l: L_WOOD, n: 4 });
-    S.seg([.95, 2.85, 0], [.95, 2.3, 0], .015, .015, COL.iron, { n: 3 });
-    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; S.seg([.95 + Math.cos(a) * .2, 2.3, Math.sin(a) * .2], [.95 + Math.cos(a) * .2, 1.5, Math.sin(a) * .2], .014, .014, COL.iron, { n: 3, l: L_METAL, sway: .12 }); }
-    for (const y of [2.3, 1.9, 1.5]) S.add(gTorus(8, .08, 3), { s: .2, p: [.95, y, 0], r: [HPI, 0, 0], c: COL.iron, l: L_METAL, sway: .12 });
-    PROP.skull(S, .95, 1.72, 0, .11, 1);
+    const c = mixC(COL.stoneD, COL.stoneL, .6);
+    S.box(.7, .18, .46, 0, .09, 0, mulC(c, .8), { l: L_ROCK }); S.box(.46, 1.3, .2, 0, .82, 0, c, { l: L_ROCK, r: [0, 0, .04] }); S.box(.58, .12, .28, .02, 1.52, 0, mulC(c, 1.1), { l: L_ROCK }); S.box(.4, .1, .22, .02, 1.62, 0, c, { l: L_ROCK });
+    for (const y of [.6, .85, 1.1]) S.box(.14, .16, .02, .01, y, .105, mulC(COL.lacq, .9), { jit: 0 });
   },
   cairn(S, rng) { let y = 0, r = rng.range(.3, .42); for (let k = 0; k < 4; k++) { S.rock(r, rng.range(-.05, .05), y + r * .45, rng.range(-.05, .05), mixC(COL.stoneD, COL.stoneL, rng()), { sq: .6 }); y += r * .72; r *= .74; } },
-  statue(S, rng) {
-    const c = COL.stone, m = () => ({ l: L_ROCK });
-    S.box(1.1, .6, 1.1, 0, .3, 0, COL.stoneD, { l: L_MASON }); S.box(.9, .15, .9, 0, .67, 0, COL.stoneL, { l: L_MASON });
-    for (const s of [-1, 1]) S.box(.2, .75, .22, s * .16, 1.1, 0, c, m());
-    S.box(.62, .7, .34, 0, 1.8, 0, c, m()); S.box(.2, .7, .2, -.42, 1.75, .05, c, { l: L_ROCK, r: [.2, 0, .15] });
-    S.box(.2, .35, .2, .42, 1.95, 0, c, m()); S.box(.1, 1.3, .08, -.5, 1.25, .2, COL.stoneL, m());
-    S.rock(.2, .7, .1, .5, c); S.rock(.16, .5, .08, .75, c);
-  },
+  statue(S, rng) { PROP.lion(S, rng, rng.sign()); },
   tuft(S, rng) {
     const c = mulC(mixC(COL.tuftA, COL.tuftB, rng() * .6), .8 + .5 * rng());
     for (let k = 0; k < rng.int(3, 5); k++) {
@@ -1650,60 +1763,84 @@ function buildPads(B) {
 }
 
 function buildKeep(B) {
+  // The pass: a brick wall with a gate tower under a double roof, a square beacon tower and a hall in the yard.
   const rng = B.rng, kx = B.kx, ky = B.keepY, oz = -12.35;
   const TG = new Soup(), TT = new Soup();
-  const st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL;
+  const st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL, red = COL.lacq, redD = COL.lacqD;
   const mc = () => mixC(sdk, sl, rng() * .8 + .1);
   const mas = (S, w, h, d, x, y, z, c, o = {}) => S.box(w, h, d, x, y, z, c || mc(), Object.assign({ l: L_MASON }, o));
   mas(TG, 10.6, .5, 6.0, 0, -.2, -2.9, sdk);
   for (let k = 0; k < 9; k++) mas(TG, 1.1, .16, .55, -4.4 + k * 1.1, .1, .25, mc());
-  const tower = (x, z, w, h, broken) => {
-    mas(TG, w + .34, .6, w + .34, x, .3, z, sdk); mas(TG, w, h, w, x, h / 2, z, st, { jit: .03 });
-    for (let c = 0; c < 4; c++) mas(TG, w + .04, .22, w + .04, x, .9 + c * (h - 1.2) / 3.2, z, mc());
-    mas(TG, w + .36, .3, w + .36, x, h + .12, z, sl);
-    for (const [dx, dz] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) { if (broken && rng() < .55) continue; mas(TG, .42, broken ? rng.range(.2, .5) : .48, .42, x + dx * (w / 2 - .05), h + .5, z + dz * (w / 2 - .05)); }
-    TG.box(.14, .8, .1, x, h * .62, z + w / 2 + .01, COL.black, { jit: 0 }); TG.box(.1, .8, .14, x + w / 2 + .01, h * .5, z, COL.black, { jit: 0 });
-    if (broken) for (let k = 0; k < 3; k++) TG.rock(rng.range(.22, .4), x + rng.range(-1.2, 1.4), .15, z + rng.range(.9, 1.6), mc());
+  const wz = -.95, wall = (x0, x1, h, broken) => {
+    const n = Math.max(1, Math.round(Math.abs(x1 - x0) / 1.1)), dx = (x1 - x0) / n;
+    for (let k = 0; k < n; k++) {
+      const x = x0 + (k + .5) * dx, hh = broken ? Math.max(.5, h - k * rng.range(.5, .95)) : h, whole = hh > h - .2;
+      mas(TG, Math.abs(dx) + .02, hh, 1.05, x, hh / 2, wz, k & 1 ? st : mc(), { jit: .03 }); mas(TG, Math.abs(dx) + .02, .5, 1.25, x, .25, wz, sdk);
+      if (whole) { mas(TG, Math.abs(dx) + .04, .14, 1.2, x, hh + .07, wz, sl); cnMerlons(TG, x - Math.abs(dx) / 2, wz + .5, x + Math.abs(dx) / 2, wz + .5, hh + .14, { rng, h: .36, w: .3, pitch: .55 }); cnMerlons(TG, x - Math.abs(dx) / 2, wz - .5, x + Math.abs(dx) / 2, wz - .5, hh + .14, { rng, h: .3, w: .3, pitch: .55 }); }
+      else { for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), hh + .15, wz); if (hh < 1.8) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.6, .6), .12, wz + rng.range(.3, 1.3), mc()); }
+    }
   };
-  tower(2.3, -.75, 1.95, 3.9, true);
-  mas(TG, 2.7, 1.25, 1.3, 0, 3.2, -.75, st);
-  for (let k = 0; k <= 8; k++) { const th = PI * k / 8; mas(TG, .4, .3, 1.4, Math.cos(th) * 1.12, 1.5 + Math.sin(th) * 1.12, -.75, sl, { r: [0, 0, th - HPI] }); }
-  for (const s of [-1, 1]) { mas(TG, .5, .9, 1.3, s * 1.12, 2.3, -.75, st); mas(TG, .3, 1.5, 1.34, s * 1.2, .75, -.75, sl); }
-  TG.box(2.2, 2.7, .2, 0, 1.35, -1.3, COL.black, { jit: 0 }); TG.box(2.2, .2, 1.2, 0, 2.75, -.8, COL.black, { jit: 0 });
-  for (const bx of [-.8, -.4, 0, .4, .8]) { TG.box(.07, .95, .07, bx, 2.15, -.3, COL.iron, { l: L_METAL }); TG.cone(.06, .16, bx, 1.6, -.3, COL.iron, { n: 4, l: L_METAL, r: [PI, 0, 0] }); }
-  for (const by of [1.95, 2.4]) TG.box(2.0, .07, .07, 0, by, -.3, COL.iron, { l: L_METAL });
-  for (const bx of [-1.02, -.34, .34, 1.02]) mas(TG, .42, .44, .42, bx, 4.05, -.3);
-  mas(TG, 2.9, .2, 1.5, 0, 3.9, -.75, sl);
-  const run = (x0, dir, hs) => hs.forEach((h, k) => {
-    const x = x0 + dir * (k + .5) * 1.35; mas(TG, 1.35, h, .95, x, h / 2, -.95, k & 1 ? st : mc());
-    if (h > 2.4) { mas(TG, 1.45, .2, 1.1, x, h + .1, -.95, sl); for (const dx of [-.4, .4]) mas(TG, .4, .42, .3, x + dx, h + .4, -.55); }
-    else for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), h + .15, -.95);
-    if (h < 1.6) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.7, .7), .12, rng.range(-.2, .9) - .5, mc());
-  });
-  run(-3.3, -1, [3.1, 3.1, 2.3, 1.3, .6]); run(3.3, 1, [3.0, 2.0, 1.1]);
-  for (let k = 0; k < 5; k++) { const h = [3.4, 2.4, 3.6, 1.6, 2.8][k], x = -4.7 + k * 1.3; mas(TG, 1.3, h, .7, x, h / 2, -5.3); if (h > 3) TG.box(.36, 1.0, .74, x, h * .62, -5.3, COL.black, { jit: 0 }); }
-  mas(TG, .7, 2.6, 3.4, -5.0, 1.3, -3.4); mas(TG, .7, 1.2, 1.0, -5.0, .6, -1.5);
-  for (let k = 0; k < 4; k++) TG.seg([-4.6, 2.5 - k * .12, -4.9 + k * .7], [-1.6 + rng() * .8, 1.2 + rng(), -4.6 + k * .7], .08, .07, COL.woodD, { l: L_WOOD, n: 4 });
+  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, true);
+  // gate platform
+  const gh = 3.7, gw = 1.75, gz = -.8, gd = 1.7;
+  for (const s of [-1, 1]) { mas(TG, gw - 1.05, gh, gd, s * (1.05 + (gw - 1.05) / 2), gh / 2, gz, st, { jit: .03 }); mas(TG, gw - .95, .6, gd + .2, s * (1.05 + (gw - 1.05) / 2 + .05), .3, gz, sdk); mas(TG, .26, 1.5, gd + .04, s * 1.12, .75, gz, sl); }
+  mas(TG, gw * 2, gh - 2.55, gd, 0, 2.55 + (gh - 2.55) / 2, gz, st);
+  for (let k = 0; k <= 8; k++) { const th = PI * k / 8; mas(TG, .38, .28, gd + .1, Math.cos(th) * 1.12, 1.5 + Math.sin(th) * 1.12, gz, sl, { r: [0, 0, th - HPI] }); }
+  TG.box(2.1, 2.6, .2, 0, 1.3, gz - gd / 2 + .15, COL.black, { jit: 0 }); TG.box(2.1, .2, gd - .3, 0, 2.7, gz, COL.black, { jit: 0 });
+  for (const s of [-1, 1]) {
+    const T = new Soup(), phi = 1.15, th = Math.atan2(-Math.sin(phi), -s * Math.cos(phi));
+    T.box(.95, 2.35, .1, .475, 1.175, 0, red, { l: L_WOOD }); T.box(.95, .08, .13, .475, 2.3, 0, redD, { l: L_WOOD }); T.box(.95, .08, .13, .475, .1, 0, redD, { l: L_WOOD });
+    for (let i = 0; i < 3; i++) for (let q = 0; q < 4; q++) T.box(.07, .07, .14, .2 + i * .28, .5 + q * .5, 0, COL.gold, { l: L_METAL, rough: .4, emis: .04, jit: 0 });
+    TG.merge(T, { p: [s * 1.02, .05, gz + gd / 2 - .1], ry: th, ao: null });
+  }
+  mas(TG, gw * 2 + .3, .18, gd + .3, 0, gh + .09, gz, sl);
+  cnMerlons(TG, -gw, gz + gd / 2 + .06, gw, gz + gd / 2 + .06, gh + .18, { rng, h: .34, w: .3, pitch: .5 }); for (const s of [-1, 1]) cnMerlons(TG, s * (gw + .06), gz - gd / 2, s * (gw + .06), gz + gd / 2, gh + .18, { rng, h: .34, w: .3, pitch: .5 });
+  TG.box(1.1, .42, .08, 0, 3.12, gz + gd / 2 + .03, C(0x1d2c4a), { jit: 0 }); TG.box(1.22, .06, .1, 0, 3.36, gz + gd / 2 + .03, COL.gold, { l: L_METAL, jit: 0 }); TG.box(1.22, .06, .1, 0, 2.88, gz + gd / 2 + .03, COL.gold, { l: L_METAL, jit: 0 });
+  for (const u of [-.3, 0, .3]) TG.box(.16, .2, .09, u, 3.12, gz + gd / 2 + .04, COL.gold, { l: L_METAL, emis: .05, jit: 0 });
+  // gate hall, two eaves
+  const hy = gh + .18, ha = 1.32, hb = .52;
+  TG.box(ha * 2 + .5, .12, hb * 2 + .5, 0, hy + .06, gz, sdk, { l: L_MASON });
+  TG.box(ha * 2 - .2, 1.0, hb * 2 - .2, 0, hy + .62, gz, COL.plaster, { jit: .02 }); TG.box(.5, .7, .06, 0, hy + .47, gz + hb - .08, COL.black, { jit: 0 });
+  for (const u of [-.8, .8]) { TG.box(.4, .34, .06, u, hy + .68, gz + hb - .08, COL.black, { jit: 0 }); for (const q of [-.1, 0, .1]) TG.box(.025, .34, .07, u + q, hy + .68, gz + hb - .07, redD, { l: L_WOOD }); }
+  for (let i = 0; i < 4; i++) for (const s of [-1, 1]) TG.seg([-ha + i * ha * 2 / 3, hy + .12, gz + s * hb], [-ha + i * ha * 2 / 3, hy + 1.12, gz + s * hb], .06, .055, red, { l: L_WOOD, n: 6 });
+  cnBrackets(TG, 0, hy + 1.14, gz, ha, hb, { h: .1 });
+  cnRoof(TG, { y: hy + 1.24, z: gz, a: ha + .62, b: hb + .62, h: .5, ridge: ha - .1, t0: .34, n: 3, m: 5, lift: .26, rr: .05 });
+  TG.box(ha * 2 - .7, .62, hb * 2 - .3, 0, hy + 1.72, gz, red, { l: L_WOOD, jit: .02 }); for (const u of [-.5, 0, .5]) TG.box(.3, .26, .05, u, hy + 1.76, gz + hb - .13, COL.black, { jit: 0 });
+  cnBrackets(TG, 0, hy + 2.03, gz, ha - .34, hb - .14, { h: .09 });
+  cnRoof(TG, { y: hy + 2.12, z: gz, a: ha + .26, b: hb + .5, h: .72, ridge: ha - .42, n: 4, m: 5, lift: .3, rr: .055 });
+  for (const s of [-1, 1]) { TG.seg([s * 1.32, 1.9, gz + gd / 2 - .02], [s * 1.32, 2.1, gz + gd / 2 + .4], .035, .03, COL.iron, { l: L_METAL, n: 4 }); TG.cyl(.09, .14, s * 1.32, 2.14, gz + gd / 2 + .42, COL.bronze, { n: 6, l: L_METAL, rt: 1.4 }); B.fires.push({ x: kx + s * 1.32, y: ky + 2.3, z: oz + gz + gd / 2 + .42, size: .42, type: 'sconce' }); }
+  for (const s of [-1, 1]) cnBanner(TG, s * (gw + .1), gh + .1, gh + 2.5, gz + gd / 2 + .1, s < 0 ? COL.clothR : COL.clothD, rng, { w: .44, len: 1.3, sway: .8, col2: s < 0 ? undefined : COL.lacqL });
+  cnBanner(TG, 2.9, 3.1, 5.3, wz + .1, COL.clothR, rng, { w: .5, len: 1.4, sway: .8 });
+  // yard: back wall, side wall, a hall and stores
+  for (let k = 0; k < 8; k++) { const x = -4.7 + k * 1.3, h = 2.5; mas(TG, 1.32, h, .7, x, h / 2, -5.3); }
+  cnMerlons(TG, -5.3, -5.05, 5.1, -5.05, 2.5, { rng, h: .3, w: .3, pitch: .55, skip: .12 });
+  mas(TG, .7, 2.5, 4.0, -5.0, 1.25, -3.3); cnMerlons(TG, -5.25, -5.2, -5.25, -1.4, 2.5, { rng, h: .3, w: .3, pitch: .55 });
+  { const hx = 1.5, hz = -3.6, a = 2.0, b = 1.0, wh = 2.5;
+    TG.box(a * 2 + .5, .3, b * 2 + .6, hx, .15, hz, sdk, { l: L_MASON }); TG.box(a * 2 - .2, wh, b * 2 - .2, hx, .3 + wh / 2, hz, COL.plaster, { jit: .02 });
+    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) TG.seg([hx - a + i * a / 2, .3, hz + s * b], [hx - a + i * a / 2, .3 + wh, hz + s * b], .075, .07, red, { l: L_WOOD, n: 6 });
+    TG.box(.7, 1.3, .08, hx, .95, hz + b - .08, COL.black, { jit: 0 }); for (const u of [-1.1, 1.1]) TG.box(.6, .5, .08, hx + u, 1.6, hz + b - .08, COL.black, { jit: 0 });
+    cnBrackets(TG, hx, .3 + wh + .02, hz, a, b, { h: .12 }); cnRoof(TG, { x: hx, z: hz, y: .3 + wh + .14, a: a + .7, b: b + .7, h: 1.05, ridge: a - .5, n: 4, m: 5, lift: .34, rr: .06 }); }
   PROP.barrel(TG, -3.6, .05, -2.2, 1.1, rng); PROP.barrel(TG, -3.1, .05, -2.6, 1, rng); PROP.crate(TG, -3.9, .05, -3.2, .55, rng, .4);
-  clothPanel(TG, { x0: 1.85, x1: 2.75, yTop: 3.2, len: 1.6, z: .25, col: COL.clothR, col2: mulC(COL.gold, .6), rng, sway: .5, rag: .7 });
-  for (const s of [-1, 1]) { TG.seg([s * 1.32, 1.9, -.08], [s * 1.32, 2.1, .32], .035, .03, COL.iron, { l: L_METAL, n: 4 }); TG.cyl(.09, .14, s * 1.32, 2.14, .34, COL.iron, { n: 6, l: L_METAL, rt: 1.4 }); B.fires.push({ x: kx + s * 1.32, y: ky + 2.3, z: oz + .34, size: .42, type: 'sconce' }); }
-  TG.cyl(1.5, 2.4, 2.4, 1.2, -4.2, sdk, { n: 8, l: L_MASON, rt: .92 });
-  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, h = rng.range(.2, 1.3); if (rng() < .3) continue; mas(TG, .9, h, .4, 2.4 + Math.cos(a) * 1.2, 2.4 + h / 2, -4.2 + Math.sin(a) * 1.2, null, { r: [0, -a + HPI, 0] }); }
-  const bx = -2.6, bz = -.95, bh = 7.3;
-  TT.cyl(1.9, 1.3, bx, .65, bz, sdk, { n: 8, l: L_MASON, rt: .84 });
-  TT.cyl(1.52, bh, bx, bh / 2, bz, st, { n: 8, l: L_MASON, rt: .9, jit: .03 });
-  for (let c = 0; c < 6; c++) TT.cyl(1.54 - c * .027, .2, bx, 1.7 + c * 1.0, bz, mc(), { n: 8, l: L_MASON });
-  TT.cyl(1.42, .55, bx, bh - .15, bz, sl, { n: 8, l: L_MASON, rt: 1.26 });
-  TT.cyl(1.82, .22, bx, bh + .22, bz, st, { n: 8, l: L_MASON });
-  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU; if (k === 1) continue; mas(TT, .6, .5, .32, bx + Math.cos(a) * 1.6, bh + .58, bz + Math.sin(a) * 1.6, null, { r: [0, -a + HPI, 0] }); }
-  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + .4; TT.box(.12, .9, .12, bx + Math.cos(a) * 1.45, bh * (.4 + (k & 1) * .22), bz + Math.sin(a) * 1.45, COL.black, { jit: 0, r: [0, -a, 0] }); }
-  for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + .2; TT.seg([bx + Math.cos(a) * 1.4, bh - .55, bz + Math.sin(a) * 1.4], [bx + Math.cos(a) * 2.2, bh - .4, bz + Math.sin(a) * 2.2], .07, .06, COL.woodD, { l: L_WOOD, n: 4 }); }
-  TT.cyl(.6, .55, bx, bh + .6, bz, sdk, { n: 8, l: L_MASON });
-  TT.cyl(.72, .4, bx, bh + 1.06, bz, COL.iron, { n: 8, l: L_METAL, rt: 1.4, rough: .7 });
+  for (const s of [-1, 1]) { const T = new Soup(); PROP.lion(T, rng, -s); TG.merge(T, { p: [s * 2.35, .16, .95], s: .85, ao: null }); }
+  // beacon tower
+  const bx = -3.5, bz = -.95, bh = 7.3, r0 = 1.95, r1 = 1.5, rot = { r: [0, PI / 4, 0] }, hw = r1 * .7071;
+  TT.cyl(r0 + .3, 1.2, bx, .6, bz, sdk, Object.assign({ n: 4, l: L_MASON, rt: .93 }, rot));
+  TT.cyl(r0, bh, bx, bh / 2, bz, COL.ram, Object.assign({ n: 4, l: L_DIRT, rt: r1 / r0, jit: .03 }, rot));
+  for (let c = 0; c < 6; c++) { const y = 1.5 + c * 1.02, rr2 = lerp(r0, r1, y / bh) + .02; TT.cyl(rr2, .16, bx, y, bz, mixC(COL.ramD, COL.ram, rng() * .5), Object.assign({ n: 4, l: L_DIRT, rt: .99 }, rot)); }
+  for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) TT.seg([bx + a * r0 * .7071, 0, bz + b * r0 * .7071], [bx + a * hw, bh, bz + b * hw], .2, .17, mc(), { n: 4, l: L_MASON });
+  TT.cyl(r1 + .06, .5, bx, bh - .1, bz, st, Object.assign({ n: 4, l: L_MASON, rt: 1.2 }, rot));
+  TT.box(hw * 2 + .7, .2, hw * 2 + .7, bx, bh + .24, bz, sl, { l: L_MASON });
+  { const e = hw + .3; for (const [x0, z0, x1, z1] of [[-e, e, e, e], [e, e, e, -e], [e, -e, -e, -e], [-e, -e, -e, e]]) cnMerlons(TT, bx + x0, bz + z0, bx + x1, bz + z1, bh + .34, { rng, h: .42, w: .32, pitch: .52 }); }
+  for (const [dx, dz, y, ry] of [[0, 1, .46, 0], [1, 0, .62, HPI], [0, 1, .78, 0], [1, 0, .34, HPI]]) { const rr2 = lerp(r0, r1, y) * .7071 + .02; TT.box(.14, .8, .1, bx + dx * rr2, bh * y, bz + dz * rr2, COL.black, { jit: 0, r: [0, ry, 0] }); }
+  for (let k = 0; k < 3; k++) { const y = bh * (.3 + k * .2), rr2 = lerp(r0, r1, y / bh) * .7071; TT.seg([bx - .5, y, bz + rr2 - .1], [bx - .5, y + .1, bz + rr2 + .6], .06, .05, COL.woodD, { l: L_WOOD, n: 4 }); TT.seg([bx + .5, y, bz + rr2 - .1], [bx + .5, y + .1, bz + rr2 + .6], .06, .05, COL.woodD, { l: L_WOOD, n: 4 }); }
+  TT.cyl(.62, .5, bx, bh + .58, bz, sdk, { n: 8, l: L_MASON });
+  TT.cyl(.72, .4, bx, bh + 1.06, bz, COL.bronze, { n: 8, l: L_METAL, rt: 1.4, rough: .7 });
   for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + .5; TT.seg([bx + Math.cos(a) * .72, bh + .35, bz + Math.sin(a) * .72], [bx + Math.cos(a) * .96, bh + 1.22, bz + Math.sin(a) * .96], .04, .04, COL.iron, { l: L_METAL, n: 4 }); }
   TT.cyl(.9, .1, bx, bh + 1.24, bz, COL.ember, { n: 8, emis: .5, jit: 0 });
   for (let k = 0; k < 4; k++) { const a = k * 1.3; TT.seg([bx + Math.cos(a) * .7, bh + 1.28, bz + Math.sin(a) * .7], [bx - Math.cos(a) * .6, bh + 1.48, bz - Math.sin(a) * .6], .1, .09, mulC(COL.bark, .7), { l: L_WOOD, n: 5, emis: .05 }); }
-  clothPanel(TT, { x0: bx - .45, x1: bx + .45, yTop: 5.2, len: 2.3, z: bz + 1.5, col: COL.clothR, col2: mulC(COL.gold, .6), rng, sway: .45 });
+  clothPanel(TT, { x0: bx - .5, x1: bx + .5, yTop: 5.6, len: 2.5, z: bz + lerp(r0, r1, .6) * .7071 + .08, col: COL.clothR, col2: mulC(COL.gold, .7), rng, sway: .4, rag: .2 });
+  TT.box(1.16, .08, .08, bx, 5.64, bz + lerp(r0, r1, .75) * .7071 + .08, COL.woodD, { l: L_WOOD });
+  cnBanner(TT, bx - hw - .2, bh + .3, bh + 2.6, bz + hw + .2, COL.clothR, rng, { w: .46, len: 1.3 });
   B.structs.push({ soup: new Soup().merge(TG, { p: [kx, ky, oz], ao: [0, .9, .7] }), cx: kx, cy: ky, cz: oz - 2.5, kind: 'keep' });
   B.structs.push({ soup: new Soup().merge(TT, { p: [kx, ky, oz], ao: [0, 1.4, .65] }), cx: kx + bx, cy: ky, cz: oz + bz, kind: 'beaconTower' });
   B.beacon = { x: kx + bx, y: ky + bh + 1.45, z: oz + bz };
@@ -1780,10 +1917,12 @@ function scatterProps(B) {
     } }
   for (let k = 0; k < 2; k++) { const p = beside(10, B.L - 8, 1.25, 1.1); if (p) drop(T => PROP.cart(T, rng, k === 1), 1.1, { at: p, ry: -p[2] + rng.range(-.3, .3), r: k === 1 ? [0, -p[2] + .4, .22] : undefined }); }
   for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 6, .75, .3); if (p) { const len = rng.range(2.6, 4.2); drop(T => PROP.palisade(T, rng, len), 1.0, { at: p, ry: -p[2] }); } }
-  for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 6, 1.0, .4); if (p) { const len = rng.range(2.5, 4.5); drop(T => PROP.fence(T, rng, len), 1.2, { at: p, ry: -p[2] + rng.range(-.15, .15) }); } }
-  for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 5, .8, .25); if (p) drop(T => PROP.banner(T, rng, k & 1 ? COL.clothR : COL.clothB), .3, { at: p, ry: -p[2] + HPI * p[3] }); }
+  for (let k = 0; k < 5; k++) { const p = beside(8, B.L - 6, 1.0, .4); if (p) { const len = rng.range(2.2, 3.6); drop(T => PROP.juma(T, rng, len), 1.2, { at: p, ry: -p[2] + rng.range(-.15, .15) }); } }
+  for (let k = 0; k < 6; k++) { const p = beside(8, B.L - 5, .8, .25); if (p) drop(T => PROP.banner(T, rng, [COL.clothR, COL.clothD, COL.clothR, COL.clothB][k & 3]), .3, { at: p, ry: -p[2] + HPI * p[3] }); }
   { const p = beside(B.L * .3, B.L * .7, .8, .3); if (p) drop(T => PROP.signpost(T, rng), .3, { at: p, ry: -p[2] }); }
-  { const p = beside(12, B.L * .6, 1.3, .6); if (p) drop(T => PROP.gibbet(T, rng), .6, { at: p, ry: -p[2] + HPI }); }
+  { const p = beside(12, B.L * .6, 1.4, .7); if (p) drop(T => PROP.wardrum(T, rng), .7, { at: p, ry: -p[2] + HPI * p[3] }); }
+  for (let k = 0; k < 3; k++) { const p = beside(8, B.L - 6, .9, .35); if (p) { const q = drop(T => PROP.stoneLamp(T, rng), .35, { at: p, ry: -p[2] }); if (q) B.fires.push({ x: q[0], y: H(q[0], q[1]) + 1.02, z: q[1], size: .2, fx: { smoke: 0, embers: 0, glow: .7 } }); } }
+  for (let k = 0; k < 3; k++) drop(T => PROP.rack(T, rng), .8, { near: 5, far: 1.2 });
   for (const pad of B.pads) {
     if (rng() < .35) continue;
     const a = rng() * TAU, x = pad.x + Math.cos(a) * 2.25, z = pad.z + Math.sin(a) * 2.25;
@@ -1796,7 +1935,7 @@ function scatterProps(B) {
   for (let k = 0; k < 3; k++) drop(T => PROP.cairn(T, rng), .5, {});
   BIOME_DRESS[bio.key]({ B, rng, drop, find, beside, free, at, H, placed, slope });
   const trees = [];
-  for (const [kind, cnt, h0, h1] of bio.trees) for (let k = 0; k < cnt; k++) { const h = rng.range(h0, h1), p = drop(T => PROP[kind](T, rng, h), kind === 'tree' || kind === 'charred' ? .55 : .8, { far: 1.0, water: kind === 'palm' && k < 6 ? 5.5 : 0 }); if (p && kind === 'tree') trees.push([p, h]); }
+  for (const [kind, cnt, h0, h1] of bio.trees) for (let k = 0; k < cnt; k++) { const h = rng.range(h0, h1), p = drop(T => PROP[kind](T, rng, h), kind === 'tree' || kind === 'charred' ? .55 : .8, { far: 1.0, water: kind === 'huyang' && k < 6 ? 5.5 : 0 }); if (p && kind === 'tree') trees.push([p, h]); }
   for (let k = 0; k < bio.webs && k < trees.length; k++) {
     const [p, h] = trees[k], y = H(p[0], p[1]), a = rng() * TAU, T = new Soup();
     PROP.web(T, [0, h * .42, 0], [Math.cos(a) * .9, h * .55, Math.sin(a) * .9], [Math.cos(a) * .7, h * .18, Math.sin(a) * .7]);
@@ -1877,13 +2016,45 @@ Object.assign(PROP, {
     for (let k = 0; k < 3; k++) S.ico(h * .03, top[0] + rng.range(-.12, .12), top[1] - .1, top[2] + rng.range(-.12, .12), C(0x3a2a1c), { d: 0 });
   },
   cactus(S, rng) {
-    const c = mulC(C(0x4f6a3c), .8 + .3 * rng()), hh = rng.range(1.0, 1.9), r = .17;
-    S.cyl(r, hh, 0, hh / 2 - .05, 0, c, { n: 7 }); S.sph(r, 0, hh - .05, 0, c, { sc: [1, .8, 1], w: 7, h: 4 });
-    for (let k = 0, n = rng.int(0, 3); k < n; k++) {
-      const a = rng() * TAU, y = hh * rng.range(.35, .6), l = rng.range(.26, .4), up = rng.range(.3, .7), x = Math.cos(a) * l, z = Math.sin(a) * l;
-      S.seg([0, y, 0], [x, y + .04, z], r * .62, r * .62, c, { n: 6 }); S.seg([x, y, z], [x, y + up, z], r * .62, r * .58, c, { n: 6 }); S.sph(r * .6, x, y + up, z, c, { w: 6, h: 4 });
+    const c = mulC(C(0x6a6a40), .8 + .3 * rng()), n = rng.int(7, 12);
+    for (let k = 0; k < n; k++) { const a = rng() * TAU, l = rng.range(.35, .8), up = rng.range(.5, 1.1), x = Math.cos(a) * l * .7, z = Math.sin(a) * l * .7; S.seg([0, 0, 0], [x, l * up, z], .022, .012, C(0x4a3828), { n: 3, sway: .2 }); if (rng() < .8) S.ico(rng.range(.07, .13), x, l * up, z, mulC(c, .8 + .4 * rng()), { d: 0, sway: .3, sc: [1, .7, 1] }); }
+    if (rng() < .5) S.ico(.05, 0, .5, 0, C(0xd0607a), { d: 0, emis: .03 });
+  },
+  song(S, rng, h) {
+    const bark = mulC(C(0x4a3226), .85 + .3 * rng()), a0 = rng() * TAU; let p = [0, -.1, 0], r = h * .065, lean = rng.range(.12, .3); const tips = [];
+    for (let k = 0; k < 5; k++) { const u = (k + 1) / 5, a = a0 + Math.sin(u * 3.2) * 1.1, q = [Math.cos(a) * lean * h * u * (1 - u * .4), h * .72 * u, Math.sin(a) * lean * h * u * (1 - u * .4)]; S.seg(p, q, r, r * .82, bark, { l: L_WOOD, n: 6 }); p = q; r *= .82; if (k >= 1) { const b = a0 + k * 2.3 + rng(), len = h * rng.range(.22, .36) * (1 - u * .35), e = [q[0] + Math.cos(b) * len, q[1] + len * rng.range(.02, .22), q[2] + Math.sin(b) * len]; S.seg(q, e, r * .6, r * .3, bark, { l: L_WOOD, n: 5, sway: .08 }); tips.push([e, 1 - u * .3]); } }
+    tips.push([[p[0], p[1] + h * .05, p[2]], .9]);
+    for (const [t, sc] of tips) for (let j = 0; j < 2; j++) { const rb = h * rng.range(.16, .23) * sc, c = mulC(mixC(C(0x21402e), C(0x3c6040), rng()), .8 + .35 * rng()); S.ico(rb, t[0] + rng.range(-.2, .2), t[1] + j * rb * .3 + rng.range(-.04, .08), t[2] + rng.range(-.2, .2), c, { sc: [1.35, .3, 1.35], d: 1, l: L_THATCH, sway: .16, r: [rng.range(-.12, .12), rng() * TAU, rng.range(-.12, .12)], cf: v => .62 + .38 * sat(v.y / (rb * .3) + .5) }); }
+    for (let k = 0; k < 3; k++) { const a = k * 2.1 + rng(); S.seg([Math.cos(a) * h * .03, h * .08, Math.sin(a) * h * .03], [Math.cos(a) * h * .14, -.1, Math.sin(a) * h * .14], h * .028, h * .015, bark, { l: L_WOOD, n: 5 }); }
+  },
+  bamboo(S, rng, h) {
+    const n = rng.int(4, 7);
+    for (let k = 0; k < n; k++) {
+      const a = rng() * TAU, d = rng.range(.05, .55), x = Math.cos(a) * d, z = Math.sin(a) * d, hh = h * rng.range(.65, 1.1), lean = [rng.range(-.12, .12) + Math.cos(a) * .08, rng.range(-.12, .12) + Math.sin(a) * .08], c = mulC(mixC(C(0x4c7a3a), C(0x7a9a48), rng()), .8 + .3 * rng()), segs = Math.max(4, Math.round(hh / .5));
+      let p = [x, -.08, z];
+      for (let i = 1; i <= segs; i++) { const u = i / segs, q = [x + lean[0] * hh * u * u, hh * u, z + lean[1] * hh * u * u]; S.seg(p, q, .035 * (1 - u * .5), .033 * (1 - u * .5), mulC(c, i & 1 ? 1 : .88), { n: 5, sway: u > .5 ? (u - .5) * .5 : 0, jit: .03 }); if (i & 1) S.cyl(.042 * (1 - u * .5), .018, q[0], q[1], q[2], mulC(c, .65), { n: 5, jit: 0, sway: u > .5 ? (u - .5) * .5 : 0 }); p = q;
+        if (u > .45) for (let j = 0; j < 2; j++) { const la = rng() * TAU, ll = rng.range(.3, .6), lc = mulC(mixC(C(0x3c6a30), C(0x74963e), rng()), .8 + .4 * rng()), ex = q[0] + Math.cos(la) * ll, ez = q[2] + Math.sin(la) * ll, ey = q[1] - ll * rng.range(.1, .5), wx = -Math.sin(la) * .07, wz = Math.cos(la) * .07, mx = (q[0] + ex) / 2, mz = (q[2] + ez) / 2, my = (q[1] + ey) / 2 + .06; ribbon(S, [q[0], q[1], q[2]], [mx + wx, my, mz + wz], [ex, ey, ez], [mx - wx, my, mz - wz], lc, [.3, .6, .95, .6]); }
+      }
     }
-    if (rng() < .4) S.ico(.06, 0, hh + .1, 0, C(0xe86a8a), { d: 0, emis: .03 });
+  },
+  huyang(S, rng, h) {
+    const bark = mulC(C(0x5a4630), .85 + .3 * rng()), tips = [];
+    const branch = (a, d, len, r, depth) => {
+      const b = [a[0] + d[0] * len, a[1] + d[1] * len, a[2] + d[2] * len]; S.seg(a, b, r, r * .66, bark, { l: L_WOOD, n: depth ? 5 : 7, sway: depth >= 2 ? .2 : 0 });
+      if (depth >= 2) { tips.push(b); return; }
+      for (let k = 0, n = depth === 0 ? 3 : 2; k < n; k++) { const nd = [d[0] + rng.range(-1, 1), d[1] * .6 + rng.range(.1, .6), d[2] + rng.range(-1, 1)], l = Math.hypot(nd[0], nd[1], nd[2]); branch(b, [nd[0] / l, nd[1] / l, nd[2] / l], len * rng.range(.6, .8), r * .6, depth + 1); }
+    };
+    S.cyl(h * .13, .3, 0, .1, 0, bark, { n: 7, l: L_WOOD, rt: .7 }); branch([0, .05, 0], [rng.range(-.2, .2), 1, rng.range(-.2, .2)], h * .36, h * .085, 0);
+    for (const t of tips) for (let j = 0; j < 2; j++) { const rb = h * rng.range(.13, .2), c = mulC(mixC(C(0xb8862c), C(0xe0b040), rng()), .75 + .4 * rng()); S.ico(rb, t[0] + rng.range(-.2, .2), t[1] + rng.range(-.05, .25), t[2] + rng.range(-.2, .2), c, { sc: [1.15, .8, 1.15], d: 1, l: L_THATCH, sway: .22, r: [rng() * .4, rng() * TAU, rng() * .4], cf: v => .6 + .4 * sat(v.y / (rb * .8) + .5) }); }
+  },
+  wreck(S, rng) {
+    const w = mulC(COL.bark, .7), L = rng.range(3.4, 4.6);
+    for (let k = 0; k < 7; k++) { const u = k / 6 * 2 - 1, wv = .62 * Math.sqrt(1 - u * u * .8), x = u * L / 2; for (const sg of [-1, 1]) { if (rng() < .15) continue; S.seg([x, .0, 0], [x, .28, sg * wv * .8], .05, .045, w, { l: L_WOOD, n: 4 }); S.seg([x, .28, sg * wv * .8], [x, .28 + rng.range(.4, .8), sg * wv], .045, .03, w, { l: L_WOOD, n: 4, emis: rng() < .3 ? .06 : 0 }); } }
+    S.seg([-L / 2 - .3, .5, 0], [L / 2 + .2, .08, 0], .09, .08, w, { l: L_WOOD, n: 5 }); S.seg([-L / 2 - .3, .5, 0], [-L / 2 - .7, 1.2, 0], .08, .04, w, { l: L_WOOD, n: 5 });
+    for (const sg of [-1, 1]) for (let k = 0; k < 4; k++) { if (rng() < .3) continue; const x0 = -L / 2 + .3 + k * L / 4.4; S.box(L / 4.6, .2, .05, x0 + L / 9, .5, sg * .56, mulC(w, .8 + .4 * rng()), { l: L_WOOD, r: [sg * .25, sg * .06, 0] }); }
+    S.seg([.2, .1, 0], [.9, 2.4, .5], .07, .05, w, { l: L_WOOD, n: 5 }); S.seg([.5, 1.5, .1], [1.4, 1.7, -.5], .035, .03, w, { l: L_WOOD, n: 4 });
+    clothPanel(S, { x0: .55, x1: 1.35, yTop: 1.6, len: .9, z: -.15, col: mulC(COL.clothD, 1.2), rng, nx: 4, ny: 4, rag: .6, sway: .7 });
+    S.cyl(.3, .04, -.4, .08, 0, [.8, .22, .03], { n: 7, emis: .25, jit: 0 });
   },
   reeds(S, rng) {
     for (let k = 0, n = rng.int(5, 9); k < n; k++) {
@@ -1945,7 +2116,7 @@ Object.assign(PROP, {
 });
 
 const BIOME_DRESS = {
-  ashen(X) { for (let k = 0; k < 3; k++) X.drop(T => PROP.log(T, X.rng), .9, { far: 1.2 }); },
+  ashen(X) { for (let k = 0; k < 3; k++) X.drop(T => PROP.log(T, X.rng), .9, { far: 1.2 }); for (let k = 0; k < 2; k++) X.drop(T => PROP.wardrum(T, X.rng), .8, { near: 4.5, far: 1.4 }); },
   frost(X) {
     const { B, rng, drop } = X, snow = B.bio.coverCol;
     for (let k = 0; k < 30; k++) { const r = rng.range(.5, 1.25); drop(T => PROP.drift(T, rng, r, snow), r * .35, { roadMin: .5, ao: null, steep: true }); }
@@ -1969,11 +2140,13 @@ const BIOME_DRESS = {
     for (let k = 0; k < 16; k++) { const p = drop(T => PROP.shroom(T, rng), .35, { ao: null }); if (p) sh.push(p); }
     for (let k = 0; k < Math.min(2, sh.length); k++) B.env.push({ x: sh[k][0], y: X.H(sh[k][0], sh[k][1]) + .7, z: sh[k][1], c: 0x45e0b8, I: 5, d: 6 });
     for (let k = 0; k < 5; k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
+    for (let k = 0; k < 9; k++) { const hh = rng.range(2.6, 4.2); drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0 }); }
   },
   ember(X) {
     const { B, rng, drop } = X, cols = [COL.stoneD, COL.stone, C(0x5a2a22), COL.stoneD];
     for (let k = 0; k < 9; k++) drop(T => PROP.basalt(T, rng), 1.0, { far: 1.4 });
     for (let k = 0; k < 6; k++) { const hh = rng.range(2.0, 4.2); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
+    for (let k = 0; k < 3; k++) drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 4.5 });
     for (let k = 0; k < 4; k++) { const p = drop(T => PROP.vent(T, rng), .8, { far: 2.2 }); if (p) B.fires.push({ x: p[0], y: X.H(p[0], p[1]) + .12, z: p[1], size: .5, fx: { layers: 0, smoke: 1.3, embers: 1.1, glow: .55 } }); }
     B.env.push({ x: B.bridge.x, y: B.wlc + .55, z: B.bridge.z, c: 0xff5a1e, I: 44, d: 9, flick: 1 });
     if (B.ponds[0]) { const q = B.ponds[0]; B.env.push({ x: q.x, y: q.y + .7, z: q.z, c: 0xff5a1e, I: 40, d: 9, flick: 1 }); }
@@ -1984,7 +2157,7 @@ const BIOME_DRESS = {
     for (let k = 0; k < 11; k++) drop(T => PROP.cactus(T, rng), .4, { far: .9 });
     for (let k = 0; k < 6; k++) { const hh = rng.range(2.2, 4.6); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
     for (const q of B.ponds) {
-      for (let k = 0; k < 4; k++) { const a = rng() * TAU, d = q.r + rng.range(1.1, 1.9), h = rng.range(3, 4.4); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.palm(T, rng, h), .5); }
+      for (let k = 0; k < 4; k++) { const a = rng() * TAU, d = q.r + rng.range(1.1, 1.9), h = rng.range(3, 4.4); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.huyang(T, rng, h), .5); }
       for (let k = 0; k < 7; k++) { const a = rng() * TAU, d = q.r * rng.range(.8, 1.2); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.reeds(T, rng), 0); }
     }
     for (const pad of B.pads) {
@@ -2496,21 +2669,25 @@ function humanKit(style, cap) {
     k.uLeg = new PartBatch(S => { S.box(.076, .27, .076, 0, -.135, 0, bone, o()); S.box(.09, .06, .09, 0, -.28, 0, bd, o()); }, limb, { rad: .07, shadow: false });
     k.lLeg = new PartBatch(S => { S.box(.062, .28, .062, 0, -.14, 0, bone, o()); S.box(.09, .05, .19, 0, -.295, .05, bd, o()); }, limb, { rad: .07, shadow: false });
   } else if (style === 'foot') {
-    const mail = COL.steel, cloth = mulC(COL.clothB, 1.75), lea = COL.leather;
-    k.pelvis = new PartBatch(S => { S.box(.28, .14, .19, 0, 0, 0, mulC(COL.clothD, 1.6), { l: L_CLOTH }); S.box(.3, .05, .2, 0, .06, 0, lea, {}); }, cap, { rad: .12 });
+    // Border garrison: red tunic, dark lamellar, a bronze helmet with a red tassel.
+    const lam = mulC(COL.iron, 1.2), lamL = mulC(COL.ironL, 1.05), cloth = mulC(COL.clothR, 1.45), clothDk = mulC(COL.clothR, .9), lea = COL.leather, brz = mulC(COL.brass, .95);
+    k.pelvis = new PartBatch(S => { S.box(.3, .16, .2, 0, -.01, 0, cloth, { l: L_CLOTH }); S.box(.31, .05, .21, 0, .07, 0, lea, {}); S.box(.1, .12, .215, 0, -.03, 0, lam, { l: L_METAL, rough: .55 }); }, cap, { rad: .12 });
     k.torso = new PartBatch(S => {
-      S.box(.34, .4, .22, 0, .21, 0, cloth, { l: L_CLOTH, jit: 0 }); S.box(.12, .34, .23, 0, .2, 0, mulC(cloth, .62), { l: L_CLOTH, jit: 0 });
-      S.box(.42, .1, .25, 0, .4, 0, mail, { l: L_METAL, rough: .5 }); S.box(.16, .08, .16, 0, .45, 0, COL.skin, {});
+      S.box(.34, .4, .22, 0, .21, 0, cloth, { l: L_CLOTH, jit: 0 }); S.box(.3, .3, .235, 0, .2, 0, lam, { l: L_METAL, rough: .55, jit: 0 });
+      for (const y of [.1, .18, .26, .34]) S.box(.305, .018, .24, 0, y, 0, lamL, { l: L_METAL, rough: .45, jit: 0 });
+      S.box(.42, .08, .25, 0, .4, 0, clothDk, { l: L_CLOTH }); S.box(.16, .08, .16, 0, .45, 0, COL.skin, {});
     }, cap, { rad: .17 });
     k.head = new PartBatch(S => {
-      S.box(.19, .2, .19, 0, .12, .0, COL.skin, { jit: .04 }); S.box(.2, .08, .1, 0, .06, -.06, mulC(COL.leather, .7), {});
-      S.add(gDome(8, 3), { s: [.155, .13, .155], p: [0, .19, 0], c: mail, l: L_METAL, rough: .42 }); S.cyl(.21, .03, 0, .19, 0, mulC(mail, .85), { n: 8, l: L_METAL, rough: .42 });
+      S.box(.19, .2, .19, 0, .12, .0, COL.skin, { jit: .04 }); S.box(.21, .13, .1, 0, .08, -.07, lam, { l: L_METAL, rough: .55 });
+      for (const s of [-1, 1]) S.box(.03, .12, .13, s * .1, .09, -.01, lam, { l: L_METAL, rough: .55 });
+      S.add(gDome(8, 3), { s: [.155, .14, .155], p: [0, .19, 0], c: brz, l: L_METAL, rough: .4 }); S.cyl(.19, .03, 0, .19, 0, mulC(brz, .8), { n: 8, l: L_METAL, rough: .42 });
+      S.cyl(.02, .07, 0, .35, 0, brz, { n: 5, l: L_METAL }); S.ico(.055, 0, .41, -.01, COL.lacqL, { d: 0, sc: [1, 1.2, 1.3], emis: .03 });
       for (const s of [-1, 1]) S.box(.03, .03, .02, s * .05, .14, .098, COL.black, { jit: 0 });
     }, cap, { rad: .14 });
-    k.uArm = new PartBatch(S => { S.box(.1, .26, .1, 0, -.13, 0, mail, { l: L_METAL, rough: .5 }); S.box(.13, .09, .13, 0, -.03, 0, mulC(mail, 1.1), { l: L_METAL, rough: .45 }); }, limb, { rad: .07, shadow: false });
+    k.uArm = new PartBatch(S => { S.box(.1, .26, .1, 0, -.13, 0, cloth, { l: L_CLOTH }); S.box(.14, .12, .14, 0, -.04, 0, lam, { l: L_METAL, rough: .5 }); S.box(.145, .018, .145, 0, -.06, 0, lamL, { l: L_METAL, rough: .45, jit: 0 }); }, limb, { rad: .07, shadow: false });
     k.lArm = new PartBatch(S => { S.box(.085, .24, .085, 0, -.12, 0, lea, {}); S.box(.09, .08, .09, 0, -.27, 0, COL.skin, {}); }, limb, { rad: .07, shadow: false });
-    k.uLeg = new PartBatch(S => { S.box(.115, .28, .115, 0, -.14, 0, mulC(COL.clothD, 1.5), { l: L_CLOTH }); }, limb, { rad: .08, shadow: false });
-    k.lLeg = new PartBatch(S => { S.box(.1, .28, .1, 0, -.14, 0, mulC(lea, .7), {}); S.box(.11, .06, .2, 0, -.29, .045, mulC(lea, .6), {}); }, limb, { rad: .08, shadow: false });
+    k.uLeg = new PartBatch(S => { S.box(.115, .28, .115, 0, -.14, 0, clothDk, { l: L_CLOTH }); S.box(.13, .14, .125, 0, -.06, 0, cloth, { l: L_CLOTH }); }, limb, { rad: .08, shadow: false });
+    k.lLeg = new PartBatch(S => { S.box(.1, .28, .1, 0, -.14, 0, mulC(COL.black, 4), {}); S.box(.11, .06, .2, 0, -.29, .045, mulC(COL.black, 3), {}); }, limb, { rad: .08, shadow: false });
   } else {
     const sk = COL.ogre, sdk = COL.ogreD, o = () => ({ jit: .06, d: 1 });
     k.pelvis = new PartBatch(S => { S.ico(.2, 0, 0, 0, sdk, { sc: [1.15, .6, .95], d: 1 }); clothPanel(S, { x0: -.15, x1: .15, yTop: .02, len: .3, z: .17, col: COL.leather, rng: makeRng(3), sway: 0, nx: 3, ny: 4 }); clothPanel(S, { x0: -.14, x1: .14, yTop: .02, len: .24, z: -.17, col: mulC(COL.leather, .7), rng: makeRng(4), sway: 0, nx: 3, ny: 3 }); S.box(.44, .05, .36, 0, .03, 0, mulC(COL.leather, .6), {}); }, cap, { rad: .2 });
@@ -2541,10 +2718,10 @@ function initKits() {
   for (const k of ['uArm', 'lArm', 'uLeg', 'lLeg']) KIT.giant[k].mesh.castShadow = true;
   const E = KIT.item = {};
   E.sword = new PartBatch(S => { S.box(.035, .13, .035, 0, 0, 0, COL.woodD, {}); S.box(.17, .03, .05, 0, .075, 0, iron, { l: L_METAL }); S.box(.055, .5, .018, 0, .34, 0, rust, { l: L_METAL, rough: .5 }); S.cone(.03, .08, 0, .63, 0, rust, { n: 4, l: L_METAL, rough: .5, rz: .012 }); }, 100, { rad: .05, shadow: false });
-  E.blade = new PartBatch(S => { S.box(.04, .13, .04, 0, 0, 0, COL.leather, {}); S.box(.2, .035, .055, 0, .075, 0, COL.brass, { l: L_METAL, rough: .4 }); S.box(.06, .52, .02, 0, .35, 0, mulC(COL.steel, 1.15), { l: L_METAL, rough: .3 }); S.cone(.032, .09, 0, .655, 0, mulC(COL.steel, 1.15), { n: 4, l: L_METAL, rough: .3 }); }, 40, { rad: .05, shadow: false });
+  E.blade = new PartBatch(S => { const st = mulC(COL.steel, 1.15); S.box(.04, .15, .04, 0, 0, 0, COL.lacqD, {}); S.add(gTorus(6, .3, 3), { s: .04, p: [0, -.11, 0], r: [0, HPI, 0], c: COL.brass, l: L_METAL }); S.box(.1, .03, .05, 0, .085, 0, COL.brass, { l: L_METAL, rough: .4 }); S.box(.02, .5, .065, 0, .35, 0, st, { l: L_METAL, rough: .3 }); S.box(.02, .1, .05, 0, .63, -.012, st, { l: L_METAL, rough: .3, r: [.3, 0, 0] }); }, 40, { rad: .05, shadow: false });
   E.torch = new PartBatch(S => { S.box(.04, .42, .04, 0, .1, 0, COL.woodD, { l: L_WOOD }); S.cyl(.06, .1, 0, .34, 0, mulC(COL.black, 3), { n: 6 }); S.cyl(.05, .03, 0, .4, 0, COL.ember, { n: 6, emis: .5, jit: 0 }); }, 80, { rad: .05, shadow: false });
   E.shieldR = new PartBatch(S => { S.cyl(.27, .05, 0, 0, 0, COL.woodD, { n: 8, r: [HPI, 0, 0], l: L_WOOD }); S.add(gTorus(8, .13, 4), { s: .25, p: [0, 0, .01], c: iron, l: L_METAL }); S.sph(.075, 0, 0, .04, COL.ironL, { l: L_METAL, w: 6, h: 4, smooth: false }); for (let a = 0; a < 4; a++) S.box(.03, .42, .012, 0, 0, .03, iron, { l: L_METAL, r: [0, 0, a * PI / 4] }); }, 60, { rad: .2, shadow: false });
-  E.shieldH = new PartBatch(S => { const sc = mulC(COL.clothB, 1.6); S.box(.36, .3, .045, 0, .08, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.26, .12, .045, 0, -.12, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.14, .1, .045, 0, -.22, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.07, .5, .05, 0, -.02, .004, mulC(COL.gold, .8), { l: L_METAL, rough: .45, jit: 0 }); S.box(.36, .06, .05, 0, .1, .004, mulC(COL.gold, .8), { l: L_METAL, rough: .45, jit: 0 }); }, 40, { rad: .2, shadow: false });
+  E.shieldH = new PartBatch(S => { const sc = mulC(COL.lacq, 1.25), g = mulC(COL.brass, 1.05); S.box(.34, .52, .04, 0, -.02, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.36, .05, .05, 0, .235, .002, g, { l: L_METAL, rough: .45, jit: 0 }); S.box(.36, .05, .05, 0, -.275, .002, g, { l: L_METAL, rough: .45, jit: 0 }); S.sph(.07, 0, -.02, .035, g, { l: L_METAL, w: 6, h: 4, smooth: false }); for (const [x, y] of [[-.1, .12], [.1, .12], [-.1, -.16], [.1, -.16]]) S.box(.04, .04, .05, x, y, .004, g, { l: L_METAL, jit: 0 }); }, 40, { rad: .2, shadow: false });
   E.helm = new PartBatch(S => { S.add(gDome(8, 3), { s: [.18, .175, .195], p: [0, .16, 0], c: iron, l: L_METAL, rough: .5 }); S.box(.035, .13, .03, 0, .15, .185, COL.ironL, { l: L_METAL }); for (const s of [-1, 1]) S.box(.03, .14, .13, s * .165, .1, .03, iron, { l: L_METAL }); S.cone(.03, .16, 0, .4, 0, COL.ironL, { n: 4, l: L_METAL }); }, 60, { rad: .16, shadow: false });
   E.plate = new PartBatch(S => { S.box(.35, .31, .25, 0, .27, 0, iron, { l: L_METAL, rough: .5 }); S.box(.2, .2, .26, 0, .29, .005, COL.ironL, { l: L_METAL, rough: .45 }); for (const s of [-1, 1]) S.sph(.1, s * .21, .44, 0, COL.ironL, { l: L_METAL, w: 6, h: 4, smooth: false, sc: [1, .8, 1.1] }); }, 60, { rad: .2, shadow: false });
   E.bow = new PartBatch(S => { let p = [0, -.36, 0]; for (let i = 1; i <= 6; i++) { const t = i / 6 * 2 - 1, q = [0, t * .36, (1 - t * t) * .12]; S.seg(p, q, .016, .016, COL.woodL, { n: 4, l: L_WOOD }); p = q; } S.seg([0, -.36, 0], [0, .36, 0], .005, .005, COL.bone, { n: 3, jit: 0 }); }, 40, { rad: .1, shadow: false });
@@ -2632,7 +2809,7 @@ function rigHuman(kit, sp, e) {
   if (e.helm) I.helm.put(M3, fl, null);
   if (e.plate) I.plate.put(M2, fl, null);
   if (e.hood) I.hood.put(M3, fl, null); if (e.robe) I.robe.put(M2, fl, null); if (e.drum) I.drum.put(M2, fl, null); if (e.standard) I.standard.put(M2, 0, null);
-  if (e.keg) I.keg.put(M2, fl, null); if (e.wraps) { I.wraps.put(M2, fl, null); I.wrapHead.put(M3, fl, null); } if (e.crown) I.crown.put(M3, fl, null);
+  if (e.keg) I.keg.put(M2, fl, null); if (e.wraps) { I.wraps.put(M2, fl, null); I.wrapHead.put(M3, fl, null); } if (e.crown) I.crown.put(M3, fl, null); if (e.jhat) I.jhat.put(M3, fl, null);
   const kL = Math.max(0, cw) * 1.0 * mv, kR = Math.max(0, -cw) * 1.0 * mv;
   const M10 = xf(_M[10], M1, sp.hipX, 0, 0, -sw - kL * .25, 0, 0), M11 = xf(_M[11], M10, 0, -sp.uLeg, 0, kL, 0, 0);
   const M12 = xf(_M[12], M1, -sp.hipX, 0, 0, sw - kR * .25, 0, 0), M13 = xf(_M[13], M12, 0, -sp.uLeg, 0, kR, 0, 0);
@@ -2764,17 +2941,25 @@ function initBestiary() {
   }, 12, N);
   I.wrapHead = new PartBatch(S => { S.cyl(.16, .07, 0, .26, 0, wrap, { n: 8, l: L_CLOTH }); S.cyl(.158, .05, 0, .09, .01, mulC(wrap, .85), { n: 8, l: L_CLOTH }); S.box(.04, .22, .02, .1, .06, -.15, wrap, { l: L_CLOTH, r: [.3, 0, .2] }); }, 12, N);
   I.crown = new PartBatch(S => {
-    const g = mulC(COL.gold, .9);
-    S.cyl(.165, .07, 0, .3, 0, g, { n: 8, l: L_METAL, rough: .35, emis: .03 });
-    for (let a = 0; a < 6; a++) S.cone(.03, .12, Math.cos(a * 1.047) * .15, .39, Math.sin(a * 1.047) * .15, g, { n: 4, l: L_METAL, rough: .35, emis: .03 });
-    for (const s of [-1, 1]) S.box(.05, .3, .16, s * .17, .12, -.02, C(0x2a4a8a), { l: L_CLOTH });
-    S.ico(.03, 0, .31, .16, [.2, .9, .8], { d: 0, emis: .3, jit: 0 });
+    // an emperor's mian: a flat board on a cap, with strings of beads front and back
+    const g = mulC(COL.gold, .9), bk = mulC(COL.black, 3);
+    S.cyl(.165, .12, 0, .28, 0, bk, { n: 8, l: L_CLOTH }); S.cyl(.17, .03, 0, .23, 0, g, { n: 8, l: L_METAL, rough: .35, emis: .03 });
+    S.box(.3, .025, .52, 0, .37, .0, bk, { r: [.14, 0, 0] }); S.box(.31, .03, .04, 0, .335, .255, g, { l: L_METAL, emis: .03 }); S.box(.31, .03, .04, 0, .405, -.255, g, { l: L_METAL, emis: .03 });
+    for (let k = -2; k <= 2; k++) { S.box(.016, .16, .016, k * .06, .25, .26, k & 1 ? [.2, .9, .8] : g, { emis: .2, jit: 0 }); S.box(.016, .14, .016, k * .06, .33, -.26, k & 1 ? g : [.9, .25, .2], { emis: .15, jit: 0 }); }
+    for (const s of [-1, 1]) S.box(.05, .3, .16, s * .17, .12, -.02, C(0x6a1c18), { l: L_CLOTH });
+    S.seg([-.2, .29, 0], [.2, .29, 0], .012, .012, g, { n: 4, l: L_METAL });
   }, 2, N);
   I.khopesh = new PartBatch(S => {
-    const g = mulC(COL.gold, .85); S.box(.04, .2, .04, 0, 0, 0, COL.leather, {}); S.box(.14, .03, .05, 0, .11, 0, g, { l: L_METAL });
-    let p = [.24, 0]; for (const [y, z] of [[.4, .03], [.52, .1], [.62, .2], [.66, .32]]) { const dy = y - p[0], dz = z - p[1], l = Math.hypot(dy, dz); S.box(.02, l + .02, .075, 0, (y + p[0]) / 2, (z + p[1]) / 2, g, { l: L_METAL, rough: .35, r: [Math.atan2(dz, dy), 0, 0] }); p = [y, z]; }
-    S.box(.02, .14, .07, 0, .18, 0, g, { l: L_METAL, rough: .35 });
+    const g = mulC(COL.bronzeG, 1.1), gd = mulC(COL.gold, .85);
+    S.box(.04, .22, .04, 0, 0, 0, COL.lacqD, {}); S.ico(.04, 0, -.13, 0, gd, { d: 0, l: L_METAL }); S.box(.18, .035, .06, 0, .12, 0, gd, { l: L_METAL, rough: .4 });
+    S.box(.022, .5, .1, 0, .39, 0, g, { l: L_METAL, rough: .4 }); S.box(.03, .5, .02, 0, .39, 0, mulC(g, 1.3), { l: L_METAL, rough: .35 }); S.cone(.05, .14, 0, .71, 0, g, { n: 4, l: L_METAL, rough: .4, rz: .012 });
   }, 2, N);
+  I.jhat = new PartBatch(S => {
+    // a hopping corpse: an official's hat and a paper charm over the face
+    const bk = mulC(COL.black, 3.5);
+    S.cyl(.2, .025, 0, .2, .01, bk, { n: 8, rt: .8 }); S.add(gDome(8, 3), { s: [.12, .1, .12], p: [0, .21, .01], c: bk }); S.ico(.03, 0, .32, .01, COL.lacqL, { d: 0, emis: .05 });
+    S.box(.075, .2, .012, 0, .08, .165, C(0xe6c84a), { emis: .1, jit: 0, r: [-.08, 0, 0] }); for (const y of [.02, .08, .14]) S.box(.04, .018, .014, 0, y, .172, COL.lacq, { jit: 0 });
+  }, 40, N);
   I.iceclub = new PartBatch(S => {
     S.seg([0, -.12, 0], [0, .5, 0], .045, .06, COL.wood, { l: L_WOOD, n: 6 });
     for (let a = 0; a < 5; a++) S.add(gOct(), { s: [.09, .25, .09], p: [Math.cos(a * 1.26) * .07, .6 + (a & 1) * .06, Math.sin(a * 1.26) * .07], r: [Math.sin(a * 1.26) * .5, a, -Math.cos(a * 1.26) * .5], c: COL.ice, rough: .15, emis: .05 });
@@ -2890,10 +3075,10 @@ const G = {
   towers: [], mons: [], men: [], arrows: [], shells: [], stuck: [], hbars: [], phase: 'play',
 };
 const TOWER = {
-  archer: { name: 'Archer tower', short: 'Archers', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['Fast flaming arrows.', 'Can hit flyers.'] },
-  bombard: { name: 'Bombard', short: 'Bombard', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['Slow shells that burst.', 'Ground targets only.'] },
-  spire: { name: 'Storm spire', short: 'Spire', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [16, 20, 26], desc: ['Chain lightning that slows.', 'Can hit flyers.'] },
-  guard: { name: 'Guard post', short: 'Guards', icon: 'guard', cost: [80, 90, 150], range: [3.4, 3.7, 4.0], n: [2, 3, 3], hp: [62, 90, 135], dmg: [7, 10, 15], rate: [7, 6, 5], air: false, ground: true, light: [55, 70, 90], desc: ['Footmen who block', 'and duel on the road.'] },
+  archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['连发火箭，射速快。', '可射飞行之敌。'] },
+  bombard: { name: '火炮台', short: '火炮', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['装填慢，炮弹炸裂一片。', '只打地面之敌。'] },
+  spire: { name: '引雷塔', short: '雷塔', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [16, 20, 26], desc: ['连环雷电，令敌迟缓。', '可击飞行之敌。'] },
+  guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 90, 150], range: [3.4, 3.7, 4.0], n: [2, 3, 3], hp: [62, 90, 135], dmg: [7, 10, 15], rate: [7, 6, 5], air: false, ground: true, light: [55, 70, 90], desc: ['戍卒出营拦路，', '与敌近身搏杀。'] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
 
@@ -2904,118 +3089,160 @@ function blueprint(kind, lvl) {
     for (let i = 1; i < S.P.length; i += 3) S.P[i] -= minY; pieces.push({ id, order, y: minY, soup: S });
   };
   const w = COL.wood, wd = COL.woodD, wl = COL.woodL, st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL, iron = COL.iron, rng = soupRng;
+  const red = COL.lacq, redD = COL.lacqD, redL = COL.lacqL;
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
   const brazier = (S, x, y, z, bs) => {
     for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + .5; S.seg([x + Math.cos(a) * bs * .42, y, z + Math.sin(a) * bs * .42], [x + Math.cos(a) * bs * .2, y + bs * .5, z + Math.sin(a) * bs * .2], .028, .028, iron, { l: L_METAL, n: 4 }); }
-    S.cyl(bs * .3, bs * .22, x, y + bs * .56, z, iron, { n: 8, l: L_METAL, rt: 1.5, rough: .6 });
+    S.cyl(bs * .3, bs * .22, x, y + bs * .56, z, COL.bronze, { n: 8, l: L_METAL, rt: 1.5, rough: .6 });
     S.cyl(bs * .4, .04, x, y + bs * .68, z, COL.ember, { n: 8, emis: .55, jit: 0 });
   };
   if (kind === 'archer') {
-    const bH = [.25, 1.0, 1.9][lvl], H = [2.0, 2.7, 3.35][lvl], W = [.75, .85, .93][lvl], bs = [.5, .62, .8][lvl];
+    // Arrow tower: a brick or rammed earth stage, red posts, a railed gallery and a tiled roof on four columns.
+    const bH = [.25, 1.0, 1.9][lvl], H = [2.0, 2.7, 3.35][lvl], W = [.75, .85, .93][lvl], bs = [.5, .62, .8][lvl], rH = [1.5, 1.55, 1.6][lvl];
     piece('base', 0, S => {
       if (lvl === 0) { S.box(1.6, .25, 1.6, 0, .125, 0, sdk, { l: L_MASON }); for (const [a, b] of corners) S.box(.3, .32, .3, a * .66, .16, b * .66, sl, { l: L_MASON }); }
       else {
-        S.box(1.8, .3, 1.8, 0, .15, 0, sdk, { l: L_MASON });
-        S.cyl(1.02, bH - .3, 0, .3 + (bH - .3) / 2, 0, st, { n: 4, l: L_MASON, rt: .9, r: [0, PI / 4, 0] });
-        S.box(1.42, .14, 1.42, 0, bH - .04, 0, sl, { l: L_MASON });
-        S.box(.3, .5, .06, 0, .56, .71, COL.black, { jit: 0 });
-        if (lvl === 2) { for (const [a, b] of corners) for (let q = 0; q < 3; q++) S.box(.22, .2, .22, a * (.7 - q * .025), .5 + q * .5, b * (.7 - q * .025), sl, { l: L_MASON }); for (const sg of [-1, 1]) S.box(.06, .5, .12, sg * .7, 1.1, 0, COL.black, { jit: 0 }); }
+        S.box(1.86, .3, 1.86, 0, .15, 0, sdk, { l: L_MASON });
+        S.cyl(1.06, bH - .3, 0, .3 + (bH - .3) / 2, 0, lvl === 2 ? st : COL.ram, { n: 4, l: lvl === 2 ? L_MASON : L_DIRT, rt: .86, r: [0, PI / 4, 0], jit: .03 });
+        for (const [a, b] of corners) S.seg([a * .76, .3, b * .76], [a * .66, bH - .06, b * .66], .1, .09, lvl === 2 ? sl : sdk, { n: 4, l: L_MASON });
+        S.box(1.4, .12, 1.4, 0, bH - .04, 0, sl, { l: L_MASON });
+        S.box(.34, .52, .06, 0, .56, .745, COL.black, { jit: 0 }); S.box(.44, .07, .1, 0, .86, .75, redD, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.06, .56, .1, sg * .2, .58, .75, redD, { l: L_WOOD });
+        if (lvl === 2) for (const sg of [-1, 1]) S.box(.06, .4, .1, sg * .72, 1.15, 0, COL.black, { jit: 0 });
       }
     });
-    piece('posts', 1, S => {
-      for (const [a, b] of corners) S.seg([a * .62, bH, b * .62], [a * (W - .1), H, b * (W - .1)], .085, .075, wd, { l: L_WOOD });
+    if (lvl === 2) piece('skirt', 1, S => { cnRoof(S, { y: bH - .34, a: 1.2, h: .34, t0: .56, n: 2, m: 4, lift: .12, rr: .035 }); });
+    piece('posts', 2, S => {
+      for (const [a, b] of corners) S.seg([a * .62, bH, b * .62], [a * (W - .1), H, b * (W - .1)], .085, .075, red, { l: L_WOOD });
       const ym = (bH + H) / 2, r = lerp(.62, W - .1, .5);
-      for (let k = 0; k < 4; k++) { const [a, b] = corners[k], [c, d] = corners[(k + 1) % 4]; S.seg([a * r, ym, b * r], [c * r, ym, d * r], .05, .05, w, { l: L_WOOD, n: 4 }); }
+      for (let k = 0; k < 4; k++) { const [a, b] = corners[k], [c, d] = corners[(k + 1) % 4]; S.seg([a * r, ym, b * r], [c * r, ym, d * r], .05, .05, redD, { l: L_WOOD, n: 4 }); }
     });
-    piece('brace', 2, S => {
+    piece('brace', 3, S => {
       for (let k = 0; k < 4; k++) { const [a, b] = corners[k], [c, d] = corners[(k + 1) % 4]; S.seg([a * .62, bH + .1, b * .62], [c * (W - .12), H - .15, d * (W - .12)], .035, .035, w, { l: L_WOOD, n: 4 }); S.seg([c * .62, bH + .1, d * .62], [a * (W - .12), H - .15, b * (W - .12)], .035, .035, wl, { l: L_WOOD, n: 4 }); }
     });
-    piece('deck', 3, S => {
-      S.box(W * 2 + .16, .1, W * 2 + .16, 0, H + .05, 0, w, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(W * 2 + .3, .09, .1, 0, H - .04, sg * (W - .1), wd, { l: L_WOOD });
-      for (const sg of [-1, 1]) S.box(.1, .09, W * 2 + .3, sg * (W - .1), H - .04, 0, wd, { l: L_WOOD });
-      if (lvl >= 1) for (const [a, b] of corners) S.seg([a * (W - .1), H - .55, b * (W - .1)], [a * (W + .06), H - .02, b * (W + .06)], .04, .04, wd, { l: L_WOOD, n: 4 });
+    piece('deck', 4, S => {
+      S.box(W * 2 + .16, .1, W * 2 + .16, 0, H + .05, 0, w, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(W * 2 + .34, .1, .12, 0, H - .04, sg * (W - .1), redD, { l: L_WOOD });
+      for (const sg of [-1, 1]) S.box(.12, .1, W * 2 + .34, sg * (W - .1), H - .04, 0, redD, { l: L_WOOD });
+      if (lvl >= 1) for (const [a, b] of corners) S.seg([a * (W - .1), H - .55, b * (W - .1)], [a * (W + .06), H - .02, b * (W + .06)], .04, .04, red, { l: L_WOOD, n: 4 });
     });
-    piece('rail', 4, S => {
-      const y0 = H + .1;
+    piece('rail', 5, S => {
+      const y0 = H + .1, R = W + .02;
       for (let k = 0; k < 4; k++) {
-        const ang = k * HPI, cs = Math.cos(ang), sn = Math.sin(ang);
-        for (let j = 0; j < 5; j++) {
-          if (k === 2 && (j === 1 || j === 2)) continue;
-          const u = (j - 2) * W * .42, hh = (j & 1) ? .34 : .5, x = u * cs + (W + .02) * sn, z = -u * sn + (W + .02) * cs;
-          S.box(W * .4, hh, .06, x, y0 + hh / 2, z, (j & 1) ? w : wl, { l: L_WOOD, r: [0, ang, 0] });
-        }
+        const ang = k * HPI, cs = Math.cos(ang), sn = Math.sin(ang), at = (u, y, ww, hh, c) => S.box(ww, hh, .05, u * cs + R * sn, y, -u * sn + R * cs, c, { l: L_WOOD, r: [0, ang, 0] });
+        if (k === 2) { for (const sg of [-1, 1]) { at(sg * W * .7, y0 + .36, W * .6, .05, red); at(sg * W * .7, y0 + .14, W * .6, .04, redD); } continue; }
+        at(0, y0 + .36, W * 2, .05, red); at(0, y0 + .14, W * 2, .04, redD);
+        for (let j = -2; j <= 2; j++) at(j * W * .4, y0 + .2, .045, .36, j & 1 ? redD : red);
+        for (const u of [-W * .6, -W * .2, W * .2, W * .6]) { S.seg([(u - .1) * cs + R * sn, y0 + .15, -(u - .1) * sn + R * cs], [(u + .1) * cs + R * sn, y0 + .35, -(u + .1) * sn + R * cs], .014, .014, redD, { n: 3, l: L_WOOD }); S.seg([(u + .1) * cs + R * sn, y0 + .15, -(u + .1) * sn + R * cs], [(u - .1) * cs + R * sn, y0 + .35, -(u - .1) * sn + R * cs], .014, .014, redD, { n: 3, l: L_WOOD }); }
       }
-      for (const [a, b] of corners) S.box(.1, .66, .1, a * (W + .02), y0 + .33, b * (W + .02), wd, { l: L_WOOD });
-      if (lvl >= 1) for (const u of lvl === 2 ? [-.5, 0, .5] : [-.35, .35]) { S.cyl(.2, .04, u, y0 + .22, W + .08, lvl === 2 ? COL.ironL : COL.clothB, { n: 8, r: [HPI, 0, 0], l: lvl === 2 ? L_METAL : L_WOOD }); S.sph(.05, u, y0 + .22, W + .11, COL.ironL, { l: L_METAL, w: 5, h: 3, smooth: false }); }
-      if (lvl === 2) for (const sg of [-1, 1]) S.cyl(.2, .04, sg * (W + .08), y0 + .22, .1, COL.clothR, { n: 8, r: [0, 0, HPI], l: L_WOOD });
+      if (lvl >= 1) for (const u of lvl === 2 ? [-.5, 0, .5] : [-.35, .35]) { S.cyl(.2, .04, u, y0 + .22, W + .08, lvl === 2 ? COL.bronze : COL.lacqL, { n: 8, r: [HPI, 0, 0], l: lvl === 2 ? L_METAL : L_WOOD }); S.sph(.05, u, y0 + .22, W + .11, COL.brass, { l: L_METAL, w: 5, h: 3, smooth: false }); }
     });
-    piece('ladder', 5, S => {
+    piece('ladder', 6, S => {
       for (const sg of [-1, 1]) S.seg([sg * .17, 0, -W - .5], [sg * .17, H + .15, -W - .06], .035, .035, wd, { l: L_WOOD, n: 4 });
       for (let y = .3; y < H; y += .34) { const u = y / (H + .15); S.box(.36, .04, .05, 0, y, lerp(-W - .5, -W - .06, u), wl, { l: L_WOOD }); }
     });
-    const bx = -W + .34, bz = -W + .36, by = H + .1 + (lvl === 2 ? .35 : 0);
-    piece('brazier', 6, S => { if (lvl === 2) S.cyl(.2, .38, bx, H + .29, bz, sdk, { n: 6, l: L_MASON }); brazier(S, bx, by, bz, bs); });
-    if (lvl >= 1) piece('flag', 7, S => { S.seg([W - .08, H + .1, -W + .08], [W - .08, H + 1.75, -W + .08], .035, .025, wd, { l: L_WOOD, n: 4 }); const T = new Soup(); clothPanel(T, { x0: 0, x1: .62, yTop: 0, len: .36, z: 0, col: COL.clothR, rng, nx: 3, ny: 2, rag: 0, sway: 1.2 }); S.merge(T, { p: [W - .06, H + 1.7, -W + .08], ao: null }); });
-    mounts.flame = [bx, by + bs * .7, bz]; mounts.flameSize = bs; mounts.top = H + 1.7;
-    mounts.archers = [[[.12, H + .1, .28]], [[-.3, H + .1, .42], [.42, H + .1, .1]], [[-.35, H + .1, .5], [.5, H + .1, .3], [.25, H + .1, -.4]]][lvl];
-  } else if (kind === 'bombard') {
-    const Rr = [1.0, 1.08, 1.15][lvl], H = [1.1, 1.5, 1.9][lvl];
-    piece('plinth', 0, S => { S.cyl(Rr + .22, .26, 0, .13, 0, sdk, { n: 10, l: L_MASON }); if (lvl === 2) S.cyl(Rr + .12, .2, 0, .36, 0, st, { n: 10, l: L_MASON }); });
-    piece('drum', 1, S => {
-      S.cyl(Rr, H, 0, H / 2, 0, st, { n: 10, l: L_MASON, rt: .93, jit: .03 });
-      for (let c = 0; c < 2 + lvl; c++) S.cyl(Rr * (1 - .05 * (.5 + c) / (2 + lvl)) + .012, .16, 0, .35 + c * (H - .5) / (1.5 + lvl), 0, mixC(sdk, sl, rng()), { n: 10, l: L_MASON });
-      S.box(.34, .55, .1, 0, .3, Rr * .97, COL.black, { jit: 0 });
+    const bx = -W + .3, bz = W - .34, by = H + .1;
+    piece('brazier', 7, S => { brazier(S, bx, by, bz, bs * .8); });
+    const ra = W + .14, pr = W - .02;
+    piece('columns', 8, S => {
+      for (const [a, b] of corners) { S.seg([a * pr, H + .1, b * pr], [a * pr, H + rH, b * pr], .055, .05, red, { l: L_WOOD, n: 6 }); S.box(.16, .06, .16, a * pr, H + .13, b * pr, sdk, { l: L_MASON }); }
+      cnBrackets(S, 0, H + rH - .02, 0, pr, pr, { h: .09 });
     });
-    if (lvl >= 1) piece('butt', 2, S => { for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4; S.box(.36, H * .8, .5, Math.cos(a) * (Rr + .06), H * .36, Math.sin(a) * (Rr + .06), sdk, { l: L_MASON, r: [0, -a + HPI, 0] }); S.box(.4, .12, .56, Math.cos(a) * (Rr + .06), H * .78, Math.sin(a) * (Rr + .06), sl, { l: L_MASON, r: [0, -a + HPI, 0] }); } });
-    if (lvl >= 1) piece('bands', 3, S => { for (const y of lvl === 2 ? [H * .45, H * .8] : [H * .65]) S.cyl(Rr * .965 + .02, .07, 0, y, 0, iron, { n: 10, l: L_METAL, rough: .55 }); });
-    piece('deck', 4, S => { S.cyl(Rr * .93 + .14, .16, 0, H + .02, 0, sl, { n: 10, l: L_MASON }); S.cyl(Rr * .8, .06, 0, H + .12, 0, w, { n: 10, l: L_WOOD }); });
-    piece('rim', 5, S => { for (let k = 0; k < 10; k++) { if (k % 5 === 0) continue; const a = (k + .5) / 10 * TAU + HPI; S.box(.46, .34, .22, Math.cos(a) * Rr * .96, H + .27, Math.sin(a) * Rr * .96, lvl === 2 && (k & 1) ? iron : mixC(sdk, sl, rng()), { l: lvl === 2 && (k & 1) ? L_METAL : L_MASON, r: [0, -a + HPI, 0] }); } });
+    piece('roof', 9, S => {
+      const thatch = lvl === 0;
+      cnRoof(S, { y: H + rH + .06, a: ra, h: [.5, .6, .7][lvl], lift: thatch ? .08 : .2, n: 4, m: 4, col: thatch ? COL.thatch : COL.tile, layer: thatch ? L_THATCH : L_SLATE, ridgeCol: thatch ? mulC(COL.thatch, .6) : undefined, finial: lvl === 2 ? COL.gold : thatch ? wd : COL.brass });
+    });
+    piece('flag', 10, S => { cnBanner(S, W + .04, H + .1, H + rH + [1.3, 1.5, 1.7][lvl], -W - .04, COL.clothR, rng, { w: .36, len: .8 + lvl * .12, col2: lvl ? mulC(COL.gold, .7) : null }); });
+    mounts.flame = [bx, by + bs * .56, bz]; mounts.flameSize = bs * .8; mounts.top = H + rH + 1.0;
+    mounts.archers = [[[.12, H + .1, .28]], [[-.3, H + .1, .1], [.42, H + .1, .3]], [[-.4, H + .1, -.1], [.5, H + .1, .3], [.1, H + .1, -.45]]][lvl];
+  } else if (kind === 'bombard') {
+    // Cannon terrace: an eight sided brick battery with merlons, a bronze gun and paper lanterns.
+    const Rr = [1.0, 1.08, 1.15][lvl], H = [1.1, 1.5, 1.9][lvl], N = 8, rot = { r: [0, PI / 8, 0] };
+    piece('plinth', 0, S => { S.cyl(Rr + .26, .26, 0, .13, 0, sdk, Object.assign({ n: N, l: L_MASON }, rot)); if (lvl === 2) S.cyl(Rr + .14, .2, 0, .36, 0, st, Object.assign({ n: N, l: L_MASON }, rot)); });
+    piece('drum', 1, S => {
+      S.cyl(Rr, H, 0, H / 2, 0, st, Object.assign({ n: N, l: L_MASON, rt: .9, jit: .03 }, rot));
+      for (let c = 0; c < 2 + lvl; c++) { const yb = .35 + c * (H - .5) / (1.5 + lvl); S.cyl(Rr * (1 - .1 * yb / H) + .012, .1, 0, yb, 0, mixC(sdk, sl, rng()), Object.assign({ n: N, l: L_MASON }, rot)); }
+      S.box(.36, .56, .1, 0, .3, Rr * .93, COL.black, { jit: 0 }); S.box(.5, .08, .14, 0, .62, Rr * .93, redD, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.07, .6, .14, sg * .22, .32, Rr * .93, redD, { l: L_WOOD });
+    });
+    if (lvl >= 1) piece('butt', 2, S => { for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4; S.box(.36, H * .8, .5, Math.cos(a) * (Rr + .02), H * .36, Math.sin(a) * (Rr + .02), sdk, { l: L_MASON, r: [0, -a + HPI, 0] }); S.box(.4, .12, .56, Math.cos(a) * (Rr + .02), H * .78, Math.sin(a) * (Rr + .02), sl, { l: L_MASON, r: [0, -a + HPI, 0] }); } });
+    if (lvl === 2) piece('skirt', 3, S => { cnRoof(S, { y: H * .5, a: Rr + .3, h: .3, t0: .7, n: 2, m: 4, lift: .12, rr: .03 }); });
+    piece('deck', 4, S => { S.cyl(Rr * .9 + .16, .16, 0, H + .02, 0, sl, Object.assign({ n: N, l: L_MASON }, rot)); S.cyl(Rr * .78, .06, 0, H + .12, 0, w, Object.assign({ n: N, l: L_WOOD }, rot)); });
+    piece('rim', 5, S => {
+      for (let k = 0; k < N; k++) {
+        if (k === 2) continue;
+        const a = k / N * TAU, rr2 = Rr * .9 + .02, cx = Math.cos(a) * rr2, cz = Math.sin(a) * rr2, tx = -Math.sin(a), tz = Math.cos(a);
+        S.box(.76, .14, .2, cx, H + .17, cz, mixC(sdk, sl, rng()), { l: L_MASON, r: [0, -a + HPI, 0] });
+        for (const u of [-.24, .24]) S.box(.26, .26, .2, cx + tx * u, H + .37, cz + tz * u, mixC(sdk, sl, rng()), { l: L_MASON, r: [0, -a + HPI, 0] });
+      }
+    });
     piece('ammo', 6, S => { for (const [x, z] of [[-.42, -.5], [-.24, -.52], [-.33, -.36]]) S.sph(.09, x, H + .22, z, mulC(iron, .8), { l: L_METAL, w: 6, h: 4, smooth: false }); S.sph(.09, -.33, H + .36, -.46, mulC(iron, .8), { l: L_METAL, w: 6, h: 4, smooth: false }); PROP.barrel(S, .45, H + .13, -.5, .75, rng); });
-    const lx = -Rr * .78, lz = .2, lh = H + 1.25 + lvl * .12;
+    const lx = -Rr * .74, lz = .1, lh = H + 1.35 + lvl * .12;
+    let lp = null;
     piece('lantern', 7, S => {
       for (const sg of lvl === 2 ? [-1, 1] : [1]) {
         const x = lx * sg;
-        S.seg([x, H + .1, lz], [x, lh, lz], .04, .035, iron, { l: L_METAL, n: 4 }); S.seg([x, lh, lz], [x - sg * -.0, lh, lz + .32], .03, .03, iron, { l: L_METAL, n: 4 });
-        S.box(.2, .05, .2, x, lh - .08, lz + .32, iron, { l: L_METAL }); S.box(.16, .2, .16, x, lh - .22, lz + .32, COL.ember, { emis: .8, jit: 0 }); S.box(.2, .04, .2, x, lh - .34, lz + .32, iron, { l: L_METAL });
-        for (const [a, b] of corners) S.box(.025, .22, .025, x + a * .09, lh - .22, lz + .32 + b * .09, iron, { l: L_METAL });
+        S.seg([x, H + .1, lz], [x, lh, lz], .04, .035, redD, { l: L_WOOD, n: 5 }); S.seg([x, lh - .04, lz], [x, lh + .06, lz + .36], .03, .022, redD, { l: L_WOOD, n: 4 });
+        S.seg([x, lh + .05, lz + .34], [x, lh - .12, lz + .34], .008, .008, COL.rope, { n: 3 });
+        const p = cnLantern(S, x, lh - .28, lz + .34, 1.25 + lvl * .1); if (sg === 1) lp = p;
       }
     });
-    mounts.flame = [lx, lh - .3, lz + .32]; mounts.flameSize = .26 + lvl * .05; mounts.flame2 = lvl === 2 ? [-lx, lh - .3, lz + .32] : null; mounts.top = H + 1.6;
+    if (lvl >= 1) piece('flag', 8, S => { cnBanner(S, Rr * .62, H + .1, H + 2.2 + lvl * .3, -Rr * .62, COL.clothD, rng, { w: .34, len: .9, col2: mulC(COL.lacqL, 1.1) }); });
+    mounts.flame = [lx, lh - .3, lz + .34]; mounts.flameSize = .24 + lvl * .04; mounts.flame2 = lvl === 2 ? [-lx, lh - .3, lz + .34] : null; mounts.top = H + 1.7;
     mounts.gun = [0, H + .15, .05]; mounts.gunLen = [.95, 1.12, 1.25][lvl]; mounts.gunR = [.15, .18, .215][lvl];
   } else if (kind === 'spire') {
-    const H = [2.7, 3.4, 4.1][lvl], bas = COL.basalt, basL = COL.basaltL, cu = C(0x8a5a3a);
-    piece('plinth', 0, S => { S.box(1.55, .22, 1.55, 0, .11, 0, basL, { l: L_ROCK }); S.box(1.18, .2, 1.18, 0, .32, 0, bas, { l: L_ROCK }); if (lvl >= 1) for (const [a, b] of corners) S.cone(.16, .5, a * .62, .5, b * .62, basL, { n: 4, l: L_ROCK }); });
-    piece('shaft', 1, S => {
-      S.cyl(.62, H - .42, 0, .42 + (H - .42) / 2, 0, bas, { n: 4, l: L_ROCK, rt: .52, r: [0, PI / 4, 0], jit: .03 });
-      for (let k = 0; k < 4; k++) { const a = k * HPI, n = 3 + lvl; for (let j = 0; j < n; j++) { const u = (j + .7) / (n + .6), y = .42 + u * (H - .42), rr2 = lerp(.62, .32, u) * .7072 + .012; S.box(.07, .2, .02, Math.sin(a) * rr2, y, Math.cos(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [-.12, a, 0], ro: 'YXZ' }); } }
+    // Thunder pagoda: a slim tiered stone pagoda that holds a floating storm pearl.
+    const H = [2.7, 3.4, 4.1][lvl], bas = COL.basalt, basL = COL.basaltL, cu = COL.brass, tiers = 2 + lvl, r0 = .56, r1 = .3, rot = { r: [0, PI / 8, 0] };
+    const rAt = u => lerp(r0, r1, u);
+    piece('plinth', 0, S => {
+      S.cyl(1.0, .2, 0, .1, 0, basL, Object.assign({ n: 8, l: L_ROCK }, rot)); S.cyl(.8, .12, 0, .26, 0, bas, Object.assign({ n: 8, l: L_ROCK, rt: .86 }, rot)); S.cyl(.74, .12, 0, .38, 0, basL, Object.assign({ n: 8, l: L_ROCK, rt: 1.12 }, rot));
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, tri = [k & 1, (k >> 1) & 1, (k >> 2) & 1]; for (let j = 0; j < 3; j++) { const rr2 = .64 + j * .1; if (tri[j]) S.box(.2, .012, .05, Math.cos(a) * rr2, .205, Math.sin(a) * rr2, COL.crystal, { emis: .4, jit: 0, r: [0, -a + HPI, 0] }); else for (const sg of [-1, 1]) S.box(.08, .012, .05, Math.cos(a) * rr2 - Math.sin(a) * sg * .06, .205, Math.sin(a) * rr2 + Math.cos(a) * sg * .06, COL.crystal, { emis: .4, jit: 0, r: [0, -a + HPI, 0] }); } }
     });
-    if (lvl >= 1) piece('bands', 2, S => { for (const u of lvl === 2 ? [.3, .58, .82] : [.4, .75]) S.cyl(lerp(.62, .32, u) + .03, .09, 0, .42 + u * (H - .42), 0, cu, { n: 4, l: L_METAL, r: [0, PI / 4, 0], rough: .45 }); });
-    piece('claws', 3, S => { for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4, cs = Math.cos(a), sn = Math.sin(a); S.seg([cs * .22, H - .12, sn * .22], [cs * .46, H + .26, sn * .46], .06, .045, basL, { l: L_ROCK, n: 4 }); S.seg([cs * .46, H + .26, sn * .46], [cs * .26, H + .74, sn * .26], .045, .012, lvl ? cu : basL, { l: lvl ? L_METAL : L_ROCK, n: 4 }); } S.cyl(.34, .12, 0, H - .02, 0, basL, { n: 4, l: L_ROCK, r: [0, PI / 4, 0] }); });
-    mounts.crystal = [0, H + .42, 0]; mounts.crystalS = [.2, .24, .29][lvl]; mounts.shards = [0, 2, 4][lvl]; mounts.rings = lvl === 2; mounts.top = H + 1.2; mounts.flame = null; mounts.lightAt = [0, H + .45, 0];
+    piece('shaft', 1, S => {
+      S.cyl(r0, H - .44, 0, .44 + (H - .44) / 2, 0, bas, Object.assign({ n: 8, l: L_ROCK, rt: r1 / r0, jit: .03 }, rot));
+      for (let k = 0; k < 4; k++) { const a = k * HPI, n = 3 + lvl; for (let j = 0; j < n; j++) { const u = (j + .7) / (n + .6), y = .44 + u * (H - .44), rr2 = rAt(u) * .925 + .012; S.box(.07, .2, .02, Math.sin(a) * rr2, y, Math.cos(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [-.1, a, 0], ro: 'YXZ' }); } }
+    });
+    piece('eaves', 2, S => {
+      for (let t = 0; t < tiers; t++) { const u = (t + .55) / (tiers + .25), y = .44 + u * (H - .44), rr2 = rAt(u); cnRoof(S, { y: y - .16, a: rr2 + .42 - t * .03, h: .3, t0: (rr2 - .04) / (rr2 + .42 - t * .03), n: 2, m: 4, lift: .16, rr: .028, ry: PI / 4 * (t & 1) }); S.cyl(rr2 + .05, .07, 0, y + .16, 0, cu, Object.assign({ n: 8, l: L_METAL, rough: .45 }, rot)); }
+    });
+    piece('claws', 3, S => {
+      for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4, cs = Math.cos(a), sn = Math.sin(a); S.seg([cs * .2, H - .1, sn * .2], [cs * .46, H + .22, sn * .46], .055, .042, cu, { l: L_METAL, n: 4, rough: .45 }); S.seg([cs * .46, H + .22, sn * .46], [cs * .3, H + .72, sn * .3], .042, .012, cu, { l: L_METAL, n: 4, rough: .45 }); }
+      S.cyl(.36, .12, 0, H - .02, 0, basL, Object.assign({ n: 8, l: L_ROCK }, rot)); S.cyl(.22, .1, 0, H + .08, 0, cu, { n: 8, l: L_METAL, rough: .45, rt: .6 });
+    });
+    mounts.crystal = [0, H + .44, 0]; mounts.crystalS = [.2, .24, .29][lvl]; mounts.shards = [0, 2, 4][lvl]; mounts.rings = lvl === 2; mounts.top = H + 1.2; mounts.flame = null; mounts.lightAt = [0, H + .45, 0];
   } else {
-    const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], stoneWalls = lvl === 2;
+    // Garrison hall: rammed earth or brick walls under a tiled roof, a halberd rack and a corner tower at the top level.
+    const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], brick = lvl === 2;
     piece('floor', 0, S => { S.box(W + .5, .16, D + .7, 0, .08, .1, sdk, { l: L_MASON }); S.box(.7, .1, .4, 0, .05, D / 2 + .55, st, { l: L_MASON }); });
     piece('walls', 1, S => {
-      const wc = stoneWalls ? st : C(0x8f8468), wlay = stoneWalls ? L_MASON : L_PLAIN;
-      if (lvl === 1) S.box(W + .04, .5, D + .04, 0, .41, 0, st, { l: L_MASON });
+      const wc = brick ? st : lvl === 1 ? COL.plaster : COL.ram, wlay = brick ? L_MASON : lvl === 1 ? L_PLAIN : L_DIRT;
+      if (lvl >= 1) S.box(W + .06, .4, D + .06, 0, .36, 0, st, { l: L_MASON });
       S.box(W, wh, D, 0, .16 + wh / 2, 0, wc, { l: wlay, jit: .03 });
-      if (!stoneWalls) { for (const [a, b] of corners) S.box(.12, wh + .04, .12, a * W / 2, .16 + wh / 2, b * D / 2, wd, { l: L_WOOD }); for (const sg of [-1, 1]) { S.box(W, .1, .08, 0, .16 + wh * .55, sg * D / 2, wd, { l: L_WOOD }); S.seg([sg * W * .5, .2, D / 2 + .01], [sg * W * .22, .16 + wh, D / 2 + .01], .04, .04, wd, { l: L_WOOD, n: 4 }); } S.box(.08, .1, D, W / 2, .16 + wh * .55, 0, wd, { l: L_WOOD }); S.box(.08, .1, D, -W / 2, .16 + wh * .55, 0, wd, { l: L_WOOD }); }
-      S.box(.5, .82, .12, 0, .57, D / 2, COL.black, { jit: 0 }); S.box(.66, .1, .16, 0, 1.02, D / 2 + .02, wd, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.09, .86, .16, sg * .29, .59, D / 2 + .02, wd, { l: L_WOOD });
-      S.box(.24, .24, .08, W * .32, .16 + wh * .62, D / 2 + .01, COL.black, { jit: 0 }); S.box(.08, .3, .3, W / 2 + .01, .16 + wh * .6, 0, COL.black, { jit: 0 });
+      for (const [a, b] of corners) S.box(.13, wh + .04, .13, a * W / 2, .16 + wh / 2, b * D / 2, red, { l: L_WOOD });
+      for (const sg of [-1, 1]) { S.box(W, .09, .09, 0, .16 + wh - .05, sg * D / 2, redD, { l: L_WOOD }); S.box(.09, .09, D, sg * W / 2, .16 + wh - .05, 0, redD, { l: L_WOOD }); }
+      S.box(.5, .82, .12, 0, .57, D / 2, COL.black, { jit: 0 }); S.box(.7, .1, .16, 0, 1.02, D / 2 + .02, red, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.09, .86, .16, sg * .29, .59, D / 2 + .02, red, { l: L_WOOD });
+      for (const sg of [-1, 1]) { const x = sg * W * .32; S.box(.3, .26, .06, x, .16 + wh * .6, D / 2 + .01, COL.black, { jit: 0 }); for (const u of [-.08, 0, .08]) S.box(.022, .26, .07, x + u, .16 + wh * .6, D / 2 + .02, redD, { l: L_WOOD }); S.box(.34, .03, .08, x, .16 + wh * .6, D / 2 + .02, redD, { l: L_WOOD }); }
+      S.box(.08, .3, .3, W / 2 + .01, .16 + wh * .6, 0, COL.black, { jit: 0 });
     });
     piece('roof', 2, S => {
-      const rl = lvl === 0 ? L_THATCH : L_SLATE, rc = lvl === 0 ? COL.thatch : COL.slate, y0 = .16 + wh, rh = [.75, .85, .9][lvl], sl2 = Math.atan2(rh, D / 2 + .2), len = Math.hypot(rh, D / 2 + .2) + .12;
-      for (const sg of [-1, 1]) S.box(W + .36, .09, len, 0, y0 + rh / 2 - .02, sg * (D / 4 + .1), rc, { l: rl, r: [sg * sl2, 0, 0] });
-      for (const sg of [-1, 1]) { const T = [[sg * W / 2, y0, -D / 2], [sg * W / 2, y0, D / 2], [sg * W / 2, y0 + rh, 0]]; const gc = stoneWalls ? st : C(0x8f8468); if (sg > 0) S.tri(T[0], T[2], T[1], gc, stoneWalls ? L_MASON : L_PLAIN, .95); else S.tri(T[0], T[1], T[2], gc, stoneWalls ? L_MASON : L_PLAIN, .95); }
-      S.box(W + .44, .1, .14, 0, y0 + rh + .02, 0, wd, { l: L_WOOD });
-      S.box(.26, .5, .26, -W * .3, y0 + rh * .7 + .1, -D * .2, sdk, { l: L_MASON });
+      const thatch = lvl === 0, y0 = .16 + wh, rh = [.7, .8, .9][lvl], gc = brick ? st : lvl === 1 ? COL.plaster : COL.ram, gl = brick ? L_MASON : lvl === 1 ? L_PLAIN : L_DIRT;
+      for (const sg of [-1, 1]) { const T = [[sg * W / 2, y0, -D / 2], [sg * W / 2, y0, D / 2], [sg * W / 2, y0 + rh - .04, 0]]; if (sg > 0) S.tri(T[0], T[2], T[1], gc, gl, .95); else S.tri(T[0], T[1], T[2], gc, gl, .95); }
+      cnRoof(S, { y: y0 - .02, a: W / 2 + .24, b: D / 2 + .34, h: rh + .04, ridge: W / 2 + .24, lift: thatch ? .04 : .12, sag: 1.35, n: 4, m: 3, col: thatch ? COL.thatch : COL.tile, layer: thatch ? L_THATCH : L_SLATE, ridgeCol: thatch ? mulC(COL.thatch, .6) : undefined, rr: .045 });
+      if (!thatch) for (const sg of [-1, 1]) S.box(.1, .12, .1, sg * (W / 2 + .1), y0 + rh + .14, 0, COL.tileD, { l: L_SLATE });
     });
-    piece('rack', 3, S => { const x = -W / 2 - .28; S.box(.06, .7, .06, x, .5, -.3, wd, { l: L_WOOD }); S.box(.06, .7, .06, x, .5, .3, wd, { l: L_WOOD }); S.box(.05, .05, .7, x, .78, 0, w, { l: L_WOOD }); for (const z of [-.2, 0, .2]) { S.seg([x + .06, .12, z], [x - .04, 1.5, z], .018, .018, wl, { l: L_WOOD, n: 4 }); S.cone(.035, .14, x - .045, 1.56, z, COL.steel, { n: 4, l: L_METAL }); } if (lvl >= 1) { S.cyl(.2, .04, W / 2 + .03, .75, -.25, COL.clothB, { n: 8, r: [0, 0, HPI], l: L_WOOD }); } });
-    if (lvl === 2) piece('turret', 4, S => { const x = W / 2 - .2, z = -D / 2 + .2, th = 2.7; S.box(.8, th, .8, x, th / 2 + .16, z, st, { l: L_MASON }); S.box(.94, .16, .94, x, th + .2, z, sl, { l: L_MASON }); for (const [a, b] of corners) S.box(.24, .26, .24, x + a * .35, th + .4, z + b * .35, mixC(sdk, sl, rng()), { l: L_MASON }); S.box(.1, .4, .06, x, th * .7, z + .41, COL.black, { jit: 0 }); });
+    piece('rack', 3, S => {
+      const x = -W / 2 - .3; S.box(.06, .7, .06, x, .5, -.3, wd, { l: L_WOOD }); S.box(.06, .7, .06, x, .5, .3, wd, { l: L_WOOD }); S.box(.05, .05, .7, x, .78, 0, w, { l: L_WOOD });
+      for (const z of [-.2, 0, .2]) { S.seg([x + .06, .12, z], [x - .04, 1.6, z], .018, .018, redD, { l: L_WOOD, n: 4 }); S.cone(.035, .18, x - .05, 1.68, z, COL.steel, { n: 4, l: L_METAL }); S.box(.02, .05, .16, x - .04, 1.5, z + .05, COL.steel, { l: L_METAL }); S.ico(.035, x - .035, 1.42, z, COL.lacqL, { d: 0 }); }
+      if (lvl >= 1) S.cyl(.2, .04, W / 2 + .03, .7, -.25, COL.lacqL, { n: 8, r: [0, 0, HPI], l: L_WOOD });
+    });
+    if (lvl === 2) piece('turret', 4, S => {
+      const x = W / 2 - .2, z = -D / 2 + .2, th = 2.5;
+      S.cyl(.6, th, x, th / 2 + .16, z, st, { n: 4, l: L_MASON, rt: .86, r: [0, PI / 4, 0] }); S.box(.86, .12, .86, x, th + .2, z, sl, { l: L_MASON });
+      for (const [a, b] of corners) S.seg([x + a * .34, th + .26, z + b * .34], [x + a * .34, th + .86, z + b * .34], .04, .04, red, { l: L_WOOD, n: 5 });
+      cnBrackets(S, x, th + .84, z, .34, .34, { h: .07 }); cnRoof(S, { x, z, y: th + .92, a: .66, h: .42, lift: .16, n: 3, m: 4, finial: COL.gold });
+      S.box(.1, .4, .06, x, th * .62, z + .37, COL.black, { jit: 0 });
+    });
     const fx = W / 2 + .12, fz = D / 2 + .5, bs = [.34, .46, .6][lvl];
     piece('fire', 5, S => { if (lvl === 0) { S.seg([fx, 0, fz], [fx, 1.05, fz], .04, .035, wd, { l: L_WOOD, n: 4 }); S.cyl(.07, .12, fx, 1.1, fz, iron, { n: 6, l: L_METAL, rt: 1.4 }); } else brazier(S, fx, .08, fz, bs + .1); });
-    piece('flag', 6, S => { const x = lvl === 2 ? W / 2 - .2 : -W / 2 + .1, z = lvl === 2 ? -D / 2 + .2 : -D / 2 + .1, y0 = lvl === 2 ? 3.1 : .2, y1 = lvl === 2 ? 4.5 : 2.9; S.seg([x, y0, z], [x, y1, z], .04, .028, wd, { l: L_WOOD, n: 4 }); const T = new Soup(); clothPanel(T, { x0: 0, x1: .7, yTop: 0, len: .46, z: 0, col: COL.clothB, col2: mulC(COL.gold, .6), rng, nx: 4, ny: 3, rag: .2, sway: 1.1 }); S.merge(T, { p: [x + .03, y1 - .06, z], ao: null }); });
-    mounts.flame = lvl === 0 ? [fx, 1.2, fz] : [fx, .08 + (bs + .1) * .72, fz]; mounts.flameSize = bs; mounts.door = [0, 0, D / 2 + .45]; mounts.top = lvl === 2 ? 3.4 : 2.2;
+    piece('flag', 6, S => { const x = -W / 2 - .12, z = D / 2 + .3; cnBanner(S, x, .1, [2.9, 3.2, 3.6][lvl], z, COL.clothB, rng, { w: .4, len: 1.1 + lvl * .1 }); });
+    mounts.flame = lvl === 0 ? [fx, 1.2, fz] : [fx, .08 + (bs + .1) * .72, fz]; mounts.flameSize = bs; mounts.door = [0, 0, D / 2 + .45]; mounts.top = lvl === 2 ? 3.6 : 2.4;
   }
   pieces.sort((a, b) => a.order - b.order);
   return { pieces, mounts };
@@ -3102,24 +3329,24 @@ class Tower {
     if (this.flame) fxEmbers(this.flame.x, this.flame.y, this.flame.z, 10, .2);
   }
   makeGun() {
-    const mt = this.mounts, L = mt.gunLen, r = mt.gunR, S = new Soup(), br = this.lvl === 2 ? COL.iron : COL.bronze;
+    const mt = this.mounts, L = mt.gunLen, r = mt.gunR, S = new Soup(), br = this.lvl === 2 ? mulC(COL.brass, .8) : COL.bronze;
     S.cyl(.42, .12, 0, .06, 0, COL.woodD, { n: 8, l: L_WOOD }); for (const sg of [-1, 1]) { S.box(.09, .34, .62, sg * (r + .07), .26, 0, COL.wood, { l: L_WOOD }); S.cyl(.17, .07, sg * (r + .16), .17, -.12, COL.woodD, { n: 8, r: [0, 0, HPI], l: L_WOOD }); }
     this.carriage = new THREE.Mesh(S.build(), MAT.world); this.carriage.castShadow = this.carriage.receiveShadow = true; this.carriage.position.set(mt.gun[0], mt.gun[1], mt.gun[2]); this.group.add(this.carriage);
     const Bq = new Soup(), o = () => ({ n: 8, l: L_METAL, r: [HPI, 0, 0], rough: .42 });
     Bq.cyl(r, L, 0, 0, L / 2 - .28, br, Object.assign(o(), { rt: .8 })); Bq.cyl(r * 1.16, .12, 0, 0, L - .3, br, o()); Bq.cyl(r * .62, .03, 0, 0, L - .235, COL.black, Object.assign(o(), { jit: 0 }));
-    for (const z of [-.2, L * .25, L * .55]) Bq.cyl(r * 1.1 - z * .03, .07, 0, 0, z, mulC(br, .8), o());
+    for (const z of [-.2, L * .25, L * .55]) Bq.cyl(r * 1.1 - z * .03, .07, 0, 0, z, z > 0 && z < L * .5 ? COL.lacq : mulC(br, .8), o());
     Bq.sph(r * .9, 0, 0, -.3, br, { l: L_METAL, w: 6, h: 4, smooth: false, rough: .42 }); Bq.sph(r * .32, 0, 0, -.3 - r * .9, mulC(br, .8), { l: L_METAL, w: 5, h: 3, smooth: false });
     this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, .4, 0); this.barrel.rotation.x = -.42; this.carriage.add(this.barrel);
     this.gunYaw = this.yaw;
   }
   makeCrystal() {
-    const mt = this.mounts, mk = (sx, sy) => { const S = new Soup(); S.add(gOct(), { s: [sx, sy, sx], c: [1, 1, 1], jit: 0, cf: v => .55 + .45 * smooth(-sy, sy, v.y) + (v.x > 0 ? .12 : 0) }); return S.build(); };
+    const mt = this.mounts, mk = (sx, sy) => { const S = new Soup(), r = (sx + sy) * .42; S.add(gSph(8, 6), { s: r, c: [1, 1, 1], jit: 0, smooth: true, cf: v => .5 + .5 * smooth(-r, r, v.y) + (v.x > 0 ? .1 : 0) }); return S.build(); };
     this.cmat = new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(.3, .6, 1) });
     this.crystal = new THREE.Group(); this.crystal.position.set(mt.crystal[0], mt.crystal[1], mt.crystal[2]);
     const c = new THREE.Mesh(mk(mt.crystalS, mt.crystalS * 1.9), this.cmat); c.castShadow = true; this.crystal.add(c); this.core = c;
     this.shards = [];
     for (let i = 0; i < mt.shards; i++) { const s = new THREE.Mesh(mk(.07, .16), this.cmat); this.crystal.add(s); this.shards.push(s); }
-    if (mt.rings) { const S = new Soup(); for (let k = 0; k < 7; k++) { if (k === 3) continue; const a = k / 7 * TAU; S.box(.5, .16, .2, Math.cos(a) * 1.0, 0, Math.sin(a) * 1.0, COL.basaltL, { l: L_ROCK, r: [0, -a + HPI, 0] }); } this.ringG = new THREE.Mesh(S.build(), MAT.world); this.ringG.castShadow = true; this.ringG.position.y = -1.25; this.crystal.add(this.ringG); }
+    if (mt.rings) { const S = new Soup(); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; S.box(.46, .1, .2, Math.cos(a) * 1.0, 0, Math.sin(a) * 1.0, COL.basaltL, { l: L_ROCK, r: [0, -a + HPI, 0] }); for (let j = 0; j < 3; j++) { const rr2 = .94 + j * .06, on = (k >> j) & 1; if (on) S.box(.3, .014, .03, Math.cos(a) * rr2, .056, Math.sin(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [0, -a + HPI, 0] }); else for (const sg of [-1, 1]) S.box(.12, .014, .03, Math.cos(a) * rr2 - Math.sin(a) * sg * .09, .056, Math.sin(a) * rr2 + Math.cos(a) * sg * .09, COL.crystal, { emis: .5, jit: 0, r: [0, -a + HPI, 0] }); } } this.ringG = new THREE.Mesh(S.build(), MAT.world); this.ringG.castShadow = true; this.ringG.position.y = -1.25; this.crystal.add(this.ringG); }
     this.group.add(this.crystal);
   }
   upgrade() { if (this.lvl >= 2 || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
@@ -3302,33 +3529,33 @@ function explodeAt(x, y, z, dmg, splash, tower) {
 
 
 const MON = {
-  skel: { name: 'Skeleton', hp: 34, spd: 1.35, rad: .27, mass: 1, bounty: 6, lives: 1, hitH: .75, top: 1.45, dmg: 6, atkT: .95, eye: [3.4, .9, .2], scale: 1, death: 'bones', blade: true },
-  rat: { name: 'Giant rat', hp: 13, spd: 2.65, rad: .2, mass: .45, bounty: 3, lives: 1, hitH: .2, top: .5, dmg: 3, atkT: .6, eye: [3.2, .4, .3], scale: 1, death: 'fur', cat: 'swarm' },
-  slime: { name: 'Slime', hp: 95, spd: .82, rad: .42, mass: 2.2, bounty: 9, lives: 1, hitH: .3, top: .75, dmg: 8, atkT: 1.2, eye: [1.8, 2.8, .4], scale: 1, death: 'goo', hop: [.95, 2.35], split: ['slimelet', 2] },
-  slimelet: { name: 'Slimelet', hp: 30, spd: 1.2, rad: .26, mass: .9, bounty: 3, lives: 1, hitH: .2, top: .48, dmg: 4, atkT: 1.0, eye: [1.8, 2.8, .4], scale: .58, death: 'goo', hop: [1.25, 2.35], cat: 'swarm' },
-  knight: { name: 'Skeleton knight', hp: 118, spd: 1.0, rad: .3, mass: 2.2, bounty: 15, lives: 1, hitH: .8, top: 1.6, dmg: 11, atkT: 1.05, eye: [.5, 1.7, 3.4], scale: 1.08, armor: .35, death: 'bones', blade: true, cat: 'armor', tint: [.74, .78, .9] },
-  bat: { name: 'Bat', hp: 15, spd: 2.2, rad: .22, mass: .3, bounty: 6, lives: 1, hitH: 0, top: .35, dmg: 0, atkT: 1, eye: [3.2, .5, .3], scale: 1.25, fly: true, death: 'bat', cat: 'air', alt: [2.9, 3.8], flap: 21 },
-  ghoul: { name: 'Ghoul', hp: 40, spd: 1.85, rad: .27, mass: .9, bounty: 7, lives: 1, hitH: .5, top: .95, dmg: 9, atkT: .7, eye: [3.2, 2.8, .6], scale: .62, frenzy: .55, death: 'flesh', tint: [1.24, 1.03, 1.9] },
-  spider: { name: 'Cave spider', hp: 20, spd: 2.25, rad: .24, mass: .4, bounty: 3, lives: 1, hitH: .18, top: .45, dmg: 4, atkT: .6, eye: [3.4, .3, .2], scale: 1, slip: true, death: 'bug', cat: 'swarm', tint: [.6, .55, .6] },
-  scarab: { name: 'Scarab', hp: 9, spd: 2.5, rad: .15, mass: .2, bounty: 1, lives: 1, hitH: .1, top: .28, dmg: 2, atkT: .6, eye: [1.2, 3.0, 2.6], scale: .5, slip: true, death: 'bug', cat: 'swarm', tint: [1.5, 1.15, .45] },
-  wolf: { name: 'Dire wolf', hp: 38, spd: 2.7, rad: .3, mass: .9, bounty: 7, lives: 1, hitH: .4, top: .85, dmg: 12, atkT: .7, eye: [3.4, 2.6, .3], scale: 1, death: 'fur', cat: 'swarm', tint: [.8, .8, .9] },
-  bomber: { name: 'Sapper', hp: 38, spd: 1.55, rad: .27, mass: 1, bounty: 8, lives: 2, hitH: .75, top: 1.55, dmg: 0, atkT: 1, eye: [3.6, 1.4, .2], scale: 1, explode: { r: 1.7, dmg: 46, men: 30 }, death: 'bones', tint: [.95, .85, .75] },
-  wraith: { name: 'Wraith', hp: 58, spd: 1.3, rad: .28, mass: 1, bounty: 11, lives: 1, hitH: .8, top: 1.5, dmg: 0, atkT: 1, eye: [.8, 2.4, 3.6], scale: 1, ghost: [1.7, 3.0], death: 'ghost' },
-  toad: { name: 'Bog toad', hp: 78, spd: 1.0, rad: .38, mass: 1.8, bounty: 9, lives: 1, hitH: .3, top: .75, dmg: 9, atkT: 1.0, eye: [3.0, 2.4, .3], scale: 1, hop: [1.2, 2.5], death: 'flesh' },
-  wisp: { name: 'Wisp', hp: 7, spd: 2.2, rad: .14, mass: .1, bounty: 2, lives: 1, hitH: 0, top: .3, dmg: 0, atkT: 1, eye: [1, 1, 1], scale: 1, fly: true, death: 'wisp', cat: 'air', alt: [1.3, 2.3], flap: 6, glow: 8 },
-  drummer: { name: 'War drummer', hp: 92, spd: 1.15, rad: .3, mass: 1.6, bounty: 14, lives: 1, hitH: .8, top: 2.35, dmg: 6, atkT: 1, eye: [3.6, .6, .2], scale: 1.05, aura: [3.4, .3], death: 'bones' },
-  gargoyle: { name: 'Gargoyle', hp: 52, spd: 1.45, rad: .32, mass: 1.2, bounty: 13, lives: 1, hitH: 0, top: .6, dmg: 0, atkT: 1, eye: [3.6, 1.2, .2], scale: 1.15, fly: true, armor: .72, death: 'rock', cat: 'air', alt: [2.4, 3.1], flap: 9 },
-  necro: { name: 'Necromancer', hp: 105, spd: .85, rad: .3, mass: 1.6, bounty: 18, lives: 1, hitH: .8, top: 1.8, dmg: 5, atkT: 1.2, eye: [.6, 3.4, 1.0], scale: 1.08, summon: { type: 'skel', n: 2, every: 7.5, max: 3, hp: .6 }, death: 'bones', tint: [.7, .74, .7] },
-  mummy: { name: 'Mummy', hp: 135, spd: .9, rad: .3, mass: 2, bounty: 14, lives: 1, hitH: .8, top: 1.55, dmg: 12, atkT: 1.1, eye: [.6, 3.0, 2.6], scale: 1.1, split: ['scarab', 3], death: 'bones', tint: [1.08, .95, .72] },
-  brute: { name: 'Troll', hp: 360, spd: .82, rad: .5, mass: 8, bounty: 30, lives: 2, hitH: 1.0, top: 1.95, dmg: 24, atkT: 1.4, eye: [3.4, 2.4, .4], scale: 1.5, regen: .035, death: 'flesh', cat: 'armor', tint: [.83, .8, 2.0] },
-  golem: { name: 'Golem', hp: 470, spd: .62, rad: .5, mass: 9, bounty: 34, lives: 2, hitH: 1.1, top: 2.1, dmg: 26, atkT: 1.5, eye: [3.2, 2.6, 1.6], scale: 1.5, armor: .35, slowRes: .5, death: 'rock', cat: 'armor' },
-  brood: { name: 'Brood mother', hp: 230, spd: .92, rad: .55, mass: 5, bounty: 24, lives: 2, hitH: .45, top: 1.05, dmg: 14, atkT: 1.0, eye: [3.4, .3, .2], scale: 2.3, split: ['spider', 5], death: 'bug', tint: [.7, .5, .6] },
-  giant: { name: 'Bone Giant', hp: 1250, spd: .88, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.2, top: 4.0, dmg: 46, atkT: 1.7, eye: [5, .9, .2], scale: 2.7, boss: true, death: 'bones', blade: true, cat: 'armor' },
-  ogre: { name: 'Ogre', hp: 1400, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 1.9, top: 3.4, dmg: 52, atkT: 1.8, eye: [4.5, 2.2, .3], scale: 2.6, boss: true, death: 'flesh', blade: true, cat: 'armor' },
-  jotun: { name: 'Frost Jotun', hp: 1150, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 1.9, top: 3.6, dmg: 52, atkT: 1.8, eye: [.8, 2.4, 4], scale: 2.75, boss: true, stomp: { every: 10, r: 5.2, stun: 1.8 }, death: 'flesh', blade: true, cat: 'armor', tint: [1.0, 1.25, 3.4] },
-  queen: { name: 'Brood Queen', hp: 1150, spd: .85, rad: 1.1, mass: 40, bounty: 200, lives: 5, hitH: 1.0, top: 2.0, dmg: 40, atkT: 1.5, eye: [3.8, .3, .9], scale: 4.2, boss: true, summon: { type: 'spider', n: 2, every: 8, max: 99, hp: 1 }, death: 'bug', cat: 'armor', tint: [.85, .55, 1.0] },
-  colossus: { name: 'Magma Colossus', hp: 1250, spd: .7, rad: 1.05, mass: 60, bounty: 200, lives: 5, hitH: 2.2, top: 4.3, dmg: 60, atkT: 2.0, eye: [4, 1.6, .3], scale: 3.0, boss: true, armor: .85, slowRes: .3, enrage: [.3, 1.25], death: 'rock', cat: 'armor', tint: [1.5, .5, .26] },
-  king: { name: 'The Buried King', hp: 1250, spd: .86, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.2, top: 4.2, dmg: 46, atkT: 1.7, eye: [.6, 3.0, 2.6], scale: 2.7, boss: true, summon: { type: 'mummy', n: 1, every: 9, max: 99, hp: .7 }, death: 'bones', blade: true, cat: 'armor', tint: [1.2, 1.0, .55] },
+  skel: { name: '阴兵', en: 'Skeleton', hp: 34, spd: 1.35, rad: .27, mass: 1, bounty: 6, lives: 1, hitH: .75, top: 1.45, dmg: 6, atkT: .95, eye: [3.4, .9, .2], scale: 1, death: 'bones', blade: true },
+  rat: { name: '硕鼠', en: 'Giant rat', hp: 13, spd: 2.65, rad: .2, mass: .45, bounty: 3, lives: 1, hitH: .2, top: .5, dmg: 3, atkT: .6, eye: [3.2, .4, .3], scale: 1, death: 'fur', cat: 'swarm' },
+  slime: { name: '瘴泥', en: 'Slime', hp: 95, spd: .82, rad: .42, mass: 2.2, bounty: 9, lives: 1, hitH: .3, top: .75, dmg: 8, atkT: 1.2, eye: [1.8, 2.8, .4], scale: 1, death: 'goo', hop: [.95, 2.35], split: ['slimelet', 2] },
+  slimelet: { name: '小瘴泥', en: 'Slimelet', hp: 30, spd: 1.2, rad: .26, mass: .9, bounty: 3, lives: 1, hitH: .2, top: .48, dmg: 4, atkT: 1.0, eye: [1.8, 2.8, .4], scale: .58, death: 'goo', hop: [1.25, 2.35], cat: 'swarm' },
+  knight: { name: '铁甲阴兵', en: 'Skeleton knight', hp: 118, spd: 1.0, rad: .3, mass: 2.2, bounty: 15, lives: 1, hitH: .8, top: 1.6, dmg: 11, atkT: 1.05, eye: [.5, 1.7, 3.4], scale: 1.08, armor: .35, death: 'bones', blade: true, cat: 'armor', tint: [.74, .78, .9] },
+  bat: { name: '蝠妖', en: 'Bat', hp: 15, spd: 2.2, rad: .22, mass: .3, bounty: 6, lives: 1, hitH: 0, top: .35, dmg: 0, atkT: 1, eye: [3.2, .5, .3], scale: 1.25, fly: true, death: 'bat', cat: 'air', alt: [2.9, 3.8], flap: 21 },
+  ghoul: { name: '僵尸', en: 'Ghoul', hp: 40, spd: 1.85, rad: .27, mass: .9, bounty: 7, lives: 1, hitH: .5, top: .95, dmg: 9, atkT: .7, eye: [3.2, 2.8, .6], scale: .62, frenzy: .55, death: 'flesh', tint: [1.24, 1.03, 1.9] },
+  spider: { name: '洞蛛', en: 'Cave spider', hp: 20, spd: 2.25, rad: .24, mass: .4, bounty: 3, lives: 1, hitH: .18, top: .45, dmg: 4, atkT: .6, eye: [3.4, .3, .2], scale: 1, slip: true, death: 'bug', cat: 'swarm', tint: [.6, .55, .6] },
+  scarab: { name: '尸甲虫', en: 'Scarab', hp: 9, spd: 2.5, rad: .15, mass: .2, bounty: 1, lives: 1, hitH: .1, top: .28, dmg: 2, atkT: .6, eye: [1.2, 3.0, 2.6], scale: .5, slip: true, death: 'bug', cat: 'swarm', tint: [1.5, 1.15, .45] },
+  wolf: { name: '妖狼', en: 'Dire wolf', hp: 38, spd: 2.7, rad: .3, mass: .9, bounty: 7, lives: 1, hitH: .4, top: .85, dmg: 12, atkT: .7, eye: [3.4, 2.6, .3], scale: 1, death: 'fur', cat: 'swarm', tint: [.8, .8, .9] },
+  bomber: { name: '火药鬼', en: 'Sapper', hp: 38, spd: 1.55, rad: .27, mass: 1, bounty: 8, lives: 2, hitH: .75, top: 1.55, dmg: 0, atkT: 1, eye: [3.6, 1.4, .2], scale: 1, explode: { r: 1.7, dmg: 46, men: 30 }, death: 'bones', tint: [.95, .85, .75] },
+  wraith: { name: '怨灵', en: 'Wraith', hp: 58, spd: 1.3, rad: .28, mass: 1, bounty: 11, lives: 1, hitH: .8, top: 1.5, dmg: 0, atkT: 1, eye: [.8, 2.4, 3.6], scale: 1, ghost: [1.7, 3.0], death: 'ghost' },
+  toad: { name: '瘴蟾', en: 'Bog toad', hp: 78, spd: 1.0, rad: .38, mass: 1.8, bounty: 9, lives: 1, hitH: .3, top: .75, dmg: 9, atkT: 1.0, eye: [3.0, 2.4, .3], scale: 1, hop: [1.2, 2.5], death: 'flesh' },
+  wisp: { name: '鬼火', en: 'Wisp', hp: 7, spd: 2.2, rad: .14, mass: .1, bounty: 2, lives: 1, hitH: 0, top: .3, dmg: 0, atkT: 1, eye: [1, 1, 1], scale: 1, fly: true, death: 'wisp', cat: 'air', alt: [1.3, 2.3], flap: 6, glow: 8 },
+  drummer: { name: '摄魂鼓手', en: 'War drummer', hp: 92, spd: 1.15, rad: .3, mass: 1.6, bounty: 14, lives: 1, hitH: .8, top: 2.35, dmg: 6, atkT: 1, eye: [3.6, .6, .2], scale: 1.05, aura: [3.4, .3], death: 'bones' },
+  gargoyle: { name: '石夜叉', en: 'Gargoyle', hp: 52, spd: 1.45, rad: .32, mass: 1.2, bounty: 13, lives: 1, hitH: 0, top: .6, dmg: 0, atkT: 1, eye: [3.6, 1.2, .2], scale: 1.15, fly: true, armor: .72, death: 'rock', cat: 'air', alt: [2.4, 3.1], flap: 9 },
+  necro: { name: '招魂巫', en: 'Necromancer', hp: 105, spd: .85, rad: .3, mass: 1.6, bounty: 18, lives: 1, hitH: .8, top: 1.8, dmg: 5, atkT: 1.2, eye: [.6, 3.4, 1.0], scale: 1.08, summon: { type: 'skel', n: 2, every: 7.5, max: 3, hp: .6 }, death: 'bones', tint: [.7, .74, .7] },
+  mummy: { name: '干尸', en: 'Mummy', hp: 135, spd: .9, rad: .3, mass: 2, bounty: 14, lives: 1, hitH: .8, top: 1.55, dmg: 12, atkT: 1.1, eye: [.6, 3.0, 2.6], scale: 1.1, split: ['scarab', 3], death: 'bones', tint: [1.08, .95, .72] },
+  brute: { name: '山魈', en: 'Troll', hp: 360, spd: .82, rad: .5, mass: 8, bounty: 30, lives: 2, hitH: 1.0, top: 1.95, dmg: 24, atkT: 1.4, eye: [3.4, 2.4, .4], scale: 1.5, regen: .035, death: 'flesh', cat: 'armor', tint: [.83, .8, 2.0] },
+  golem: { name: '石俑', en: 'Golem', hp: 470, spd: .62, rad: .5, mass: 9, bounty: 34, lives: 2, hitH: 1.1, top: 2.1, dmg: 26, atkT: 1.5, eye: [3.2, 2.6, 1.6], scale: 1.5, armor: .35, slowRes: .5, death: 'rock', cat: 'armor' },
+  brood: { name: '蛛母', en: 'Brood mother', hp: 230, spd: .92, rad: .55, mass: 5, bounty: 24, lives: 2, hitH: .45, top: 1.05, dmg: 14, atkT: 1.0, eye: [3.4, .3, .2], scale: 2.3, split: ['spider', 5], death: 'bug', tint: [.7, .5, .6] },
+  giant: { name: '白骨将军', en: 'Bone Giant', hp: 1250, spd: .88, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.2, top: 4.0, dmg: 46, atkT: 1.7, eye: [5, .9, .2], scale: 2.7, boss: true, death: 'bones', blade: true, cat: 'armor' },
+  ogre: { name: '巨魈王', en: 'Ogre', hp: 1400, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 1.9, top: 3.4, dmg: 52, atkT: 1.8, eye: [4.5, 2.2, .3], scale: 2.6, boss: true, death: 'flesh', blade: true, cat: 'armor' },
+  jotun: { name: '雪魃', en: 'Frost Jotun', hp: 1150, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 1.9, top: 3.6, dmg: 52, atkT: 1.8, eye: [.8, 2.4, 4], scale: 2.75, boss: true, stomp: { every: 10, r: 5.2, stun: 1.8 }, death: 'flesh', blade: true, cat: 'armor', tint: [1.0, 1.25, 3.4] },
+  queen: { name: '蛛后', en: 'Brood Queen', hp: 1150, spd: .85, rad: 1.1, mass: 40, bounty: 200, lives: 5, hitH: 1.0, top: 2.0, dmg: 40, atkT: 1.5, eye: [3.8, .3, .9], scale: 4.2, boss: true, summon: { type: 'spider', n: 2, every: 8, max: 99, hp: 1 }, death: 'bug', cat: 'armor', tint: [.85, .55, 1.0] },
+  colossus: { name: '熔岩巨俑', en: 'Magma Colossus', hp: 1250, spd: .7, rad: 1.05, mass: 60, bounty: 200, lives: 5, hitH: 2.2, top: 4.3, dmg: 60, atkT: 2.0, eye: [4, 1.6, .3], scale: 3.0, boss: true, armor: .85, slowRes: .3, enrage: [.3, 1.25], death: 'rock', cat: 'armor', tint: [1.5, .5, .26] },
+  king: { name: '陵中尸王', en: 'The Buried King', hp: 1250, spd: .86, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.2, top: 4.2, dmg: 46, atkT: 1.7, eye: [.6, 3.0, 2.6], scale: 2.7, boss: true, summon: { type: 'mummy', n: 1, every: 9, max: 99, hp: .7 }, death: 'bones', blade: true, cat: 'armor', tint: [1.2, 1.0, .55] },
 };
 
 function spawnMonster(type, o = {}) {
@@ -3425,7 +3652,7 @@ const RIGS = {
   giant(m) { m.weapon = KIT.item.boneclub; m.wScale = 1.25; m.heavy = true; return rigHuman(KIT.giant, SPEC.skel, m); },
   ogre(m) { m.weapon = KIT.item.club; m.wScale = 1.2; m.heavy = true; return rigHuman(KIT.ogre, SPEC.ogre, m); },
   rat: rigRat, bat: m => rigBat(m), slime: rigSlime, slimelet: rigSlime,
-  ghoul(m) { m.claw = true; return rigHuman(KIT.ogre, SPEC.ogre, m); },
+  ghoul(m) { m.claw = true; m.jhat = true; return rigHuman(KIT.ogre, SPEC.ogre, m); },
   brute(m) { m.weapon = KIT.item.club; m.wScale = 1.1; m.heavy = true; return rigHuman(KIT.ogre, SPEC.ogre, m); },
   jotun(m) { m.weapon = KIT.item.iceclub; m.wScale = 1.3; m.heavy = true; return rigHuman(KIT.ogre, SPEC.ogre, m); },
   golem(m) { m.heavy = true; return rigHuman(KIT.golem, SPEC.golem, m); },
@@ -3711,7 +3938,7 @@ function buildWave(k, level) {
 function startWave() {
   G.k = G.k % 5 + 1; G.queue = buildWave(G.k, G.level); G.waveT = 0; G.spawning = true; G.bossWave = G.k === 5; G.waveKills = 0; G.waveLeaks = 0; G.bossDown = false; G.trickle = 6; G.trickleN = 0;
   sfx(G.bossWave ? 'hornBoss' : 'horn', G.B.cave.x, G.B.cave.z, 1.1);
-  UI.banner(G.bossWave ? 'Wave ' + waveNumber() + ' · ' + MON[bossType()].name : 'Wave ' + waveNumber(), G.bossWave ? 3.6 : 2.2, G.bossWave);
+  UI.banner(G.bossWave ? '第 ' + waveNumber() + ' 波 · ' + MON[bossType()].name : '第 ' + waveNumber() + ' 波', G.bossWave ? 3.6 : 2.2, G.bossWave);
 }
 function endWave() {
   const l = G.waveLeaks;
@@ -3816,8 +4043,8 @@ function aiThink(dt) {
 
 function setPhase(p) {
   G.phase = p; G.phaseT = 0;
-  if (p === 'clear') { G.advance = true; UI.banner('The pass holds', 3.2, false); UI.closeMenu(); }
-  if (p === 'defeat') { UI.banner('The beacon is out', 4.2, true); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
+  if (p === 'clear') { G.advance = true; UI.banner('关隘无恙', 3.2, false); UI.closeMenu(); }
+  if (p === 'defeat') { UI.banner('烽火熄灭', 4.2, true); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
   if (p === 'crumble') startCrumble();
   if (p === 'rise') startRise();
 }
@@ -4029,8 +4256,31 @@ const PX = (() => {
   for (const ch in SRC) glyphs.set(ch, parse(SRC[ch]));
   const UNKNOWN = parse(UNKNOWN_SRC);
 
-  function measure(str) {
+  // Chinese glyphs come as 12 px and 16 px bitmaps. Each UI scale picks the size and whole-number zoom that best fill the 9 row line of the Latin font.
+  const wide = new Map(), wideSizes = [];
+  let lastS = 3;
+  function wideMode(s) {
+    let best = null;
+    for (const size of wideSizes) { const k = Math.max(1, Math.floor(LINE * s / size)), h = size * k; if (!best || h >= best[0] * best[1] * (size > best[0] ? .85 : 1.18)) best = [size, k]; }
+    return best;
+  }
+  function addWide(chars, ...sets) {
+    const list = Array.from(chars);
+    for (let q = 0; q < sets.length; q += 2) {
+      const size = sets[q], hex = sets[q + 1], dg = Math.ceil(size / 4); wideSizes.push(size);
+      list.forEach((ch, i) => { const rows = new Uint16Array(size); for (let r = 0; r < size; r++) rows[r] = parseInt(hex.substr((i * size + r) * dg, dg), 16); let e = wide.get(ch); if (!e) wide.set(ch, e = {}); e[size] = rows; });
+    }
+  }
+  function hasWide(str) { for (const ch of str) if (wide.has(ch)) return true; return false; }
+  function mixedWidth(str, s) {
+    const [size, cs] = wideMode(s); let px = 0, last = 0;
+    for (const ch of str) { if (wide.has(ch)) { last = cs; px += size * cs + last; } else { last = GAP * s; px += (glyphs.get(ch) || UNKNOWN).w * s + last; } }
+    return px - last;
+  }
+
+  function measure(str, s) {
     str = String(str);
+    if (hasWide(str)) { const k = Math.max(1, Math.round(s || lastS)); return mixedWidth(str, k) / k; }
     let w = 0, n = 0;
     for (const ch of str) { w += (glyphs.get(ch) || UNKNOWN).w + GAP; n++; }
     return n ? w - GAP : 0;
@@ -4079,6 +4329,36 @@ const PX = (() => {
     return remember(key, { cv, w, o });
   }
 
+  function runMixed(str, color, shadow, outline, s) {
+    const key = 'm\u0001' + s + '\u0001' + str + '\u0001' + color + '\u0001' + shadow + '\u0001' + outline;
+    const hit = cache.get(key);
+    if (hit) { cache.delete(key); cache.set(key, hit); return hit; }
+    const [WIDE, cs] = wideMode(s), wpx = mixedWidth(str, s), o = outline ? 1 : 0, sh = shadow ? 1 : 0, wy = Math.floor((LINE * s - WIDE * cs) / 2);
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, wpx + (2 * o + sh) * s);
+    cv.height = (LINE + 2 * o + sh) * s;
+    const c = cv.getContext('2d');
+    const paint = (dx, dy) => {
+      let x = o * s;
+      for (const ch of str) {
+        const wg = wide.get(ch);
+        if (wg) {
+          const rows = wg[WIDE]; for (let r = 0; r < WIDE; r++) { let b = rows[r], cx = WIDE - 1; while (b) { if (b & 1) c.fillRect(x + (cx + dx) * cs, o * s + wy + (r + dy) * cs, cs, cs); b >>= 1; cx--; } }
+          x += (WIDE + 1) * cs;
+        } else {
+          const g = glyphs.get(ch) || UNKNOWN;
+          for (let r = 0; r < LINE; r++) { let b = g.bits[r], cx = 0; while (b) { if (b & 1) c.fillRect(x + (cx + dx) * s, (o + r + dy) * s, s, s); b >>= 1; cx++; } }
+          x += (g.w + GAP) * s;
+        }
+      }
+    };
+    if (shadow) { c.fillStyle = shadow; paint(1, 1); if (outline) for (const d of DIRS) paint(d[0] + 1, d[1] + 1); }
+    if (outline) { c.fillStyle = outline; for (const d of DIRS) paint(d[0], d[1]); }
+    c.fillStyle = color;
+    paint(0, 0);
+    return remember(key, { cv, w: wpx / s, o, native: true });
+  }
+
   const NOOPT = {};
 
   function text(ctx, str, x, y, s, color, opts) {
@@ -4086,7 +4366,8 @@ const PX = (() => {
     if (!str.length) return 0;
     s = Math.max(1, Math.round(s || 1));
     const op = opts || NOOPT;
-    const e = run(str, color || '#ffffff', op.shadow || '', op.outline || '');
+    lastS = s;
+    const e = hasWide(str) ? runMixed(str, color || '#ffffff', op.shadow || '', op.outline || '', s) : run(str, color || '#ffffff', op.shadow || '', op.outline || '');
     const wpx = e.w * s;
     let dx = x;
     if (op.align === 'c') dx = x - wpx / 2; else if (op.align === 'r') dx = x - wpx;
@@ -4096,7 +4377,7 @@ const PX = (() => {
     if (ctx.imageSmoothingEnabled) ctx.imageSmoothingEnabled = false;
     const ga = ctx.globalAlpha;
     if (a < 1) ctx.globalAlpha = ga * a;
-    ctx.drawImage(e.cv, dx - e.o * s, dy - e.o * s, e.cv.width * s, e.cv.height * s);
+    if (e.native) ctx.drawImage(e.cv, dx - e.o * s, dy - e.o * s); else ctx.drawImage(e.cv, dx - e.o * s, dy - e.o * s, e.cv.width * s, e.cv.height * s);
     if (a < 1) ctx.globalAlpha = ga;
     return wpx;
   }
@@ -4351,8 +4632,13 @@ const PX = (() => {
     return m ? [m[0], m[1]] : [0, 0];
   }
 
-  return { LINE, CAP, measure, text, icon, iconSize, icons: Object.keys(ICONS), palette: PAL };
+  return { LINE, CAP, measure, text, icon, iconSize, addWide, icons: Object.keys(ICONS), palette: PAL };
 })();
+
+// Generated by tools/cjk.py from Noto Sans CJK SC at 12 px and 16 px (SIL Open Font License 1.1). Do not edit by hand.
+PX.addWide('。一下与中之事云交亲代令伤俑停僵关兵军出击前升卒即叉发只可台各后启命在地城基塔填壁声夜妖守害射将小尸山岩岭工巨巫已师干建开引弹御快怨恙悬慢戍或战手打拆招拦择按接提搏摄敌无时杀来查格梦楼此母波泥泽洞满火灭灵炮炸点烽熄熔燧片狼玉王环生用甲电瘴白看督石硕秒程空第管箭级缓自至药营虫蛛蝠蟾行裂装诛赤路身转迎近还连迟选途速造铁长门防阴除陵随隘雁雪雷静面音领飞首骨鬼魂魃魈鼓鼠，：',
+  12, '0000000000000000000000007009009006000000000000000000007ff0000000000000000007fe0400400600580440400400400400401001001fe2002003fe0020047f40040040380400407fe4424424424427fe4420400400400400200207fc00c0080300600803005804fe0407fe3fc2443fc0403fc7fe0443fc0440c00003fc0000000007fe0800981082047fe0020400207fe00010c6064920900600601986060400403fe1080907fe0407fe14834c2440c00801141122106fee1021021021020920a20602006009034c6230203fc0080900e002001012014027e6906102fe22222222226224228c1fe2042782186fea922fe2922fe2922922961101fe20027c67ce002fe30227c2102102701fe2002fe2fe6fea002fe2fe2fe2fe2003fe1081080903fe0200207fe06005009830c40200c1f01001fe1081081087fe0001882064027fe4824823fc1001203fc0200207fe0200200402442442442443fc0404424424427fe0020200203fc0200207fe0202242242243fc00410c1087fe0007d24527d24527d24524424cc0481c87081081087fe1081081082086084080400207fe10810829c6264407fe0400400400007de4527d24524527d24924965d06500100007fc20424412810809006006009030c4020482442403fe0c00fc08414823863044c1860003fc2042042042043fc00009010c2064020007fe0040043e42242242243e420400401c0400801082047fe0003fc2042042043fc2040801fc3084900600f070e3fc2042043fc20400c3f02002003fe2002fe2824824824fe0820400203fc2042043fc2003fe5025025fe1020200e01986f60003be4a24a24a23ac0200200400807fe1001102106fe6102102102102fe200250252f4e2722d225225235644004203e20c20a2fe7882882fa2aa2ac3a44ed0951221087fe1081f81f81087fe1082445fb0407fe2042fe2447102282462bc20037ce4404407c2102fe210f7c27c24427c27c344eff0240c27884be79443e7c867e6483c03fc0400407fe0007fe0403fe0003fc2442443fc4004008000407fe11012023e2526dc2a423821826c28220021e26878848857e5185183183246624420400207fe4120107fe0103101100900100700407fe4023fc0403fc0407fe3fc2042043fc1047c44447fe4447c44547d414424444418c11013e54673c1181e41fe70452412410411c020020020220224224222422c210200201c00003fc2042043fc2002002002004004004000000400404424424424424424424427fe0024424427fe0000007fe1001fe7025021fe10220021862872475278077e7047087380180080000007fe0400400400400400400400407fe0000003fe2002003fc2042043fc2002003fe0000007fe04014824834834c4d2c620407fe0007fc0042042043fc2042002022022023fe10017e51057e5525525525521522562104100007fe0400400407fe04004004004004004001077e2122fe21277e57e5102fe210580c7e0007fe1081081087fe1081081083082084080047e40240243e44047e40440440440441c400472412477e45247e75217e1101ff1106102804fe94a24a3fa64aa4a37a34a34a3f820821021037e712a12a122ff21022822c2462821003fe2624a22ac12221e44032450a50a0f81081087fe0403fc0407fe04022450650a0f01fc2041fc1fc2047fe1087fc04032450a0f027e24237eb7ebfeaaa2fe2002fe2642182e60280263fe4104123145944d841841a42a84601c0127fe0107d24544547d80081da62a0461001121c810e13810a7ca44c44c4497d646200c7f00400407fe0400407fe0400400401c020027f20878820820838860820820820863820e27074024027e24834865824e24a28868820027e212f222222cc300e7e24224227e64220422422877e200200200f7c2002002fe60020027e2247182182e731067e2102fe21061021021027ef922102ff324e442682182346c221027e204f242fe210320eff24427821c6e227e242f7e24227e2003fee5025e2502b071e2142fe210f7e27e25277ea042ff24422461c2fe24477c24427c3fee002fe2aa24c2ac71209071011e112ff41341147cc44844c7d64620007fe0400400407fe0600a00a012232243e0047844844ff4847a44a449448478440401c20c1980601986040407fe0401482444420c00000400407fe2441481487fe0d01d034c6460000407fe0d01486061f81f81081f80007fe21023e2247e42183186e66bea4224223e2021087fe31c59cd2b1480fc30c0980700c070025225477e2383567106106fea2426821c2e20900900904924dc4984904904904914d171e0001fc2442242047fe2042642047fe0080384103100fe0924922fe0c40a429829853c54240027e08207e6800a00a61b82a02a24a251e0002fc0440284382c60100fc2103fe4104100006fe0820fec822ba0aa0aa2ba2a24824864482fe0081fe4282fe0aa2aa2d62d649248600004004024224224446806009019030c4020007fe02004014426426806009009830c4023fc0043fc0043fc02024424446809018c6062202202be74277aa4a24a23a34234644203e2202202bf6d0750a1e21021031e31041041004007e0400403fc2042043fc00029449249221023e2e4718718ae727e21037e31047ec1021027e2c26fe742a7e27e2103282a24a603c21027e2c2766b42a5a22c26633c34444483c2122942be708bdaa6c25426e2565644e801e2202202203fe2002003f820820840840800851037e24264257e14237e55214c14c1766400000007fe0400400403fc0400480440407fe0000007fe0400400403fc0400400400407fe000f7e2082102107342762d22107100100100001402403fe4404403fc0400400400407fe0003fe2222223fe2222223fe22242242282c0000007fe4424427fe4424427fe4420400400400407fc4444447fc4447fc44004204203e0203fe2106fe7fe2002fcefc2fc2105fe4100400403fc2042042043fc2042042043fc2040043f83fe0807fe1003fc7fc5041fc1041fc1001fe7d410855c5223fc2043fc3fc2043fc0007fe0800801001fe3025021021021fe1020007fe21023e4427ca4ca4ca49279c4220400807102142327d23527506926042082300403be5422422427be20057e688e7e20820827f0400607fe4025986063fc0400400400407fe2103de5284243fc0443fc2403fe0c234c4402107fe5240407fe5fa2081f82001fc2041fc2103fe5241087fe0003d23d24523d24420cc10027c224528f2e2224b275404c34c4d60a200627825457ef202fe42073e06415ce9c0620400403fc2042043fc2043fc2042043fc2040007fe0801083fc0020403fc0400400407fe1007fe10021023e4a274221279200278200c1087fe1087fe4025fa1081f83fc2042043fc0400403fc4444444443fc04004c0447fe0022082287be6a86c86887fe61c29c3aa44b00827e2007be6a26be6807fe64a37e2ca7ca07e22023c77ebd4b6ab7e74025c35e35e6a209e10027e40010027e604e042042042042042187e21123d265218274e0207fe0a671812c1c211051037e11071017e0407fe0a671816c18221035007e0506902102fe2382343d63d20100400403fc0407fe09029429649219211023079049e4a44f47d811c5a657e5225a2e2203e0401f82081f82081fa20c7f80380681886382087be21051057f5107be10418471810c1040204de2920920926922922f22962105000fe00667824004007e6482482482882885000fe4002fe010010e382542922102102105008fe4202fe0400506fe2102102fe2102105108fe00067e24204207e6402482842862825000fe01045027e0900106fe22822824a38e5814fe01063804c0ff0106fe2102542922307000fe4106fe2100fe0926922fe2382542927000fe0504502fe0900fe60027c28428427c7004fe2087a843e8487c820867e3082182943222421041081101601007fe1201201101081e61002fe10240240240240240240240240240240e7905085fe52062053e5224a27224444c440c7804be52252253e5224a24be5c244244248671051852464363c5105fe51075445249143071057e5106106fe56653c5647ac41843c4c20087be55061e6325de55255e7524564a041e7445245206fe62854657e5aa7aa4aa4aa4ff0007fe4a84a853e56873e52853e52853e0203fc0407fe4427de3dc0003fc0043fc0043fc3fc0407fe4427de3dc0003fc2443fc2443fc1107dc1247fefca00a7bf78a4be7884885b80007fe0407fe4924924f24924f24927fe4020407fe1081087fe0003fc2043fc2042043fc10013e28847e92a02a7aa0aa12a30c1120600007f001201401801801601201000a00a0061081887fe0403fc2043fc2043fc2043fc2041f82081e82287fe4027fa3f82083f82082180403fc2443fc2442443fc0680b41ba32243e0107fe04a07efd225257e5147964b607204e1047d257e6507de6527ec3a43cc3f25010fe1087ea5587fe66267e7e233e3625e65020fe1087c813e7c80087be4a27944942883d442208033c39c2043fc2443d42443542c43dd262000000000000000000000000300300100200000000000000300300000000000000300300',
+  16, '0000000000000000000000000000000000000000300048004400440048003000000000000000000000000000000000007ffe0000000000000000000000000000000000007ffe01000100010001c001700118010c0100010001000100010001000000080008000ffc1800100010001ffc0004000400047fec000c000800f800000180018001803ffc218421842184218421843ffc218401800180018001800180000001000180008000803ffc001800100020004000800300060038006c0043fe018001807ffe01801ff811881ff801803ffc018c7ffe018c3ffc018c01800700000000001ff80000000000007ffe0200060004200c10081818083ffc3e0400040100018000807ffe00000c3018083424242206600240018003c00670381e6002010001803ffc08100c3004207ffe018001807ffe018009b01998118c2184070000400448084418421040307e77f0d040106010201020102010311012101a100e00000080018003c006601d18318e60c200001ffc00180030066003c00180006008800980190013fe32007440504097fe104410c41084108411841304163c140000001ffc100811f0303037fe5666566617fe1666166617fe166616661666166c084008601ffe100033fc320453fc500017fe140217fe106010601060106011e0080017fe100013fc33fc326473fc700037fe33fc326433fc326433fc30003ffe08100810043004203ffc0180018001807ffe018001c0036006301c18700e400200380fe00800080008000ffc08200820082008207ffe000006701818300e400000007ffe4002420206001ff80400088008801ffc008000807ffe00800080008001800180318c318c318c318c3ffc01802184218421842184218421843ffc00040180018001803ffc0180018001807ffe0180318c318c318c318c318c3ffc000c0818081004307ffe000000003f2421243f24212421243f24212421042104271c001003901e107c100c100c100c107ffe0c100c10081008101810301060104010010000807ffe00000c1008201c30125830cc608401807ffe018001800180018000003f7e2166216621663f66216621663f6620662466226e2f60796061600060000000003ffc10081308099808d00c300620024001c0018006601c38700e400001801918110c11003ffe0300020007f806080f18091018a030c061b0071e0c06000000001ffc100c100c100c100c100c1ffc0000000004200c18180c30064000000000007ffe000800081f8810881088108810881f88100810080008000800780200020006200c301818103c3ffc000400001ff810081008100810081ff81008020006000ff8181034306360018007e01c38700e1ff81018101810181ff81018000001fc3f80300030003ffe30003000300027fc240424042404640447fc44040100018000803ffc300430043ffc300030003ffc2c042c042c046c044ffc4c040080018003c00660181877ee00003e7c22442244224422443e5c20400040004000000200020002007ffe040008201820102033fc5020102010201020102017fe000010201020112011267d3a11e213a21722112615261d2c71204102010201fe00101014101213fe7a107a1013d212561254125412581a5877d9043a046e08460000081008107ffe08100ff008100ff008107ffe081011886ff6418201803ffc1188118817fe118879e810f0118c160614f8100019fc39046104010401fc01043020302033fe304079fc310431fc31fc310431fc3904390477fe4098030c020200103efe224022483efe20107e1062fe62107e1001803ffc018001807ffe0000018001807ffe01803ffc000000003ffc3184318431843ffc2004200060004000010001807ffe0c4008c018fe11843164732c548810d01070107010d8170e14021000101e11f020207c202420242025fe44304830387018481cc8348c61064202010001807ffe60066026002000207ffe0020102008200c2004200020002001e0010001807ffe61867ffe018001801ffc01807ffe01801ff8100810081ff81008080c080c3e0c220c3efe220c220c3e4c224c7e2c062c0a0c120c320c420c0e380800086008fe49846acc385808600b8808081bfe280849880888084808080838018001800180018001801188118c318431842186618241820182018001800700000000001ffc10041004100410041ffc1000100010003000300020002000400001800180018001802184218421842184218421842184218421843ffc000400040180218421843ffc000000007ffe04000c0008001ffc3804680408040ffc080410201020105054d8548855665622540055fc540c540854107cf06460003000100000000000003ffc01800180018001800180018001800180018001807ffe0000000000001ffc1000100010001ff810081008100810081ff81000100010001ffe000000007ffe0180099809901990119019b835ac23e641c2018001807ffe0000000000007ff8000800083008300830083ff83008300030003002300230061ffc08000bfe2820282029fe2926292629262926292609260926112c102030202020000000003ffc01800180018001807ffe01800180018001800180018001800180004078400bfc104417fe20447bfc484008404bfc384037fe10402c0063fe400000007ffe043004300430043004307ffe04300c3008300830183030306030003000043f840184018401843f842004200420043f84018401840104010401040f040004788c08c8081809fe792241fe4122412279fe082008200bfe0820082078201200320067dec5121d12111227d26112e51225d225122512251627f02f9020101040104010405bfc5c4454445044504417fe1060106010d01098110c160614020800187c1f4433446244525c0c420c42387e6300058034cc24046416441207e008100c1004203ffc01803ffc018001807ffe0100018014c824042416441247e0000000001ff818081ff818081ff818087ffe0c3019f83e0405882404641647e0100013fc13fc5a045bfc540057fe569217fe100017fc110c1098107013de16060050004c00443ffe20402040204438442c48267822302030206260d2419a430e0040004c00447ffe004000403f442364236823283f30003003727ed2619a010e08200828082408260f20083e08f008127f164114411c4118411a7f3a416e0006000801fc3f80018001803ffc0180018001807ffe018001800180018001800f001000100011fe10187e181018101810181e1878185018101810181018101870f01004107c11c011007d00110011fe11101d1079705130111c1116121012107210100013fe104610467cc610841184131c1c00f1fe110611061106110611fe710610081088108810107ffe1000100010001c0079fc100010001000100013fe7000100013fc108410887c58103011dc13061c2071fc1020102013fe1020102070201020102013fe12027e421242104013fe148c7988710810d81070107811cc73021040102013fe10087888109013fe1040184077fe1188110811d0107010fc6706100011fc11047dfc110411fc100010001bfe78205120113c132012a0147e70001028102613fe10207ffe122613fe12263ffe7226100817fe1108118810887038100017fe13047bfc130413fc13041ffe700457fe10a21694131813981636604202201e2078200860087e08447fc408e408a87e284218421842387e6442c6008200003ffc01000100010001007ffe018003800280068004820c82188270fe4000000800087c08440845fe440844087c8844c84448442844087c08400800080078000838300660018006603818600801807ffe018009901998318c618641820300018001803ffc018019880998099009907ffe03c007e00db01998318c418201800000018001807ffe03c005a00db0199c60064ff008100ff008100ff000007ffe1040104010fc10847dc8125818303c7034dc338651fc51841184118411fc1184081008107ffe1c383e5c6ad64892030007f81c183430036001c003803e00300010201124112410a87ffe107031ac3b26344053fe5088518811d0107813ce12000000046004600460046024602466277824602460246024602462246227e27c3e00000ffc180c1b0810c810087ffe10081208318830c820083ffe0018001000f000203020182003fe02224224322013fc0384028816c81450343024786d8e0b02000033fc0a040204020443fc720012c002c402d81af012c032c224c264c20c7e000037fc1908019800f040e033981646004013fc1040104027fe204060400040000037fe1c02040205fa4402640214f2049204921c9214f2348224026402040e0190319017fe0190000007fe609007fe0492149214d2156a252a24426402040e0000000001800180018019841184110c21086198038002c006600c301818700e00007ffe018001800180098c19881188319001c00340026004301818700e400200003ff800081ff8000800083ff80180118011083188239002400630381e6006104010c0108014fe55025bf251925192119211f21986198c25822582618240fe10c01080108014fe556055605760507e10601060187e3c6024602460406040600100010001fe010001001ff810081008100810081ff80000164c2244622642221040104010fc1588575854305878518e132211fc102019fc2c2027fe402040201020102011fc110455fc550455fc5104510411fc106018b02684228a628a40f81020102013fe160256ca588c5b26507010d811861bfe39842584258441fc4184000010441024122c12fe583058725ed45238126c121c322a2aca2a8867b0447e004010401040104010401ffc1000100010001ff01010301020102010601040100060682039fc1104310449fc0904190419fc29206926491c0918090c19e67302000000003ffc018001800180018001803ffc018001a001900188018c01807ffe000000003ffc018001800180018001803ffc0180018001800180018001807ffe00007bfe103010201060107078f810ac11241322122018207020402000200020000001800980198011803ffc21806180418001801ffc01800180018001807ffe00003ffc3184318431843ffc3184318431843ffc2184218421842184418441bc00003ffc2184218421843ffc2184218421843ffc21840180018001800180018000000100010001003ffc210421043ffc2104210421043ffc21000102018200fe008000c01ffe504057fc510817fe100013fc73fc520433fc20402ffe604040400180010003003ffc300c300c300c300c3ffc300c300c300c300c3ffc300c300c00083ff003003ffc020006007ffe0c000ff818086ff848080ff808080ff8080808000ffc08447f682a382b38496c08861ff810081ff810081ff810081ff81008000000007ffe06000400040008001ffc1804280468044804080408040ffc080400007dfe1020302020fc20843ca464a464a4a4a424a424a424203c4820c6010200203e20782018a418a47fa6192219223d243e24582cd808181018601bc01a0000003ffe7986198619867ffe180018003dfe3e205820d9fe182018201bfe18000000010001807ffe4002400246701818300e20001ff801800180018001807ffe106010403f7e24d844883ffc010401041ffc31003ffc030407040d04313c2100104030403f7e6c9841883ffe20063ffe18181ff8180018001ffc180c1ffc180c10403f7e2498648808100c207ffe00003f2421243f2421243f2421042104271c080013f81088208824984c90789e10c630c43ce4612801381d18732c42c60282100413f81124312425284ffe788013fe20807cfc618401481f78723006ee05820180010001001ffc100c100c1ffc100c100c100c1ffc100c100c100c1ffc100c000000007ffe06000c20083010183ffc0004018001803ffc0180018001807ffe042004207ffe04200840104030fe24867d06184630647e24402402047e04003c042004207ffe04207ffe600260026ff208100ff000001ffc100c100c1ffc100c0180018001803ffc218c218c218c218c3ffc018001800198018c03fc7fc60002101010d010907cfe54905590551054107dfe50381458145c1e94719201120010100011fe10007cfc5484548454fc54007dfe5122152215fe15227d2203fe0102104010f811987ffe57285546551055fe55007d7e517e1500157e3e42467e0242080019fe300060004c0008001bfe30087008500810081008100810081008107800067fa608261f2671260a260c06711c00807ffe02840c4c7c700c300fce08020820082068201bfe0820382049fe080001807ffe02840c4c787008b00f8e0802002031a0092001fe032002207220102013fe1070106810a815a41b2632220020018001801ff80180018001807ffe02601268126c2264666644620c60186011c000607e40427c42c443c87f7808300838486c4f8648fc488448847e8460fc0084018001001ff018101ff0181018121ff4181c18187ff00070019007101c1060f0101010307ffe1020282029fe284048407e4008fe080c1e08787008300818080000c0633e3222022202220222722212221222126213e2162e102038206c0043fe0000000c21f811001100010001fe7110111013101210121012103c106c0043fe0000200037fe10200060004000c071d8134c164614421040104030406c0047fe00000080208037fe11800120032073fc10201020102017fe102010206c2047fe0000000021fc11041104010401fc7100132013101218120c160638006c0047fe00204120212013fe1220002007fe70901090119011121312161e3800660043fe0060206031901b0c0e0601f8706017fe10601168126c1664146238c06c0043fe00000060606037fe186003fc02647264126413fc10f011f8136414602c0043fe00000160616033fc12600460006077fe100013fc12041204120413fc380047fe101030903e9060fe41903d101810181019fe7e301830182818481ecc198611020000080008180830086009c0090008007ffe088008c00840082008300b9c1e06000013fe1806080660066006600660066006600660066006600660066006601c00207c2044204bfe48c048c048c04cfc4484448444845d8441044304460c443800007cfe44864486488648fe4c864486448644fe44864d86410641064306420c00307c2048504888530653fe482048204c2047fe4c2059ac41244222422240e000207c2049fc4820482053fe5880498c4a424cfc4d885ad840704070439e4202001078304afe4a205160507e50a24f3e4922493e49225922412e4680447e400000007d88488848804bfe5000589849044a024ffc4a545a544254425447fe400000003ffe200026d0249824fe2d903f9036fe2490249024fe6490449044fe448000003ffc01807ffe41825ffa41821ff800001ff8000800081ff800083ff8000800003ffc01807ffe41825ffa41821ff800001ff8118811881ff811881ff81008082008607f7c08c87f9008fe7f3600363ffe22363e3622fe3e36223022302e6000007ffe0100010001003ffc2424242427e42424242427e4242424243ffc2004010001803ffc08100c3004207ffe00001ff8100810081ff8100810081ff81008080008fe1410161022fe49c24cd200d23ed202d204d22cd23828182c0cc60182000000007fe000600064006800700030003800260022002000320012001a000e08100c1004207ffe01001ff8100810081ff8100810081ff8100810081ff8100800001ff018101f9018907ffe400240025ffa10181ff810181ff81018101810700000010001003ff8310831083ff8310831083ff80310029006a40cbe188260fe002000207dfc0124012401fc7f24112421fc242024685c6c726e00a201a2033e082008247e204afe4a207e204a3e4a447e6410dc1a881b143fe2280267fe4000081008927e544a544a7c7e444a444a7c7e44187c1a441b442bcc280247fe4000081008107f1008fe7f10001000107efe62467e44006c262834100f387cce008202003c7c20043e7c200420043ffc31003148372831083d48352831283de6200600000000000000000000000000000000000000000000180018000800080030000000000000000000180018000000000000000000000000001800180000000000');
 
 
 const UI = (() => {
@@ -4381,7 +4667,7 @@ const UI = (() => {
     if (o.hi) { c.fillStyle = o.hi; c.fillRect(x + 2 * s, y + s, w - 4 * s, s); }
   }
   function text(str, x, y, col, o) { return PX.text(U.ctx, str, x, y, U.s, col || COLR.tx, o); }
-  const tw = str => PX.measure(str) * U.s;
+  const tw = str => PX.measure(str, U.s) * U.s;
 
   function initUI() {
     const cv = document.getElementById('hud'); U.ctx = cv.getContext('2d'); U.ctx.imageSmoothingEnabled = false;
@@ -4521,12 +4807,12 @@ const UI = (() => {
       PX.icon(c, st[0], x, iy, s, st[0] === 'flame' ? .55 + .45 * (G.lives / G.maxLives) : 1); if (st[0] === 'coin') { goldPos.x = x + iw * s / 2; goldPos.y = iy + ih * s / 2; }
       x += iw * s + 2 * s; text(st[1], x, y0 + Math.round((hS - LH) / 2) + s, st[2]); x += Math.max(tw(st[1]), tw('000')) + 6 * s;
     }
-    const wn = 'Wave ' + Math.max(1, waveNumber());
+    const wn = '第 ' + Math.max(1, waveNumber()) + ' 波';
     let sub, frac = -1;
-    if (G.phase === 'play') { if (!G.spawning && !G.bossWave && G.nextIn > 0) { sub = 'Next wave in ' + Math.ceil(G.nextIn); frac = 1 - G.nextIn / 6.5; } else { const n = G.mons.length + G.queue.length; sub = n + ' on the road'; } }
-    else sub = G.phase === 'defeat' ? 'The fire has died' : G.phase === 'clear' ? 'Boss defeated' : 'A new pass awaits';
-    const bw = PX.iconSize('banner')[0] * s, wW = Math.max(bw + 3 * s + tw(wn), tw(sub), tw('Next wave in 0')) + pad * 2 + 4 * s, hW = LH * 2 + pad * 2 + s;
-    const you = U.playerActive(), ct = you ? 'You command' : 'AI commander', cs = you ? 'Click here for the AI' : 'Click a pad to take over';
+    if (G.phase === 'play') { if (!G.spawning && !G.bossWave && G.nextIn > 0) { sub = '下一波 ' + Math.ceil(G.nextIn) + ' 秒'; frac = 1 - G.nextIn / 6.5; } else { const n = G.mons.length + G.queue.length; sub = '来敌 ' + n; } }
+    else sub = G.phase === 'defeat' ? '烽火已熄' : G.phase === 'clear' ? '首领已诛' : '转战下一关';
+    const bw = PX.iconSize('banner')[0] * s, wW = Math.max(bw + 3 * s + tw(wn), tw(sub), tw('下一波 00 秒')) + pad * 2 + 4 * s, hW = LH * 2 + pad * 2 + s;
+    const you = U.playerActive(), ct = you ? '亲自督战' : '军师代守', cs = you ? '点此交还军师' : '点击塔基即可接管';
     const ic = you ? 'hand' : 'helm', icw = PX.iconSize(ic)[0] * s, cW = Math.max(icw + 3 * s + tw(ct), tw(cs)) + pad * 2 + 2 * s, xc = W - cW - 5 * s, g3 = 3 * s;
     const xw = Math.round(W / 2 - wW / 2);
     let yc = y0, yw = y0;
@@ -4542,11 +4828,11 @@ const UI = (() => {
     const hotC = U.inside && U.mx >= xc && U.mx <= xc + cW && U.my >= yc && U.my <= yc + hW; U.cmdRect = { x: xc, y: yc, w: cW, h: hW, hot: hotC };
     plate(xc, yc, cW, hW, hotC ? { bd: COLR.bdHi, bg: COLR.bg2 } : you ? { bd: COLR.bdHi } : {});
     PX.icon(c, ic, xc + pad, yc + pad - s, s); text(ct, xc + pad + icw + 3 * s, yc + pad, you ? COLR.amber : COLR.tx); text(cs, xc + pad, yc + pad + LH + s, COLR.dim);
-    { const on = AU.ready && !AU.muted, lbl = AU.ready ? (AU.muted ? 'Sound off' : 'Sound on') : 'Click for sound', icn = on ? 'sound' : 'mute', iw2 = PX.iconSize(icn)[0] * s, w = iw2 + 3 * s + tw(lbl) + pad * 2, h = LH + pad * 2 - s, xs = 5 * s, ys = H - h - 5 * s;
+    { const on = AU.ready && !AU.muted, lbl = AU.ready ? (AU.muted ? '已静音' : '声音开') : '点击开启声音', icn = on ? 'sound' : 'mute', iw2 = PX.iconSize(icn)[0] * s, w = iw2 + 3 * s + tw(lbl) + pad * 2, h = LH + pad * 2 - s, xs = 5 * s, ys = H - h - 5 * s;
       const hotS = U.inside && U.mx >= xs && U.mx <= xs + w && U.my >= ys && U.my <= ys + h;
       plate(xs, ys, w, h, hotS ? { bd: COLR.bdHi, bg: COLR.bg2 } : {}); PX.icon(c, icn, xs + pad, ys + pad - s, s, AU.ready ? 1 : .8); text(lbl, xs + pad + iw2 + 3 * s, ys + pad - s, AU.ready ? COLR.dim : COLR.tx);
       U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false }; }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = 'Click a pad to build · 1-4 pick a tower · Space calls the next wave', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
     for (let i = U.coins.length - 1; i >= 0; i--) {
       const q = U.coins[i]; q.t += R.frameDt; const u = sat(q.t / q.T), e = u * u * (3 - 2 * u), a = 1 - e;
       const px = a * a * q.sx + 2 * a * e * q.cx + e * e * goldPos.x, py = a * a * q.sy + 2 * a * e * q.cy + e * e * goldPos.y;
@@ -4555,7 +4841,7 @@ const UI = (() => {
     }
     if (U.msg) {
       const m = U.msg; m.t += R.frameDt; const a = sat(Math.min(m.t * 3, (m.dur - m.t) * 2));
-      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = PX.measure(m.text) * sc + pad * 4, h = PX.LINE * sc + pad * 2; c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); c.globalAlpha = 1; }
+      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = PX.measure(m.text, sc) * sc + pad * 4, h = PX.LINE * sc + pad * 2; c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); c.globalAlpha = 1; }
     }
     if (U.menu && G.phase === 'play') {
       const m = U.menu, p = proj(m.pad.x, m.pad.y + (m.tower ? Math.min(3.6, m.tower.mounts.top) : 1.2), m.pad.z), a = sat(m.t * 8), mp = 6 * s;
@@ -4570,10 +4856,10 @@ const UI = (() => {
       if (!m.tower) {
         const bwid = 31 * s, bh = 35 * s, gapb = 3 * s, rowW = 4 * bwid + 3 * gapb;
         let lit = null; const fk = U.gp.active ? TOWER_KINDS[m.focus % 4] : null;
-        const lines = k => k ? [TOWER[k].name].concat(TOWER[k].desc) : ['Choose a tower', 'Hover or press 1 to 4', 'to see what each does.'];
+        const lines = k => k ? [TOWER[k].name].concat(TOWER[k].desc) : ['选择防御工事', '悬停或按 1 至 4，', '查看各自用途。'];
         let textW = 0; for (const k of [null].concat(TOWER_KINDS)) for (const l of lines(k)) textW = Math.max(textW, tw(l));
         const wP = Math.max(rowW, textW) + mp * 2, hP = mp * 2 + LH + 3 * s + bh + 4 * s + LH * 3 + 2 * s, [px, py] = place(wP, hP);
-        plate(px, py, wP, hP); text('Build here', px + mp, py + mp - s, COLR.amber);
+        plate(px, py, wP, hP); text('在此建造', px + mp, py + mp - s, COLR.amber);
         const bx0 = px + Math.round((wP - rowW) / 2), by = py + mp + LH + 3 * s;
         TOWER_KINDS.forEach((kind, i) => {
           const d = TOWER[kind], can = G.gold >= d.cost[0], bx = bx0 + i * (bwid + gapb);
@@ -4588,8 +4874,8 @@ const UI = (() => {
         text(ls[0], px + mp, ty, lit || fk ? COLR.tx : COLR.dim); text(ls[1], px + mp, ty + LH + s, COLR.dim); if (ls[2]) text(ls[2], px + mp, ty + LH * 2 + s, COLR.dim);
       } else {
         const t = m.tower, d = t.def, maxed = t.lvl >= 2, upc = maxed ? 0 : d.cost[t.lvl + 1], can = !maxed && G.gold >= upc && t.state === 'active', refund = Math.round(t.spent * .6);
-        const ul = maxed ? 'Max level' : 'Upgrade ' + upc, sl = 'Sell +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
-        const st = t.kind === 'guard' ? d.n[t.lvl] + ' footmen · ' + d.hp[t.lvl] + ' health' : 'Range ' + d.range[t.lvl].toFixed(1) + ' · Damage ' + d.dmg[t.lvl];
+        const ul = maxed ? '已满级' : '升级 ' + upc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
+        const st = t.kind === 'guard' ? '戍卒 ' + d.n[t.lvl] + ' · 生命 ' + d.hp[t.lvl] : '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + d.dmg[t.lvl];
         const wP = Math.max(bw3 * 2 + 3 * s, tw(d.name) + 26 * s, tw(st)) + mp * 2, hP = mp * 2 + LH * 2 + 5 * s + bh, [px, py] = place(wP, hP);
         plate(px, py, wP, hP); text(d.name, px + mp, py + mp - s, COLR.amber);
         for (let i = 0; i < 3; i++) PX.icon(c, i <= t.lvl ? 'star' : 'starEmpty', px + wP - mp - (3 - i) * 6 * s, py + mp, s);
@@ -4604,8 +4890,8 @@ const UI = (() => {
     }
     if (hot !== U.hotBtn && hot) sfx('uiHover', CAM.x, CAM.z, .5);
     U.hotBtn = hot;
-    if (U.armed && U.inside && G.phase === 'play') { const l = TOWER[U.armed].name + ': click a pad', w = tw(l) + pad * 2; const xx = clamp(U.mx + 10 * s, 2 * s, W - w - 2 * s), yy = clamp(U.my + 10 * s, 2 * s, H - LH - pad * 2); plate(xx, yy, w, LH + pad * 2 - s, { bd: COLR.bdHi }); text(l, xx + pad, yy + pad - s, COLR.tx); }
-    if (U.titleT < 7 && !U.menu) { const a = sat(Math.min((U.titleT - .4) * 1.5, (6.6 - U.titleT) * 1.2)); if (a > 0) { const sc = s * 2, t1 = 'Cinderwatch', t2 = G.B.bio.name + ' · The commander plays until you take over.', w = Math.max(PX.measure(t1) * sc, tw(t2)) + pad * 4, h = PX.LINE * sc + LH + pad * 2 + 2 * s, yy = H - h - 22 * s; c.globalAlpha = a; plate(Math.round(W / 2 - w / 2), yy, w, h); PX.text(c, t1, W / 2, yy + pad, sc, '#ffd9a8', { align: 'c' }); text(t2, W / 2, yy + pad + PX.LINE * sc + s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; } }
+    if (U.armed && U.inside && G.phase === 'play') { const l = TOWER[U.armed].name + '：点击塔基', w = tw(l) + pad * 2; const xx = clamp(U.mx + 10 * s, 2 * s, W - w - 2 * s), yy = clamp(U.my + 10 * s, 2 * s, H - LH - pad * 2); plate(xx, yy, w, LH + pad * 2 - s, { bd: COLR.bdHi }); text(l, xx + pad, yy + pad - s, COLR.tx); }
+    if (U.titleT < 7 && !U.menu) { const a = sat(Math.min((U.titleT - .4) * 1.5, (6.6 - U.titleT) * 1.2)); if (a > 0) { const sc = s * 2, t1 = '烽燧', t2 = G.B.bio.name + ' · 军师代守，随时可接管', w = Math.max(PX.measure(t1, sc) * sc, tw(t2)) + pad * 4, h = PX.LINE * sc + LH + pad * 2 + 2 * s, yy = H - h - 22 * s; c.globalAlpha = a; plate(Math.round(W / 2 - w / 2), yy, w, h); PX.text(c, t1, W / 2, yy + pad, sc, '#ffd9a8', { align: 'c' }); text(t2, W / 2, yy + pad + PX.LINE * sc + s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; } }
     if (HASH.fps) { text(R.fpsText || '', 6 * s, H - 30 * s, COLR.ok, { outline: COLR.dark }); }
   }
   U.init = initUI; U.update = update; U.draw = draw;
@@ -4929,11 +5215,20 @@ const AU = (function () {
     const f = 146.83 * rr(0.985, 1.015);
     const os = hornNote(d, t, f, 1.5, 0.5, 1);
     for (let i = 0; i < os.length; i++) { const fr = os[i][0].frequency, b = os[i][1]; fr.setValueAtTime(b, t + 0.52); fr.exponentialRampToValueAtTime(b * 1.4983, t + 0.6); }
+    drumHit(d, t, 0.5); drumHit(d, t + 0.28, 0.4); drumHit(d, t + 0.56, 0.6);
+  };
+  S.gong = (d, t, f0, vel) => {
+    const R = [1, 1.48, 2.02, 2.74, 3.76, 4.93, 6.1], A = [1, 0.7, 0.55, 0.4, 0.3, 0.2, 0.12], lp = flt(d, 'lowpass', 5200);
+    lp.frequency.setValueAtTime(1400, t); lp.frequency.linearRampToValueAtTime(5200, t + 0.35); lp.frequency.exponentialRampToValueAtTime(700, t + 3.2);
+    for (let i = 0; i < R.length; i++) { const g = gn(lp), o = osc('sine', f0 * R[i], t, 3.6, g), dec = 3.0 / (1 + i * 0.35); o.frequency.setValueAtTime(f0 * R[i] * 1.03, t); o.frequency.exponentialRampToValueAtTime(f0 * R[i] * 0.955, t + 1.6); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vel * A[i] * 0.22, t + 0.02 + i * 0.03); g.gain.setTargetAtTime(0.0001, t + 0.1 + i * 0.03, dec * 0.4); }
+    const n = gn(d), nf = flt(n, 'bandpass', 3200, 0.6); noi(t, 0.5, nf); ad(n.gain, t, vel * 0.18, 0.004, 0.35);
   };
   S.hornBoss = (d, t) => {
     const f = 73.42 * rr(0.99, 1.01);
-    hornNote(d, t, f, 1.25, 0.55, 0.8);
+    S.gong(d, t, 98, 1);
+    hornNote(d, t + 0.25, f, 1.2, 0.55, 0.8);
     hornNote(d, t + 1.45, f * 0.7937, 1.9, 0.6, 0.85);
+    for (let i = 0; i < 6; i++) drumHit(d, t + 1.45 + i * 0.3, 0.28 + i * 0.07);
     const r = gn(d), rf = flt(r, 'lowpass', 110); noi(t + 1.45, 2.2, rf, bufBrown); ad(r.gain, t + 1.45, 0.35, 0.6, 1.5);
   };
   S.leak = (d, t) => {
@@ -5092,12 +5387,13 @@ const AU = (function () {
   }
 
   const CH = [
-    { n: [38, 45, 50, 53, 57], m: [62, 65, 69, 72, 74, 76], to: [1, 2, 4, 3] },
-    { n: [34, 41, 50, 53, 58], m: [62, 65, 70, 74, 69], to: [2, 0, 4] },
-    { n: [31, 43, 46, 50, 55], m: [62, 67, 70, 74, 69], to: [0, 3, 1] },
-    { n: [33, 40, 45, 48, 52], m: [64, 69, 72, 76, 67], to: [0, 1] },
-    { n: [29, 41, 45, 48, 53], m: [60, 65, 69, 72, 77, 67], to: [2, 0, 1] },
+    { n: [38, 45, 50, 53, 57], m: [62, 65, 67, 69, 72, 74, 77], to: [1, 2, 4, 3] },
+    { n: [29, 41, 48, 53, 57], m: [65, 69, 72, 74, 77, 67], to: [2, 0, 4] },
+    { n: [31, 43, 50, 55, 60], m: [62, 67, 69, 72, 74, 79], to: [0, 3, 1] },
+    { n: [33, 45, 48, 50, 55], m: [69, 72, 74, 67, 62, 65], to: [0, 1] },
+    { n: [36, 43, 48, 50, 55], m: [60, 62, 67, 72, 74, 65], to: [2, 0, 1] },
   ];
+  const PENTA = [50, 53, 55, 57, 60, 62, 65, 67, 69, 72, 74, 77, 79, 81];
   function padChord(t, c, dur) {
     const v = voice(0, 1, 0.5, nMusic); V = v;
     const env = gn(v.out), hp = flt(env, 'highpass', 50), sides = [], open = rr(560, 700);
@@ -5114,22 +5410,43 @@ const AU = (function () {
     env.gain.setValueAtTime(0.0001, t); env.gain.linearRampToValueAtTime(1, t + 3.5); env.gain.setTargetAtTime(0.0001, t + dur, 1.3);
     finishVoice(v);
   }
-  function pianoNote(t, m, vel) {
+  function pianoNote(t, m, vel, bend) {
+    // a plucked zither string: bright pick, quick fall, sometimes a slide into the note and a late vibrato
     const f = mtof(m), v = voice(rr(-0.3, 0.3), 1, 0.8, nMusic); V = v;
-    const lp = flt(v.out, 'lowpass', 2200, 0.4);
-    lp.frequency.setValueAtTime(Math.min(3200, f * 5), t); lp.frequency.exponentialRampToValueAtTime(Math.max(300, f * 1.3), t + 2.2);
-    const dec = 3.6 * Math.pow(440 / f, 0.35), H = [[1, 1, 1], [2.002, 0.3, 0.55], [3.006, 0.1, 0.35], [4.012, 0.04, 0.22]];
-    for (let i = 0; i < H.length; i++) { const h = H[i], g = gn(lp); osc('sine', f * h[0], t, dec * h[2] + 0.1, g); ad(g.gain, t, vel * 0.11 * h[1], 0.007, dec * h[2]); }
-    const tg = gn(lp); osc('triangle', f, t, dec * 0.5, tg); ad(tg.gain, t, vel * 0.03, 0.006, dec * 0.4);
-    const n = gn(v.out), nf = flt(n, 'lowpass', 900); noi(t, 0.05, nf); ad(n.gain, t, vel * 0.03, 0.002, 0.03);
+    const lp = flt(v.out, 'lowpass', 2600, 0.6);
+    lp.frequency.setValueAtTime(Math.min(5200, f * 8), t); lp.frequency.exponentialRampToValueAtTime(Math.max(380, f * 1.5), t + 1.1);
+    const dec = 2.4 * Math.pow(440 / f, 0.35), H = [[1, 1, 1], [2.003, 0.5, 0.6], [3.008, 0.28, 0.4], [4.016, 0.14, 0.26], [5.03, 0.07, 0.18]];
+    const slide = bend === undefined ? (rnd() < 0.4 ? rr(0.89, 0.945) : 1) : bend, vib = gn(null, f * 0.011); const vo = osc('sine', rr(5.2, 6.2), t, dec + 0.2, vib); vib.gain.setValueAtTime(0, t); vib.gain.linearRampToValueAtTime(f * 0.011, t + 0.7); void vo;
+    for (let i = 0; i < H.length; i++) {
+      const h = H[i], g = gn(lp), o = osc(i ? 'sine' : 'triangle', f * h[0], t, dec * h[2] + 0.1, g);
+      if (slide < 1) { o.frequency.setValueAtTime(f * h[0] * slide, t); o.frequency.exponentialRampToValueAtTime(f * h[0], t + 0.11); }
+      if (i < 2) { const vg = gn(o.frequency, h[0]); vib.connect(vg); }
+      ad(g.gain, t, vel * 0.1 * h[1], 0.004, dec * h[2]);
+    }
+    const n = gn(v.out), nf = flt(n, 'bandpass', Math.min(6000, f * 6), 1.2); noi(t, 0.03, nf); ad(n.gain, t, vel * 0.05, 0.001, 0.02);
     finishVoice(v);
+  }
+  function pentaRun(t, m, vel) {
+    let k = PENTA.indexOf(m); if (k < 0) k = 6;
+    const dir = rnd() < 0.5 ? 1 : -1, n = 3 + ((rnd() * 3) | 0), gap = rr(0.1, 0.16);
+    for (let i = 0; i < n; i++) { const q = PENTA[cl(k + dir * i, 0, PENTA.length - 1)]; pianoNote(t + i * gap, q, vel * (0.55 + 0.45 * i / n), 1); }
+  }
+  function woodBlock(t, vel) {
+    const v = voice(rr(-0.2, 0.2), 1, 0.3, nMusic); V = v;
+    const g = gn(v.out), bp = flt(g, 'bandpass', 1150, 9); noi(t, 0.05, bp); ad(g.gain, t, vel * 2.4, 0.001, 0.05);
+    const g2 = gn(v.out); osc('sine', 1150, t, 0.08, g2); ad(g2.gain, t, vel * 0.25, 0.001, 0.05);
+    finishVoice(v);
+  }
+  function drumHit(d, t, vel, f0) {
+    const f = f0 || 62, g = gn(d), o = osc('sine', f, t, 1.2, g); sw(o.frequency, t, f * 1.9, f, 0.07); ad(g.gain, t, vel, 0.004, 0.9);
+    const g2 = gn(d), o2 = osc('sine', f * 1.59, t, 0.6, g2); sw(o2.frequency, t, f * 2.4, f * 1.59, 0.05); ad(g2.gain, t, vel * 0.4, 0.004, 0.4);
+    const g3 = gn(d); osc('triangle', f * 2.3, t, 0.3, g3); ad(g3.gain, t, vel * 0.16, 0.003, 0.2);
+    const n = gn(d), nf = flt(n, 'lowpass', 420); noi(t, 0.12, nf); ad(n.gain, t, vel * 0.9, 0.002, 0.07);
+    const sl = gn(d), sf = flt(sl, 'bandpass', 1800, 1.5); noi(t, 0.03, sf); ad(sl.gain, t, vel * 0.25, 0.001, 0.02);
   }
   function timp(t, vel) {
     const v = voice(rr(-0.15, 0.15), 1, 0.6, nMusic); V = v;
-    const g = gn(v.out), o = osc('sine', 73.4, t, 1.3, g); sw(o.frequency, t, 80, 72.5, 0.08); ad(g.gain, t, vel, 0.006, 1.1);
-    const g2 = gn(v.out); osc('sine', 110.4, t, 0.7, g2); ad(g2.gain, t, vel * 0.35, 0.005, 0.5);
-    const g3 = gn(v.out); osc('sine', 147.5, t, 0.4, g3); ad(g3.gain, t, vel * 0.15, 0.004, 0.3);
-    const n = gn(v.out), nf = flt(n, 'lowpass', 200); noi(t, 0.1, nf); ad(n.gain, t, vel * 0.6, 0.003, 0.06);
+    drumHit(v.out, t, vel);
     finishVoice(v);
   }
   function pickNote(c) {
@@ -5142,8 +5459,9 @@ const AU = (function () {
       const t = Math.max(mus.nextChord, now + 0.05), c = CH[mus.chord], dur = rr(11, 15);
       padChord(t, c, dur);
       if (rnd() < 0.75) {
-        const t1 = t + rr(3, 6.5); pianoNote(t1, pickNote(c), rr(0.6, 1));
-        if (rnd() < 0.35) pianoNote(t1 + rr(2.4, 4.2), pickNote(c), rr(0.45, 0.8));
+        const t1 = t + rr(3, 6.5), m1 = pickNote(c); pianoNote(t1, m1, rr(0.6, 1));
+        if (rnd() < 0.45) pentaRun(t1 + rr(1.2, 2.2), m1, rr(0.4, 0.65));
+        if (rnd() < 0.4) pianoNote(t1 + rr(3.4, 5.0), pickNote(c), rr(0.45, 0.8));
       }
       mus.nextChord = t + dur - 1.0;
       mus.chord = c.to[(rnd() * c.to.length) | 0];
@@ -5152,9 +5470,12 @@ const AU = (function () {
       if (mus.timpAt < now - 1) mus.timpAt = now + 0.4;
       if (now > mus.timpAt - 0.2) {
         const t = Math.max(mus.timpAt, now + 0.03), vel = 0.22 * cur.tension;
-        timp(t, vel * (mus.timpN % 4 === 0 ? 1 : 0.7));
-        if (mus.timpN % 4 === 3) timp(t + 1.8, vel * 0.45);
-        mus.timpN++; mus.timpAt = t + 2.4;
+        const k = mus.timpN % 4;
+        timp(t, vel * (k === 0 ? 1 : 0.7));
+        if (k === 1) timp(t + 0.9, vel * 0.5);
+        if (k === 2) { woodBlock(t + 0.6, vel); woodBlock(t + 1.2, vel * 0.7); }
+        if (k === 3) { timp(t + 0.6, vel * 0.55); timp(t + 0.9, vel * 0.65); timp(t + 1.2, vel * 0.8); }
+        mus.timpN++; mus.timpAt = t + 1.8;
       }
     }
   }
@@ -5346,12 +5667,12 @@ function boot() {
   KIT.marker = new PartBatch(S => { S.box(.07, .75, .07, 0, .37, 0, COL.woodD, { l: L_WOOD, r: [0, 0, .08] }); clothPanel(S, { x0: .03, x1: .36, yTop: .72, len: .26, z: 0, col: COL.clothT, rng: makeRng(9), nx: 2, ny: 2, rag: 0, sway: 0 }); S.rock(.12, -.2, .04, .15, COL.stone, {}); S.rock(.09, .22, .03, -.12, COL.stoneD, {}); }, 14, { rad: .1 });
   G.boardSeed = HASH.seed ? +HASH.seed : 1 + Math.floor(Math.random() * 9000);
   G.boardIndex = +(HASH.board || 0); G.level = +(HASH.level || 0);
-  { const bi = HASH.biome === undefined ? -1 : BIOMES.findIndex(b => b.key === HASH.biome || b.name.toLowerCase() === String(HASH.biome).toLowerCase()); BIOME.start = (bi >= 0 ? bi : HASH.biome !== undefined && isFinite(+HASH.biome) ? +HASH.biome : HASH.seed ? 0 : Math.floor(Math.random() * BIOMES.length)) - G.boardIndex; }
+  { const bi = HASH.biome === undefined ? -1 : BIOMES.findIndex(b => b.key === HASH.biome || b.name === String(HASH.biome)); BIOME.start = (bi >= 0 ? bi : HASH.biome !== undefined && isFinite(+HASH.biome) ? +HASH.biome : HASH.seed ? 0 : Math.floor(Math.random() * BIOMES.length)) - G.boardIndex; }
   const B = G.B = buildBoard(G.boardSeed++, G.boardIndex++);
   R.scene.add(B.group); activateBoard(B, true);
   beginBattle(true);
   window.addEventListener('resize', resizeRenderer);
-  window.__cw = { G, R, CAM, UI, LT, FX, AI, PX, MON, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
+  window.__cw = { G, R, CAM, UI, LT, FX, AI, PX, MON, buildTower, upgradeTower, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
   if (HASH.k) G.k = +HASH.k;
   if (HASH.ff) { const n = Math.round(+HASH.ff * 30); for (let i = 0; i < n; i++) step(1 / 30); CAM.sx = CAM.fx; CAM.sz = CAM.fz; R.fade = 1; }
   if (HASH.phase) setPhase(HASH.phase);

@@ -4,10 +4,10 @@ const G = {
   towers: [], mons: [], men: [], arrows: [], shells: [], stuck: [], hbars: [], phase: 'play',
 };
 const TOWER = {
-  archer: { name: 'Archer tower', short: 'Archers', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['Fast flaming arrows.', 'Can hit flyers.'] },
-  bombard: { name: 'Bombard', short: 'Bombard', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['Slow shells that burst.', 'Ground targets only.'] },
-  spire: { name: 'Storm spire', short: 'Spire', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [16, 20, 26], desc: ['Chain lightning that slows.', 'Can hit flyers.'] },
-  guard: { name: 'Guard post', short: 'Guards', icon: 'guard', cost: [80, 90, 150], range: [3.4, 3.7, 4.0], n: [2, 3, 3], hp: [62, 90, 135], dmg: [7, 10, 15], rate: [7, 6, 5], air: false, ground: true, light: [55, 70, 90], desc: ['Footmen who block', 'and duel on the road.'] },
+  archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['连发火箭，射速快。', '可射飞行之敌。'] },
+  bombard: { name: '火炮台', short: '火炮', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['装填慢，炮弹炸裂一片。', '只打地面之敌。'] },
+  spire: { name: '引雷塔', short: '雷塔', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [16, 20, 26], desc: ['连环雷电，令敌迟缓。', '可击飞行之敌。'] },
+  guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 90, 150], range: [3.4, 3.7, 4.0], n: [2, 3, 3], hp: [62, 90, 135], dmg: [7, 10, 15], rate: [7, 6, 5], air: false, ground: true, light: [55, 70, 90], desc: ['戍卒出营拦路，', '与敌近身搏杀。'] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
 
@@ -18,118 +18,160 @@ function blueprint(kind, lvl) {
     for (let i = 1; i < S.P.length; i += 3) S.P[i] -= minY; pieces.push({ id, order, y: minY, soup: S });
   };
   const w = COL.wood, wd = COL.woodD, wl = COL.woodL, st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL, iron = COL.iron, rng = soupRng;
+  const red = COL.lacq, redD = COL.lacqD, redL = COL.lacqL;
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
   const brazier = (S, x, y, z, bs) => {
     for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + .5; S.seg([x + Math.cos(a) * bs * .42, y, z + Math.sin(a) * bs * .42], [x + Math.cos(a) * bs * .2, y + bs * .5, z + Math.sin(a) * bs * .2], .028, .028, iron, { l: L_METAL, n: 4 }); }
-    S.cyl(bs * .3, bs * .22, x, y + bs * .56, z, iron, { n: 8, l: L_METAL, rt: 1.5, rough: .6 });
+    S.cyl(bs * .3, bs * .22, x, y + bs * .56, z, COL.bronze, { n: 8, l: L_METAL, rt: 1.5, rough: .6 });
     S.cyl(bs * .4, .04, x, y + bs * .68, z, COL.ember, { n: 8, emis: .55, jit: 0 });
   };
   if (kind === 'archer') {
-    const bH = [.25, 1.0, 1.9][lvl], H = [2.0, 2.7, 3.35][lvl], W = [.75, .85, .93][lvl], bs = [.5, .62, .8][lvl];
+    // Arrow tower: a brick or rammed earth stage, red posts, a railed gallery and a tiled roof on four columns.
+    const bH = [.25, 1.0, 1.9][lvl], H = [2.0, 2.7, 3.35][lvl], W = [.75, .85, .93][lvl], bs = [.5, .62, .8][lvl], rH = [1.5, 1.55, 1.6][lvl];
     piece('base', 0, S => {
       if (lvl === 0) { S.box(1.6, .25, 1.6, 0, .125, 0, sdk, { l: L_MASON }); for (const [a, b] of corners) S.box(.3, .32, .3, a * .66, .16, b * .66, sl, { l: L_MASON }); }
       else {
-        S.box(1.8, .3, 1.8, 0, .15, 0, sdk, { l: L_MASON });
-        S.cyl(1.02, bH - .3, 0, .3 + (bH - .3) / 2, 0, st, { n: 4, l: L_MASON, rt: .9, r: [0, PI / 4, 0] });
-        S.box(1.42, .14, 1.42, 0, bH - .04, 0, sl, { l: L_MASON });
-        S.box(.3, .5, .06, 0, .56, .71, COL.black, { jit: 0 });
-        if (lvl === 2) { for (const [a, b] of corners) for (let q = 0; q < 3; q++) S.box(.22, .2, .22, a * (.7 - q * .025), .5 + q * .5, b * (.7 - q * .025), sl, { l: L_MASON }); for (const sg of [-1, 1]) S.box(.06, .5, .12, sg * .7, 1.1, 0, COL.black, { jit: 0 }); }
+        S.box(1.86, .3, 1.86, 0, .15, 0, sdk, { l: L_MASON });
+        S.cyl(1.06, bH - .3, 0, .3 + (bH - .3) / 2, 0, lvl === 2 ? st : COL.ram, { n: 4, l: lvl === 2 ? L_MASON : L_DIRT, rt: .86, r: [0, PI / 4, 0], jit: .03 });
+        for (const [a, b] of corners) S.seg([a * .76, .3, b * .76], [a * .66, bH - .06, b * .66], .1, .09, lvl === 2 ? sl : sdk, { n: 4, l: L_MASON });
+        S.box(1.4, .12, 1.4, 0, bH - .04, 0, sl, { l: L_MASON });
+        S.box(.34, .52, .06, 0, .56, .745, COL.black, { jit: 0 }); S.box(.44, .07, .1, 0, .86, .75, redD, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.06, .56, .1, sg * .2, .58, .75, redD, { l: L_WOOD });
+        if (lvl === 2) for (const sg of [-1, 1]) S.box(.06, .4, .1, sg * .72, 1.15, 0, COL.black, { jit: 0 });
       }
     });
-    piece('posts', 1, S => {
-      for (const [a, b] of corners) S.seg([a * .62, bH, b * .62], [a * (W - .1), H, b * (W - .1)], .085, .075, wd, { l: L_WOOD });
+    if (lvl === 2) piece('skirt', 1, S => { cnRoof(S, { y: bH - .34, a: 1.2, h: .34, t0: .56, n: 2, m: 4, lift: .12, rr: .035 }); });
+    piece('posts', 2, S => {
+      for (const [a, b] of corners) S.seg([a * .62, bH, b * .62], [a * (W - .1), H, b * (W - .1)], .085, .075, red, { l: L_WOOD });
       const ym = (bH + H) / 2, r = lerp(.62, W - .1, .5);
-      for (let k = 0; k < 4; k++) { const [a, b] = corners[k], [c, d] = corners[(k + 1) % 4]; S.seg([a * r, ym, b * r], [c * r, ym, d * r], .05, .05, w, { l: L_WOOD, n: 4 }); }
+      for (let k = 0; k < 4; k++) { const [a, b] = corners[k], [c, d] = corners[(k + 1) % 4]; S.seg([a * r, ym, b * r], [c * r, ym, d * r], .05, .05, redD, { l: L_WOOD, n: 4 }); }
     });
-    piece('brace', 2, S => {
+    piece('brace', 3, S => {
       for (let k = 0; k < 4; k++) { const [a, b] = corners[k], [c, d] = corners[(k + 1) % 4]; S.seg([a * .62, bH + .1, b * .62], [c * (W - .12), H - .15, d * (W - .12)], .035, .035, w, { l: L_WOOD, n: 4 }); S.seg([c * .62, bH + .1, d * .62], [a * (W - .12), H - .15, b * (W - .12)], .035, .035, wl, { l: L_WOOD, n: 4 }); }
     });
-    piece('deck', 3, S => {
-      S.box(W * 2 + .16, .1, W * 2 + .16, 0, H + .05, 0, w, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(W * 2 + .3, .09, .1, 0, H - .04, sg * (W - .1), wd, { l: L_WOOD });
-      for (const sg of [-1, 1]) S.box(.1, .09, W * 2 + .3, sg * (W - .1), H - .04, 0, wd, { l: L_WOOD });
-      if (lvl >= 1) for (const [a, b] of corners) S.seg([a * (W - .1), H - .55, b * (W - .1)], [a * (W + .06), H - .02, b * (W + .06)], .04, .04, wd, { l: L_WOOD, n: 4 });
+    piece('deck', 4, S => {
+      S.box(W * 2 + .16, .1, W * 2 + .16, 0, H + .05, 0, w, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(W * 2 + .34, .1, .12, 0, H - .04, sg * (W - .1), redD, { l: L_WOOD });
+      for (const sg of [-1, 1]) S.box(.12, .1, W * 2 + .34, sg * (W - .1), H - .04, 0, redD, { l: L_WOOD });
+      if (lvl >= 1) for (const [a, b] of corners) S.seg([a * (W - .1), H - .55, b * (W - .1)], [a * (W + .06), H - .02, b * (W + .06)], .04, .04, red, { l: L_WOOD, n: 4 });
     });
-    piece('rail', 4, S => {
-      const y0 = H + .1;
+    piece('rail', 5, S => {
+      const y0 = H + .1, R = W + .02;
       for (let k = 0; k < 4; k++) {
-        const ang = k * HPI, cs = Math.cos(ang), sn = Math.sin(ang);
-        for (let j = 0; j < 5; j++) {
-          if (k === 2 && (j === 1 || j === 2)) continue;
-          const u = (j - 2) * W * .42, hh = (j & 1) ? .34 : .5, x = u * cs + (W + .02) * sn, z = -u * sn + (W + .02) * cs;
-          S.box(W * .4, hh, .06, x, y0 + hh / 2, z, (j & 1) ? w : wl, { l: L_WOOD, r: [0, ang, 0] });
-        }
+        const ang = k * HPI, cs = Math.cos(ang), sn = Math.sin(ang), at = (u, y, ww, hh, c) => S.box(ww, hh, .05, u * cs + R * sn, y, -u * sn + R * cs, c, { l: L_WOOD, r: [0, ang, 0] });
+        if (k === 2) { for (const sg of [-1, 1]) { at(sg * W * .7, y0 + .36, W * .6, .05, red); at(sg * W * .7, y0 + .14, W * .6, .04, redD); } continue; }
+        at(0, y0 + .36, W * 2, .05, red); at(0, y0 + .14, W * 2, .04, redD);
+        for (let j = -2; j <= 2; j++) at(j * W * .4, y0 + .2, .045, .36, j & 1 ? redD : red);
+        for (const u of [-W * .6, -W * .2, W * .2, W * .6]) { S.seg([(u - .1) * cs + R * sn, y0 + .15, -(u - .1) * sn + R * cs], [(u + .1) * cs + R * sn, y0 + .35, -(u + .1) * sn + R * cs], .014, .014, redD, { n: 3, l: L_WOOD }); S.seg([(u + .1) * cs + R * sn, y0 + .15, -(u + .1) * sn + R * cs], [(u - .1) * cs + R * sn, y0 + .35, -(u - .1) * sn + R * cs], .014, .014, redD, { n: 3, l: L_WOOD }); }
       }
-      for (const [a, b] of corners) S.box(.1, .66, .1, a * (W + .02), y0 + .33, b * (W + .02), wd, { l: L_WOOD });
-      if (lvl >= 1) for (const u of lvl === 2 ? [-.5, 0, .5] : [-.35, .35]) { S.cyl(.2, .04, u, y0 + .22, W + .08, lvl === 2 ? COL.ironL : COL.clothB, { n: 8, r: [HPI, 0, 0], l: lvl === 2 ? L_METAL : L_WOOD }); S.sph(.05, u, y0 + .22, W + .11, COL.ironL, { l: L_METAL, w: 5, h: 3, smooth: false }); }
-      if (lvl === 2) for (const sg of [-1, 1]) S.cyl(.2, .04, sg * (W + .08), y0 + .22, .1, COL.clothR, { n: 8, r: [0, 0, HPI], l: L_WOOD });
+      if (lvl >= 1) for (const u of lvl === 2 ? [-.5, 0, .5] : [-.35, .35]) { S.cyl(.2, .04, u, y0 + .22, W + .08, lvl === 2 ? COL.bronze : COL.lacqL, { n: 8, r: [HPI, 0, 0], l: lvl === 2 ? L_METAL : L_WOOD }); S.sph(.05, u, y0 + .22, W + .11, COL.brass, { l: L_METAL, w: 5, h: 3, smooth: false }); }
     });
-    piece('ladder', 5, S => {
+    piece('ladder', 6, S => {
       for (const sg of [-1, 1]) S.seg([sg * .17, 0, -W - .5], [sg * .17, H + .15, -W - .06], .035, .035, wd, { l: L_WOOD, n: 4 });
       for (let y = .3; y < H; y += .34) { const u = y / (H + .15); S.box(.36, .04, .05, 0, y, lerp(-W - .5, -W - .06, u), wl, { l: L_WOOD }); }
     });
-    const bx = -W + .34, bz = -W + .36, by = H + .1 + (lvl === 2 ? .35 : 0);
-    piece('brazier', 6, S => { if (lvl === 2) S.cyl(.2, .38, bx, H + .29, bz, sdk, { n: 6, l: L_MASON }); brazier(S, bx, by, bz, bs); });
-    if (lvl >= 1) piece('flag', 7, S => { S.seg([W - .08, H + .1, -W + .08], [W - .08, H + 1.75, -W + .08], .035, .025, wd, { l: L_WOOD, n: 4 }); const T = new Soup(); clothPanel(T, { x0: 0, x1: .62, yTop: 0, len: .36, z: 0, col: COL.clothR, rng, nx: 3, ny: 2, rag: 0, sway: 1.2 }); S.merge(T, { p: [W - .06, H + 1.7, -W + .08], ao: null }); });
-    mounts.flame = [bx, by + bs * .7, bz]; mounts.flameSize = bs; mounts.top = H + 1.7;
-    mounts.archers = [[[.12, H + .1, .28]], [[-.3, H + .1, .42], [.42, H + .1, .1]], [[-.35, H + .1, .5], [.5, H + .1, .3], [.25, H + .1, -.4]]][lvl];
-  } else if (kind === 'bombard') {
-    const Rr = [1.0, 1.08, 1.15][lvl], H = [1.1, 1.5, 1.9][lvl];
-    piece('plinth', 0, S => { S.cyl(Rr + .22, .26, 0, .13, 0, sdk, { n: 10, l: L_MASON }); if (lvl === 2) S.cyl(Rr + .12, .2, 0, .36, 0, st, { n: 10, l: L_MASON }); });
-    piece('drum', 1, S => {
-      S.cyl(Rr, H, 0, H / 2, 0, st, { n: 10, l: L_MASON, rt: .93, jit: .03 });
-      for (let c = 0; c < 2 + lvl; c++) S.cyl(Rr * (1 - .05 * (.5 + c) / (2 + lvl)) + .012, .16, 0, .35 + c * (H - .5) / (1.5 + lvl), 0, mixC(sdk, sl, rng()), { n: 10, l: L_MASON });
-      S.box(.34, .55, .1, 0, .3, Rr * .97, COL.black, { jit: 0 });
+    const bx = -W + .3, bz = W - .34, by = H + .1;
+    piece('brazier', 7, S => { brazier(S, bx, by, bz, bs * .8); });
+    const ra = W + .14, pr = W - .02;
+    piece('columns', 8, S => {
+      for (const [a, b] of corners) { S.seg([a * pr, H + .1, b * pr], [a * pr, H + rH, b * pr], .055, .05, red, { l: L_WOOD, n: 6 }); S.box(.16, .06, .16, a * pr, H + .13, b * pr, sdk, { l: L_MASON }); }
+      cnBrackets(S, 0, H + rH - .02, 0, pr, pr, { h: .09 });
     });
-    if (lvl >= 1) piece('butt', 2, S => { for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4; S.box(.36, H * .8, .5, Math.cos(a) * (Rr + .06), H * .36, Math.sin(a) * (Rr + .06), sdk, { l: L_MASON, r: [0, -a + HPI, 0] }); S.box(.4, .12, .56, Math.cos(a) * (Rr + .06), H * .78, Math.sin(a) * (Rr + .06), sl, { l: L_MASON, r: [0, -a + HPI, 0] }); } });
-    if (lvl >= 1) piece('bands', 3, S => { for (const y of lvl === 2 ? [H * .45, H * .8] : [H * .65]) S.cyl(Rr * .965 + .02, .07, 0, y, 0, iron, { n: 10, l: L_METAL, rough: .55 }); });
-    piece('deck', 4, S => { S.cyl(Rr * .93 + .14, .16, 0, H + .02, 0, sl, { n: 10, l: L_MASON }); S.cyl(Rr * .8, .06, 0, H + .12, 0, w, { n: 10, l: L_WOOD }); });
-    piece('rim', 5, S => { for (let k = 0; k < 10; k++) { if (k % 5 === 0) continue; const a = (k + .5) / 10 * TAU + HPI; S.box(.46, .34, .22, Math.cos(a) * Rr * .96, H + .27, Math.sin(a) * Rr * .96, lvl === 2 && (k & 1) ? iron : mixC(sdk, sl, rng()), { l: lvl === 2 && (k & 1) ? L_METAL : L_MASON, r: [0, -a + HPI, 0] }); } });
+    piece('roof', 9, S => {
+      const thatch = lvl === 0;
+      cnRoof(S, { y: H + rH + .06, a: ra, h: [.5, .6, .7][lvl], lift: thatch ? .08 : .2, n: 4, m: 4, col: thatch ? COL.thatch : COL.tile, layer: thatch ? L_THATCH : L_SLATE, ridgeCol: thatch ? mulC(COL.thatch, .6) : undefined, finial: lvl === 2 ? COL.gold : thatch ? wd : COL.brass });
+    });
+    piece('flag', 10, S => { cnBanner(S, W + .04, H + .1, H + rH + [1.3, 1.5, 1.7][lvl], -W - .04, COL.clothR, rng, { w: .36, len: .8 + lvl * .12, col2: lvl ? mulC(COL.gold, .7) : null }); });
+    mounts.flame = [bx, by + bs * .56, bz]; mounts.flameSize = bs * .8; mounts.top = H + rH + 1.0;
+    mounts.archers = [[[.12, H + .1, .28]], [[-.3, H + .1, .1], [.42, H + .1, .3]], [[-.4, H + .1, -.1], [.5, H + .1, .3], [.1, H + .1, -.45]]][lvl];
+  } else if (kind === 'bombard') {
+    // Cannon terrace: an eight sided brick battery with merlons, a bronze gun and paper lanterns.
+    const Rr = [1.0, 1.08, 1.15][lvl], H = [1.1, 1.5, 1.9][lvl], N = 8, rot = { r: [0, PI / 8, 0] };
+    piece('plinth', 0, S => { S.cyl(Rr + .26, .26, 0, .13, 0, sdk, Object.assign({ n: N, l: L_MASON }, rot)); if (lvl === 2) S.cyl(Rr + .14, .2, 0, .36, 0, st, Object.assign({ n: N, l: L_MASON }, rot)); });
+    piece('drum', 1, S => {
+      S.cyl(Rr, H, 0, H / 2, 0, st, Object.assign({ n: N, l: L_MASON, rt: .9, jit: .03 }, rot));
+      for (let c = 0; c < 2 + lvl; c++) { const yb = .35 + c * (H - .5) / (1.5 + lvl); S.cyl(Rr * (1 - .1 * yb / H) + .012, .1, 0, yb, 0, mixC(sdk, sl, rng()), Object.assign({ n: N, l: L_MASON }, rot)); }
+      S.box(.36, .56, .1, 0, .3, Rr * .93, COL.black, { jit: 0 }); S.box(.5, .08, .14, 0, .62, Rr * .93, redD, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.07, .6, .14, sg * .22, .32, Rr * .93, redD, { l: L_WOOD });
+    });
+    if (lvl >= 1) piece('butt', 2, S => { for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4; S.box(.36, H * .8, .5, Math.cos(a) * (Rr + .02), H * .36, Math.sin(a) * (Rr + .02), sdk, { l: L_MASON, r: [0, -a + HPI, 0] }); S.box(.4, .12, .56, Math.cos(a) * (Rr + .02), H * .78, Math.sin(a) * (Rr + .02), sl, { l: L_MASON, r: [0, -a + HPI, 0] }); } });
+    if (lvl === 2) piece('skirt', 3, S => { cnRoof(S, { y: H * .5, a: Rr + .3, h: .3, t0: .7, n: 2, m: 4, lift: .12, rr: .03 }); });
+    piece('deck', 4, S => { S.cyl(Rr * .9 + .16, .16, 0, H + .02, 0, sl, Object.assign({ n: N, l: L_MASON }, rot)); S.cyl(Rr * .78, .06, 0, H + .12, 0, w, Object.assign({ n: N, l: L_WOOD }, rot)); });
+    piece('rim', 5, S => {
+      for (let k = 0; k < N; k++) {
+        if (k === 2) continue;
+        const a = k / N * TAU, rr2 = Rr * .9 + .02, cx = Math.cos(a) * rr2, cz = Math.sin(a) * rr2, tx = -Math.sin(a), tz = Math.cos(a);
+        S.box(.76, .14, .2, cx, H + .17, cz, mixC(sdk, sl, rng()), { l: L_MASON, r: [0, -a + HPI, 0] });
+        for (const u of [-.24, .24]) S.box(.26, .26, .2, cx + tx * u, H + .37, cz + tz * u, mixC(sdk, sl, rng()), { l: L_MASON, r: [0, -a + HPI, 0] });
+      }
+    });
     piece('ammo', 6, S => { for (const [x, z] of [[-.42, -.5], [-.24, -.52], [-.33, -.36]]) S.sph(.09, x, H + .22, z, mulC(iron, .8), { l: L_METAL, w: 6, h: 4, smooth: false }); S.sph(.09, -.33, H + .36, -.46, mulC(iron, .8), { l: L_METAL, w: 6, h: 4, smooth: false }); PROP.barrel(S, .45, H + .13, -.5, .75, rng); });
-    const lx = -Rr * .78, lz = .2, lh = H + 1.25 + lvl * .12;
+    const lx = -Rr * .74, lz = .1, lh = H + 1.35 + lvl * .12;
+    let lp = null;
     piece('lantern', 7, S => {
       for (const sg of lvl === 2 ? [-1, 1] : [1]) {
         const x = lx * sg;
-        S.seg([x, H + .1, lz], [x, lh, lz], .04, .035, iron, { l: L_METAL, n: 4 }); S.seg([x, lh, lz], [x - sg * -.0, lh, lz + .32], .03, .03, iron, { l: L_METAL, n: 4 });
-        S.box(.2, .05, .2, x, lh - .08, lz + .32, iron, { l: L_METAL }); S.box(.16, .2, .16, x, lh - .22, lz + .32, COL.ember, { emis: .8, jit: 0 }); S.box(.2, .04, .2, x, lh - .34, lz + .32, iron, { l: L_METAL });
-        for (const [a, b] of corners) S.box(.025, .22, .025, x + a * .09, lh - .22, lz + .32 + b * .09, iron, { l: L_METAL });
+        S.seg([x, H + .1, lz], [x, lh, lz], .04, .035, redD, { l: L_WOOD, n: 5 }); S.seg([x, lh - .04, lz], [x, lh + .06, lz + .36], .03, .022, redD, { l: L_WOOD, n: 4 });
+        S.seg([x, lh + .05, lz + .34], [x, lh - .12, lz + .34], .008, .008, COL.rope, { n: 3 });
+        const p = cnLantern(S, x, lh - .28, lz + .34, 1.25 + lvl * .1); if (sg === 1) lp = p;
       }
     });
-    mounts.flame = [lx, lh - .3, lz + .32]; mounts.flameSize = .26 + lvl * .05; mounts.flame2 = lvl === 2 ? [-lx, lh - .3, lz + .32] : null; mounts.top = H + 1.6;
+    if (lvl >= 1) piece('flag', 8, S => { cnBanner(S, Rr * .62, H + .1, H + 2.2 + lvl * .3, -Rr * .62, COL.clothD, rng, { w: .34, len: .9, col2: mulC(COL.lacqL, 1.1) }); });
+    mounts.flame = [lx, lh - .3, lz + .34]; mounts.flameSize = .24 + lvl * .04; mounts.flame2 = lvl === 2 ? [-lx, lh - .3, lz + .34] : null; mounts.top = H + 1.7;
     mounts.gun = [0, H + .15, .05]; mounts.gunLen = [.95, 1.12, 1.25][lvl]; mounts.gunR = [.15, .18, .215][lvl];
   } else if (kind === 'spire') {
-    const H = [2.7, 3.4, 4.1][lvl], bas = COL.basalt, basL = COL.basaltL, cu = C(0x8a5a3a);
-    piece('plinth', 0, S => { S.box(1.55, .22, 1.55, 0, .11, 0, basL, { l: L_ROCK }); S.box(1.18, .2, 1.18, 0, .32, 0, bas, { l: L_ROCK }); if (lvl >= 1) for (const [a, b] of corners) S.cone(.16, .5, a * .62, .5, b * .62, basL, { n: 4, l: L_ROCK }); });
-    piece('shaft', 1, S => {
-      S.cyl(.62, H - .42, 0, .42 + (H - .42) / 2, 0, bas, { n: 4, l: L_ROCK, rt: .52, r: [0, PI / 4, 0], jit: .03 });
-      for (let k = 0; k < 4; k++) { const a = k * HPI, n = 3 + lvl; for (let j = 0; j < n; j++) { const u = (j + .7) / (n + .6), y = .42 + u * (H - .42), rr2 = lerp(.62, .32, u) * .7072 + .012; S.box(.07, .2, .02, Math.sin(a) * rr2, y, Math.cos(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [-.12, a, 0], ro: 'YXZ' }); } }
+    // Thunder pagoda: a slim tiered stone pagoda that holds a floating storm pearl.
+    const H = [2.7, 3.4, 4.1][lvl], bas = COL.basalt, basL = COL.basaltL, cu = COL.brass, tiers = 2 + lvl, r0 = .56, r1 = .3, rot = { r: [0, PI / 8, 0] };
+    const rAt = u => lerp(r0, r1, u);
+    piece('plinth', 0, S => {
+      S.cyl(1.0, .2, 0, .1, 0, basL, Object.assign({ n: 8, l: L_ROCK }, rot)); S.cyl(.8, .12, 0, .26, 0, bas, Object.assign({ n: 8, l: L_ROCK, rt: .86 }, rot)); S.cyl(.74, .12, 0, .38, 0, basL, Object.assign({ n: 8, l: L_ROCK, rt: 1.12 }, rot));
+      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, tri = [k & 1, (k >> 1) & 1, (k >> 2) & 1]; for (let j = 0; j < 3; j++) { const rr2 = .64 + j * .1; if (tri[j]) S.box(.2, .012, .05, Math.cos(a) * rr2, .205, Math.sin(a) * rr2, COL.crystal, { emis: .4, jit: 0, r: [0, -a + HPI, 0] }); else for (const sg of [-1, 1]) S.box(.08, .012, .05, Math.cos(a) * rr2 - Math.sin(a) * sg * .06, .205, Math.sin(a) * rr2 + Math.cos(a) * sg * .06, COL.crystal, { emis: .4, jit: 0, r: [0, -a + HPI, 0] }); } }
     });
-    if (lvl >= 1) piece('bands', 2, S => { for (const u of lvl === 2 ? [.3, .58, .82] : [.4, .75]) S.cyl(lerp(.62, .32, u) + .03, .09, 0, .42 + u * (H - .42), 0, cu, { n: 4, l: L_METAL, r: [0, PI / 4, 0], rough: .45 }); });
-    piece('claws', 3, S => { for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4, cs = Math.cos(a), sn = Math.sin(a); S.seg([cs * .22, H - .12, sn * .22], [cs * .46, H + .26, sn * .46], .06, .045, basL, { l: L_ROCK, n: 4 }); S.seg([cs * .46, H + .26, sn * .46], [cs * .26, H + .74, sn * .26], .045, .012, lvl ? cu : basL, { l: lvl ? L_METAL : L_ROCK, n: 4 }); } S.cyl(.34, .12, 0, H - .02, 0, basL, { n: 4, l: L_ROCK, r: [0, PI / 4, 0] }); });
-    mounts.crystal = [0, H + .42, 0]; mounts.crystalS = [.2, .24, .29][lvl]; mounts.shards = [0, 2, 4][lvl]; mounts.rings = lvl === 2; mounts.top = H + 1.2; mounts.flame = null; mounts.lightAt = [0, H + .45, 0];
+    piece('shaft', 1, S => {
+      S.cyl(r0, H - .44, 0, .44 + (H - .44) / 2, 0, bas, Object.assign({ n: 8, l: L_ROCK, rt: r1 / r0, jit: .03 }, rot));
+      for (let k = 0; k < 4; k++) { const a = k * HPI, n = 3 + lvl; for (let j = 0; j < n; j++) { const u = (j + .7) / (n + .6), y = .44 + u * (H - .44), rr2 = rAt(u) * .925 + .012; S.box(.07, .2, .02, Math.sin(a) * rr2, y, Math.cos(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [-.1, a, 0], ro: 'YXZ' }); } }
+    });
+    piece('eaves', 2, S => {
+      for (let t = 0; t < tiers; t++) { const u = (t + .55) / (tiers + .25), y = .44 + u * (H - .44), rr2 = rAt(u); cnRoof(S, { y: y - .16, a: rr2 + .42 - t * .03, h: .3, t0: (rr2 - .04) / (rr2 + .42 - t * .03), n: 2, m: 4, lift: .16, rr: .028, ry: PI / 4 * (t & 1) }); S.cyl(rr2 + .05, .07, 0, y + .16, 0, cu, Object.assign({ n: 8, l: L_METAL, rough: .45 }, rot)); }
+    });
+    piece('claws', 3, S => {
+      for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4, cs = Math.cos(a), sn = Math.sin(a); S.seg([cs * .2, H - .1, sn * .2], [cs * .46, H + .22, sn * .46], .055, .042, cu, { l: L_METAL, n: 4, rough: .45 }); S.seg([cs * .46, H + .22, sn * .46], [cs * .3, H + .72, sn * .3], .042, .012, cu, { l: L_METAL, n: 4, rough: .45 }); }
+      S.cyl(.36, .12, 0, H - .02, 0, basL, Object.assign({ n: 8, l: L_ROCK }, rot)); S.cyl(.22, .1, 0, H + .08, 0, cu, { n: 8, l: L_METAL, rough: .45, rt: .6 });
+    });
+    mounts.crystal = [0, H + .44, 0]; mounts.crystalS = [.2, .24, .29][lvl]; mounts.shards = [0, 2, 4][lvl]; mounts.rings = lvl === 2; mounts.top = H + 1.2; mounts.flame = null; mounts.lightAt = [0, H + .45, 0];
   } else {
-    const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], stoneWalls = lvl === 2;
+    // Garrison hall: rammed earth or brick walls under a tiled roof, a halberd rack and a corner tower at the top level.
+    const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], brick = lvl === 2;
     piece('floor', 0, S => { S.box(W + .5, .16, D + .7, 0, .08, .1, sdk, { l: L_MASON }); S.box(.7, .1, .4, 0, .05, D / 2 + .55, st, { l: L_MASON }); });
     piece('walls', 1, S => {
-      const wc = stoneWalls ? st : C(0x8f8468), wlay = stoneWalls ? L_MASON : L_PLAIN;
-      if (lvl === 1) S.box(W + .04, .5, D + .04, 0, .41, 0, st, { l: L_MASON });
+      const wc = brick ? st : lvl === 1 ? COL.plaster : COL.ram, wlay = brick ? L_MASON : lvl === 1 ? L_PLAIN : L_DIRT;
+      if (lvl >= 1) S.box(W + .06, .4, D + .06, 0, .36, 0, st, { l: L_MASON });
       S.box(W, wh, D, 0, .16 + wh / 2, 0, wc, { l: wlay, jit: .03 });
-      if (!stoneWalls) { for (const [a, b] of corners) S.box(.12, wh + .04, .12, a * W / 2, .16 + wh / 2, b * D / 2, wd, { l: L_WOOD }); for (const sg of [-1, 1]) { S.box(W, .1, .08, 0, .16 + wh * .55, sg * D / 2, wd, { l: L_WOOD }); S.seg([sg * W * .5, .2, D / 2 + .01], [sg * W * .22, .16 + wh, D / 2 + .01], .04, .04, wd, { l: L_WOOD, n: 4 }); } S.box(.08, .1, D, W / 2, .16 + wh * .55, 0, wd, { l: L_WOOD }); S.box(.08, .1, D, -W / 2, .16 + wh * .55, 0, wd, { l: L_WOOD }); }
-      S.box(.5, .82, .12, 0, .57, D / 2, COL.black, { jit: 0 }); S.box(.66, .1, .16, 0, 1.02, D / 2 + .02, wd, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.09, .86, .16, sg * .29, .59, D / 2 + .02, wd, { l: L_WOOD });
-      S.box(.24, .24, .08, W * .32, .16 + wh * .62, D / 2 + .01, COL.black, { jit: 0 }); S.box(.08, .3, .3, W / 2 + .01, .16 + wh * .6, 0, COL.black, { jit: 0 });
+      for (const [a, b] of corners) S.box(.13, wh + .04, .13, a * W / 2, .16 + wh / 2, b * D / 2, red, { l: L_WOOD });
+      for (const sg of [-1, 1]) { S.box(W, .09, .09, 0, .16 + wh - .05, sg * D / 2, redD, { l: L_WOOD }); S.box(.09, .09, D, sg * W / 2, .16 + wh - .05, 0, redD, { l: L_WOOD }); }
+      S.box(.5, .82, .12, 0, .57, D / 2, COL.black, { jit: 0 }); S.box(.7, .1, .16, 0, 1.02, D / 2 + .02, red, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.09, .86, .16, sg * .29, .59, D / 2 + .02, red, { l: L_WOOD });
+      for (const sg of [-1, 1]) { const x = sg * W * .32; S.box(.3, .26, .06, x, .16 + wh * .6, D / 2 + .01, COL.black, { jit: 0 }); for (const u of [-.08, 0, .08]) S.box(.022, .26, .07, x + u, .16 + wh * .6, D / 2 + .02, redD, { l: L_WOOD }); S.box(.34, .03, .08, x, .16 + wh * .6, D / 2 + .02, redD, { l: L_WOOD }); }
+      S.box(.08, .3, .3, W / 2 + .01, .16 + wh * .6, 0, COL.black, { jit: 0 });
     });
     piece('roof', 2, S => {
-      const rl = lvl === 0 ? L_THATCH : L_SLATE, rc = lvl === 0 ? COL.thatch : COL.slate, y0 = .16 + wh, rh = [.75, .85, .9][lvl], sl2 = Math.atan2(rh, D / 2 + .2), len = Math.hypot(rh, D / 2 + .2) + .12;
-      for (const sg of [-1, 1]) S.box(W + .36, .09, len, 0, y0 + rh / 2 - .02, sg * (D / 4 + .1), rc, { l: rl, r: [sg * sl2, 0, 0] });
-      for (const sg of [-1, 1]) { const T = [[sg * W / 2, y0, -D / 2], [sg * W / 2, y0, D / 2], [sg * W / 2, y0 + rh, 0]]; const gc = stoneWalls ? st : C(0x8f8468); if (sg > 0) S.tri(T[0], T[2], T[1], gc, stoneWalls ? L_MASON : L_PLAIN, .95); else S.tri(T[0], T[1], T[2], gc, stoneWalls ? L_MASON : L_PLAIN, .95); }
-      S.box(W + .44, .1, .14, 0, y0 + rh + .02, 0, wd, { l: L_WOOD });
-      S.box(.26, .5, .26, -W * .3, y0 + rh * .7 + .1, -D * .2, sdk, { l: L_MASON });
+      const thatch = lvl === 0, y0 = .16 + wh, rh = [.7, .8, .9][lvl], gc = brick ? st : lvl === 1 ? COL.plaster : COL.ram, gl = brick ? L_MASON : lvl === 1 ? L_PLAIN : L_DIRT;
+      for (const sg of [-1, 1]) { const T = [[sg * W / 2, y0, -D / 2], [sg * W / 2, y0, D / 2], [sg * W / 2, y0 + rh - .04, 0]]; if (sg > 0) S.tri(T[0], T[2], T[1], gc, gl, .95); else S.tri(T[0], T[1], T[2], gc, gl, .95); }
+      cnRoof(S, { y: y0 - .02, a: W / 2 + .24, b: D / 2 + .34, h: rh + .04, ridge: W / 2 + .24, lift: thatch ? .04 : .12, sag: 1.35, n: 4, m: 3, col: thatch ? COL.thatch : COL.tile, layer: thatch ? L_THATCH : L_SLATE, ridgeCol: thatch ? mulC(COL.thatch, .6) : undefined, rr: .045 });
+      if (!thatch) for (const sg of [-1, 1]) S.box(.1, .12, .1, sg * (W / 2 + .1), y0 + rh + .14, 0, COL.tileD, { l: L_SLATE });
     });
-    piece('rack', 3, S => { const x = -W / 2 - .28; S.box(.06, .7, .06, x, .5, -.3, wd, { l: L_WOOD }); S.box(.06, .7, .06, x, .5, .3, wd, { l: L_WOOD }); S.box(.05, .05, .7, x, .78, 0, w, { l: L_WOOD }); for (const z of [-.2, 0, .2]) { S.seg([x + .06, .12, z], [x - .04, 1.5, z], .018, .018, wl, { l: L_WOOD, n: 4 }); S.cone(.035, .14, x - .045, 1.56, z, COL.steel, { n: 4, l: L_METAL }); } if (lvl >= 1) { S.cyl(.2, .04, W / 2 + .03, .75, -.25, COL.clothB, { n: 8, r: [0, 0, HPI], l: L_WOOD }); } });
-    if (lvl === 2) piece('turret', 4, S => { const x = W / 2 - .2, z = -D / 2 + .2, th = 2.7; S.box(.8, th, .8, x, th / 2 + .16, z, st, { l: L_MASON }); S.box(.94, .16, .94, x, th + .2, z, sl, { l: L_MASON }); for (const [a, b] of corners) S.box(.24, .26, .24, x + a * .35, th + .4, z + b * .35, mixC(sdk, sl, rng()), { l: L_MASON }); S.box(.1, .4, .06, x, th * .7, z + .41, COL.black, { jit: 0 }); });
+    piece('rack', 3, S => {
+      const x = -W / 2 - .3; S.box(.06, .7, .06, x, .5, -.3, wd, { l: L_WOOD }); S.box(.06, .7, .06, x, .5, .3, wd, { l: L_WOOD }); S.box(.05, .05, .7, x, .78, 0, w, { l: L_WOOD });
+      for (const z of [-.2, 0, .2]) { S.seg([x + .06, .12, z], [x - .04, 1.6, z], .018, .018, redD, { l: L_WOOD, n: 4 }); S.cone(.035, .18, x - .05, 1.68, z, COL.steel, { n: 4, l: L_METAL }); S.box(.02, .05, .16, x - .04, 1.5, z + .05, COL.steel, { l: L_METAL }); S.ico(.035, x - .035, 1.42, z, COL.lacqL, { d: 0 }); }
+      if (lvl >= 1) S.cyl(.2, .04, W / 2 + .03, .7, -.25, COL.lacqL, { n: 8, r: [0, 0, HPI], l: L_WOOD });
+    });
+    if (lvl === 2) piece('turret', 4, S => {
+      const x = W / 2 - .2, z = -D / 2 + .2, th = 2.5;
+      S.cyl(.6, th, x, th / 2 + .16, z, st, { n: 4, l: L_MASON, rt: .86, r: [0, PI / 4, 0] }); S.box(.86, .12, .86, x, th + .2, z, sl, { l: L_MASON });
+      for (const [a, b] of corners) S.seg([x + a * .34, th + .26, z + b * .34], [x + a * .34, th + .86, z + b * .34], .04, .04, red, { l: L_WOOD, n: 5 });
+      cnBrackets(S, x, th + .84, z, .34, .34, { h: .07 }); cnRoof(S, { x, z, y: th + .92, a: .66, h: .42, lift: .16, n: 3, m: 4, finial: COL.gold });
+      S.box(.1, .4, .06, x, th * .62, z + .37, COL.black, { jit: 0 });
+    });
     const fx = W / 2 + .12, fz = D / 2 + .5, bs = [.34, .46, .6][lvl];
     piece('fire', 5, S => { if (lvl === 0) { S.seg([fx, 0, fz], [fx, 1.05, fz], .04, .035, wd, { l: L_WOOD, n: 4 }); S.cyl(.07, .12, fx, 1.1, fz, iron, { n: 6, l: L_METAL, rt: 1.4 }); } else brazier(S, fx, .08, fz, bs + .1); });
-    piece('flag', 6, S => { const x = lvl === 2 ? W / 2 - .2 : -W / 2 + .1, z = lvl === 2 ? -D / 2 + .2 : -D / 2 + .1, y0 = lvl === 2 ? 3.1 : .2, y1 = lvl === 2 ? 4.5 : 2.9; S.seg([x, y0, z], [x, y1, z], .04, .028, wd, { l: L_WOOD, n: 4 }); const T = new Soup(); clothPanel(T, { x0: 0, x1: .7, yTop: 0, len: .46, z: 0, col: COL.clothB, col2: mulC(COL.gold, .6), rng, nx: 4, ny: 3, rag: .2, sway: 1.1 }); S.merge(T, { p: [x + .03, y1 - .06, z], ao: null }); });
-    mounts.flame = lvl === 0 ? [fx, 1.2, fz] : [fx, .08 + (bs + .1) * .72, fz]; mounts.flameSize = bs; mounts.door = [0, 0, D / 2 + .45]; mounts.top = lvl === 2 ? 3.4 : 2.2;
+    piece('flag', 6, S => { const x = -W / 2 - .12, z = D / 2 + .3; cnBanner(S, x, .1, [2.9, 3.2, 3.6][lvl], z, COL.clothB, rng, { w: .4, len: 1.1 + lvl * .1 }); });
+    mounts.flame = lvl === 0 ? [fx, 1.2, fz] : [fx, .08 + (bs + .1) * .72, fz]; mounts.flameSize = bs; mounts.door = [0, 0, D / 2 + .45]; mounts.top = lvl === 2 ? 3.6 : 2.4;
   }
   pieces.sort((a, b) => a.order - b.order);
   return { pieces, mounts };
@@ -216,24 +258,24 @@ class Tower {
     if (this.flame) fxEmbers(this.flame.x, this.flame.y, this.flame.z, 10, .2);
   }
   makeGun() {
-    const mt = this.mounts, L = mt.gunLen, r = mt.gunR, S = new Soup(), br = this.lvl === 2 ? COL.iron : COL.bronze;
+    const mt = this.mounts, L = mt.gunLen, r = mt.gunR, S = new Soup(), br = this.lvl === 2 ? mulC(COL.brass, .8) : COL.bronze;
     S.cyl(.42, .12, 0, .06, 0, COL.woodD, { n: 8, l: L_WOOD }); for (const sg of [-1, 1]) { S.box(.09, .34, .62, sg * (r + .07), .26, 0, COL.wood, { l: L_WOOD }); S.cyl(.17, .07, sg * (r + .16), .17, -.12, COL.woodD, { n: 8, r: [0, 0, HPI], l: L_WOOD }); }
     this.carriage = new THREE.Mesh(S.build(), MAT.world); this.carriage.castShadow = this.carriage.receiveShadow = true; this.carriage.position.set(mt.gun[0], mt.gun[1], mt.gun[2]); this.group.add(this.carriage);
     const Bq = new Soup(), o = () => ({ n: 8, l: L_METAL, r: [HPI, 0, 0], rough: .42 });
     Bq.cyl(r, L, 0, 0, L / 2 - .28, br, Object.assign(o(), { rt: .8 })); Bq.cyl(r * 1.16, .12, 0, 0, L - .3, br, o()); Bq.cyl(r * .62, .03, 0, 0, L - .235, COL.black, Object.assign(o(), { jit: 0 }));
-    for (const z of [-.2, L * .25, L * .55]) Bq.cyl(r * 1.1 - z * .03, .07, 0, 0, z, mulC(br, .8), o());
+    for (const z of [-.2, L * .25, L * .55]) Bq.cyl(r * 1.1 - z * .03, .07, 0, 0, z, z > 0 && z < L * .5 ? COL.lacq : mulC(br, .8), o());
     Bq.sph(r * .9, 0, 0, -.3, br, { l: L_METAL, w: 6, h: 4, smooth: false, rough: .42 }); Bq.sph(r * .32, 0, 0, -.3 - r * .9, mulC(br, .8), { l: L_METAL, w: 5, h: 3, smooth: false });
     this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, .4, 0); this.barrel.rotation.x = -.42; this.carriage.add(this.barrel);
     this.gunYaw = this.yaw;
   }
   makeCrystal() {
-    const mt = this.mounts, mk = (sx, sy) => { const S = new Soup(); S.add(gOct(), { s: [sx, sy, sx], c: [1, 1, 1], jit: 0, cf: v => .55 + .45 * smooth(-sy, sy, v.y) + (v.x > 0 ? .12 : 0) }); return S.build(); };
+    const mt = this.mounts, mk = (sx, sy) => { const S = new Soup(), r = (sx + sy) * .42; S.add(gSph(8, 6), { s: r, c: [1, 1, 1], jit: 0, smooth: true, cf: v => .5 + .5 * smooth(-r, r, v.y) + (v.x > 0 ? .1 : 0) }); return S.build(); };
     this.cmat = new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(.3, .6, 1) });
     this.crystal = new THREE.Group(); this.crystal.position.set(mt.crystal[0], mt.crystal[1], mt.crystal[2]);
     const c = new THREE.Mesh(mk(mt.crystalS, mt.crystalS * 1.9), this.cmat); c.castShadow = true; this.crystal.add(c); this.core = c;
     this.shards = [];
     for (let i = 0; i < mt.shards; i++) { const s = new THREE.Mesh(mk(.07, .16), this.cmat); this.crystal.add(s); this.shards.push(s); }
-    if (mt.rings) { const S = new Soup(); for (let k = 0; k < 7; k++) { if (k === 3) continue; const a = k / 7 * TAU; S.box(.5, .16, .2, Math.cos(a) * 1.0, 0, Math.sin(a) * 1.0, COL.basaltL, { l: L_ROCK, r: [0, -a + HPI, 0] }); } this.ringG = new THREE.Mesh(S.build(), MAT.world); this.ringG.castShadow = true; this.ringG.position.y = -1.25; this.crystal.add(this.ringG); }
+    if (mt.rings) { const S = new Soup(); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; S.box(.46, .1, .2, Math.cos(a) * 1.0, 0, Math.sin(a) * 1.0, COL.basaltL, { l: L_ROCK, r: [0, -a + HPI, 0] }); for (let j = 0; j < 3; j++) { const rr2 = .94 + j * .06, on = (k >> j) & 1; if (on) S.box(.3, .014, .03, Math.cos(a) * rr2, .056, Math.sin(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [0, -a + HPI, 0] }); else for (const sg of [-1, 1]) S.box(.12, .014, .03, Math.cos(a) * rr2 - Math.sin(a) * sg * .09, .056, Math.sin(a) * rr2 + Math.cos(a) * sg * .09, COL.crystal, { emis: .5, jit: 0, r: [0, -a + HPI, 0] }); } } this.ringG = new THREE.Mesh(S.build(), MAT.world); this.ringG.castShadow = true; this.ringG.position.y = -1.25; this.crystal.add(this.ringG); }
     this.group.add(this.crystal);
   }
   upgrade() { if (this.lvl >= 2 || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }

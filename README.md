@@ -1,115 +1,101 @@
-# Cinderwatch
+# 烽燧（Cinderwatch · 中式战争主题）
 
-A self-playing 3D isometric tower defense in a single HTML file.
+单个 HTML 文件里的自动对战 3D 等轴测塔防。边关守军点燃烽火，凭箭楼、火炮台、引雷塔与戍卒营，抵挡自山洞涌出的幽冥妖军。页面一打开，军师便代你守关，你随时可以接管。
 
-A handful of firelit towers hold the great beacon of a ruined keep against endless columns of monsters, across five lands from a dark mountain pass to a snowfield, a bog, a lava scar and a desert at dusk. An AI commander plays from the moment the page loads, and you can take over at any time.
+本分支 `zh-war-theme` 把原版 [Cinderwatch](https://kevintngo.github.io/cinderwatch/) 的场景、建筑、单位、界面与音效整体换成了中式战争风格，玩法与数值未动。
 
-**[Play it in your browser](https://kevintngo.github.io/cinderwatch/)** · [Watch 20 seconds of gameplay](https://kevintngo.github.io/cinderwatch/media/gameplay-20s.mp4)
+![雁门关：白骨将军攻到关前](media/screenshot-zh.jpg)
 
-![A bone giant falls apart between the towers](media/screenshot.jpg)
+## 改了什么
 
-## What is in it
+- **关隘。** 主城换成青砖城墙、拱门朱漆大门、双檐城楼、方形夯土烽火台和院内大殿，门前一对石狮。
+- **四种防御，各三级，仍在脚手架里逐件搭起。**
+  - 箭楼：砖台或夯土台、朱漆立柱、回廊栏杆，顶上是起翘的瓦顶（一级为茅顶）。
+  - 火炮台：八角砖台加垛口，铜炮，挑杆上挂红灯笼。
+  - 引雷塔：层层出檐的石塔，塔顶四爪托着一颗雷珠，三级时环绕八卦石环。
+  - 戍卒营：夯土墙、粉墙或砖墙配悬山瓦顶，门口戟架，三级带角楼。
+- **五处战场。** 雁门关、雪岭长城、云梦泽、赤壁、玉门关。新增松、竹、胡杨、红柳丛和赤壁的烧毁战船；道旁换成拒马、战鼓、兵器架、石灯、界碑和竖幅战旗；废塔换成残破烽燧，十字墓碑换成碑帽石碑。
+- **敌我单位。** 守军改为红衣铁甲、铜盔红缨的戍卒，配环首刀与方盾。敌军改名并局部换装：阴兵、铁甲阴兵、僵尸（官帽加符纸）、石俑、怨灵、招魂巫、摄魂鼓手等，首领为白骨将军、雪魃、蛛后、熔岩巨俑、陵中尸王（头戴冕旒）与巨魈王。
+- **中文界面。** 像素字体新增汉字支持：字形由 `tools/cjk.py` 从 Noto Sans CJK SC 栅格化成 12 px 与 16 px 点阵，嵌在代码里，离线可用。
+- **音效。** 配乐改为 D 羽调式五声和声与拨弦筝音，紧张时是大鼓和梆子；每波来袭有三通鼓加号角，首领登场先响一声大锣。
 
-- **Four towers, three levels each**, raised piece by piece inside scaffolding: archer tower, bombard, storm spire and guard post.
-- **Twenty kinds of monster**, each with its own model and trick. Skeletons, giant rats, slimes that split, shield-bearing knights and bats are joined by:
-  - ghouls that run faster as they are hurt, dire wolves, and cave spiders and scarabs that slip past the guards
-  - sappers whose powder keg blows up friend and foe, and wraiths that arrows and swords pass through while they fade
-  - war drummers that speed up everything near them, and necromancers that raise more skeletons
-  - bog toads, mummies that burst into scarabs, and brood mothers that burst into spiders
-  - trolls that heal, stone golems that shrug off arrows, and gargoyles and glowing wisps in the air
-- **A boss on every fifth wave, one per land**: the Bone Giant, the Frost Jotun that freezes towers, the Brood Queen, the Magma Colossus and the Buried King, with the Ogre waiting on a second visit to Ashen Pass. Each land also favors its own monsters, and tints some of them to match.
-- **Battlefields that rebuild themselves.** After each boss the slab crumbles away and a new one, with a different road, assembles out of the dark.
-- **Five lands.** Each new battlefield is in the next one: Ashen Pass, Frostfall (snow, a frozen stream and falling snow), Mirefen (bog pools, willows, glowing mushrooms and fireflies), Emberscar (a lava river, charred trees and ash) and Duskmesa (dunes, palms and an oasis). A page opened without a seed starts in a random one.
-- **Light as the main character.** A flickering beacon, a brazier on every tower, flaming arrows, cannon flashes and chain lightning, with moving shadows.
-- **A miniature look.** The scene is drawn at about half resolution, then given an ordered dither, a depth-aware tilt-shift blur, a vignette and film grain.
-- **No asset files.** Every model, texture and sound is generated in code.
+![雪岭长城、云梦泽、赤壁、玉门关](media/biomes-zh.jpg)
 
-![Frostfall, Mirefen, Emberscar and Duskmesa](media/biomes.jpg)
+仍然没有任何素材文件：模型、贴图、声音全部由代码生成。
 
-![The battlefield breaking apart](media/crumble.jpg)
+## 操作
 
-## Controls
+不操作也能看。你下达第一条指令后即由你督战，直到你把指挥权交还军师。
 
-The game needs no input. Your first command puts you in charge, and the AI commander stays out until you hand the battle back.
-
-| Input | Action |
+| 输入 | 动作 |
 | --- | --- |
-| Hover a pad or tower | Highlight it and show its range |
-| Click or tap an empty pad | Open the build menu |
-| Click or tap a tower | Upgrade or sell |
-| `1` to `4` | Pick a tower kind |
-| `U` | Upgrade the hovered or selected tower |
-| `X` | Sell the selected tower |
-| `Space` | Call the next wave early |
-| `C`, or click the commander plate | Hand command back to the AI, or take it |
-| `M` | Mute |
-| `Esc` | Close the menu |
-| Gamepad | Stick or D-pad selects a pad, A opens and confirms, B closes, X upgrades, Y calls the next wave |
+| 悬停塔基或防御 | 高亮并显示射程 |
+| 点击空塔基 | 打开建造菜单 |
+| 点击防御 | 升级或拆除 |
+| `1` 至 `4` | 选择防御种类 |
+| `U` | 升级悬停或选中的防御 |
+| `X` | 拆除选中的防御 |
+| 空格 | 提前迎接下一波 |
+| `C`，或点击右上角指挥牌 | 交还或接管指挥 |
+| `M` | 静音 |
+| `Esc` | 关闭菜单 |
+| 手柄 | 摇杆或十字键选塔基，A 打开并确认，B 关闭，X 升级，Y 提前迎敌 |
 
-Browsers keep audio off until a gesture, so the first click or key press turns the sound on.
+浏览器要等到一次点击或按键后才允许出声。
 
-Gamepad and touch input are implemented but have not been tested on real hardware.
+## 运行
 
-## Run it
+直接打开 `index.html`。支持 `file://`，不需要服务器、构建或网络。
 
-Open `index.html`. It works from `file://` with no server, no build step and no network.
-
-## Build it
+## 构建
 
 ```bash
-python3 tools/build.py
+python3 tools/cjk.py     # 只有改了界面里的中文才需要：重新生成 src/71-cjk.js
+python3 tools/build.py   # 把 src/*.js 拼进 index.html，并内联 vendor/ 里的 three.js
 ```
 
-This joins `src/*.js` into `index.html` and inlines three.js from `vendor/`.
+`tools/cjk.py` 需要 Pillow 和 Noto Sans CJK 字体，字体路径可作为参数传入。
 
-## Layout
+## 目录
 
-| Path | Contents |
+| 路径 | 内容 |
 | --- | --- |
-| `index.html` | The built game |
-| `src/00-util.js` | Math, random numbers, noise |
-| `src/10-gfx.js` | Procedural textures, the lit material, the geometry builder |
-| `src/20-post.js` | Renderer and post-processing |
-| `src/29-biome.js` | The five lands: palettes, light, weather and water settings |
-| `src/30-layout.js`, `31-terrain.js`, `32-props.js`, `33-flora.js` | Road, stream and pad layout, terrain, scenery, plants and props of each land |
-| `src/40-fx.js`, `41-weather.js` | Lights, particles, lightning, decals, snow, ash, dust and fireflies |
-| `src/50-rig.js`, `51-bestiary.js` | Characters built from instanced parts, debris, the models of the later monsters |
-| `src/60-towers.js`, `61-monsters.js`, `62-game.js` | Towers, monsters and the crowd, waves and the AI commander |
-| `src/70-pixelfont.js`, `72-ui.js` | Pixel font, HUD, menus, input |
-| `src/80-audio.js` | Synthesized sound |
-| `src/90-main.js` | Camera and main loop |
-| `tools/` | Build script and test tools |
+| `index.html` | 构建好的游戏 |
+| `src/00-util.js` | 数学、随机数、噪声 |
+| `src/10-gfx.js` | 程序化贴图、光照材质、几何体构建器 |
+| `src/12-china.js` | 中式建筑构件：起翘屋顶、斗拱带、垛口、灯笼、战旗 |
+| `src/20-post.js` | 渲染器与后处理 |
+| `src/29-biome.js` | 五处战场的色板、光照、天气与水体设置 |
+| `src/30-layout.js`、`31-terrain.js`、`32-props.js`、`33-flora.js` | 道路与塔基布局、地形、关隘与道具、各战场的植被 |
+| `src/40-fx.js`、`41-weather.js` | 灯光、粒子、闪电、贴花、雪、灰、沙尘与萤火 |
+| `src/50-rig.js`、`51-bestiary.js` | 由实例化部件拼成的角色、碎块、后期敌人的模型 |
+| `src/60-towers.js`、`61-monsters.js`、`62-game.js` | 防御工事、敌军与人群、波次与军师 AI |
+| `src/70-pixelfont.js`、`71-cjk.js`、`72-ui.js` | 像素字体、汉字点阵（生成文件）、界面与输入 |
+| `src/80-audio.js` | 合成音效与配乐 |
+| `src/90-main.js` | 相机与主循环 |
+| `tools/` | 构建脚本、汉字点阵生成脚本与测试工具 |
 
-## Development tools
+## 开发工具
 
-Both tools drive headless Chrome and need Node 22 or newer. Set `CHROME` if Chrome is not in the default macOS location, and `FFMPEG` if `ffmpeg` is not on your path.
+`tools/cdp.js` 与 `tools/record.js` 驱动无头 Chrome，需要 Node 22 以上。Chrome 不在 macOS 默认位置时设置 `CHROME`，`ffmpeg` 不在路径里时设置 `FFMPEG`。在没有显卡的 Linux 上，把 `cdp.js` 里的 `--use-angle=metal` 换成 `--use-angle=swiftshader` 即可。
 
 ```bash
 node tools/cdp.js "seed=4&ff=30" wait:2000 shot:battle eval:"__cw.G.lives"
 ```
 
-`cdp.js` runs the game in real time and accepts `wait`, `shot`, `eval`, `click`, `move` and `key` steps. Screenshots go to `tools/shots/`.
+URL 参数，例如 `index.html#seed=4&biome=fen`：
 
-```bash
-node tools/record.js scan 4 200
-node tools/record.js capture 4 5130-5490,9870-10230 out.mp4
-```
-
-`record.js` steps the game at a fixed 1/60 s, so a seed always replays the same way. `scan` logs what happens when, `stills` saves frames, and `capture` writes a video of the given frame ranges with the game's own audio.
-
-URL flags, for example `index.html#seed=4&fps=1`:
-
-| Flag | Effect |
+| 参数 | 作用 |
 | --- | --- |
-| `seed=N` | Fix the battlefield and the run (starts in Ashen Pass) |
-| `biome=NAME` | Start in `ashen`, `frost`, `fen`, `ember` or `dunes` |
-| `level=N`, `k=N` | Start at a later battlefield or wave |
-| `ff=S` | Fast-forward S seconds before the first frame |
-| `fps=1` | Show frame rate and draw calls |
-| `nodof=1` | Turn off the tilt-shift blur |
-| `noscale=1` | Turn off automatic resolution scaling |
-| `manual=1` | Do not start the loop (used by `record.js`) |
+| `seed=N` | 固定战场与战局（从雁门关开始） |
+| `biome=NAME` | 起始战场：`ashen` 雁门关、`frost` 雪岭长城、`fen` 云梦泽、`ember` 赤壁、`dunes` 玉门关 |
+| `level=N`、`k=N` | 从后面的战场或波次开始 |
+| `ff=S` | 第一帧前快进 S 秒 |
+| `fps=1` | 显示帧率与绘制调用数 |
+| `nodof=1` | 关闭移轴模糊 |
+| `noscale=1` | 关闭自动分辨率缩放 |
+| `manual=1` | 不启动主循环（供 `record.js` 使用） |
 
-## License
+## 许可
 
-[MIT](LICENSE). The build includes [three.js](https://threejs.org) r170, also MIT ([notice](vendor/LICENSE-three.txt)).
+游戏代码为 [MIT](LICENSE) 许可。构建产物内含 [three.js](https://threejs.org) r170（MIT，[声明](vendor/LICENSE-three.txt)），以及由 Noto Sans CJK SC 栅格化得到的汉字点阵（SIL Open Font License 1.1，[声明](vendor/LICENSE-noto-cjk.txt)）。

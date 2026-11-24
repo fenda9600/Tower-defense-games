@@ -58,13 +58,45 @@ Object.assign(PROP, {
     for (let k = 0; k < 3; k++) S.ico(h * .03, top[0] + rng.range(-.12, .12), top[1] - .1, top[2] + rng.range(-.12, .12), C(0x3a2a1c), { d: 0 });
   },
   cactus(S, rng) {
-    const c = mulC(C(0x4f6a3c), .8 + .3 * rng()), hh = rng.range(1.0, 1.9), r = .17;
-    S.cyl(r, hh, 0, hh / 2 - .05, 0, c, { n: 7 }); S.sph(r, 0, hh - .05, 0, c, { sc: [1, .8, 1], w: 7, h: 4 });
-    for (let k = 0, n = rng.int(0, 3); k < n; k++) {
-      const a = rng() * TAU, y = hh * rng.range(.35, .6), l = rng.range(.26, .4), up = rng.range(.3, .7), x = Math.cos(a) * l, z = Math.sin(a) * l;
-      S.seg([0, y, 0], [x, y + .04, z], r * .62, r * .62, c, { n: 6 }); S.seg([x, y, z], [x, y + up, z], r * .62, r * .58, c, { n: 6 }); S.sph(r * .6, x, y + up, z, c, { w: 6, h: 4 });
+    const c = mulC(C(0x6a6a40), .8 + .3 * rng()), n = rng.int(7, 12);
+    for (let k = 0; k < n; k++) { const a = rng() * TAU, l = rng.range(.35, .8), up = rng.range(.5, 1.1), x = Math.cos(a) * l * .7, z = Math.sin(a) * l * .7; S.seg([0, 0, 0], [x, l * up, z], .022, .012, C(0x4a3828), { n: 3, sway: .2 }); if (rng() < .8) S.ico(rng.range(.07, .13), x, l * up, z, mulC(c, .8 + .4 * rng()), { d: 0, sway: .3, sc: [1, .7, 1] }); }
+    if (rng() < .5) S.ico(.05, 0, .5, 0, C(0xd0607a), { d: 0, emis: .03 });
+  },
+  song(S, rng, h) {
+    const bark = mulC(C(0x4a3226), .85 + .3 * rng()), a0 = rng() * TAU; let p = [0, -.1, 0], r = h * .065, lean = rng.range(.12, .3); const tips = [];
+    for (let k = 0; k < 5; k++) { const u = (k + 1) / 5, a = a0 + Math.sin(u * 3.2) * 1.1, q = [Math.cos(a) * lean * h * u * (1 - u * .4), h * .72 * u, Math.sin(a) * lean * h * u * (1 - u * .4)]; S.seg(p, q, r, r * .82, bark, { l: L_WOOD, n: 6 }); p = q; r *= .82; if (k >= 1) { const b = a0 + k * 2.3 + rng(), len = h * rng.range(.22, .36) * (1 - u * .35), e = [q[0] + Math.cos(b) * len, q[1] + len * rng.range(.02, .22), q[2] + Math.sin(b) * len]; S.seg(q, e, r * .6, r * .3, bark, { l: L_WOOD, n: 5, sway: .08 }); tips.push([e, 1 - u * .3]); } }
+    tips.push([[p[0], p[1] + h * .05, p[2]], .9]);
+    for (const [t, sc] of tips) for (let j = 0; j < 2; j++) { const rb = h * rng.range(.16, .23) * sc, c = mulC(mixC(C(0x21402e), C(0x3c6040), rng()), .8 + .35 * rng()); S.ico(rb, t[0] + rng.range(-.2, .2), t[1] + j * rb * .3 + rng.range(-.04, .08), t[2] + rng.range(-.2, .2), c, { sc: [1.35, .3, 1.35], d: 1, l: L_THATCH, sway: .16, r: [rng.range(-.12, .12), rng() * TAU, rng.range(-.12, .12)], cf: v => .62 + .38 * sat(v.y / (rb * .3) + .5) }); }
+    for (let k = 0; k < 3; k++) { const a = k * 2.1 + rng(); S.seg([Math.cos(a) * h * .03, h * .08, Math.sin(a) * h * .03], [Math.cos(a) * h * .14, -.1, Math.sin(a) * h * .14], h * .028, h * .015, bark, { l: L_WOOD, n: 5 }); }
+  },
+  bamboo(S, rng, h) {
+    const n = rng.int(4, 7);
+    for (let k = 0; k < n; k++) {
+      const a = rng() * TAU, d = rng.range(.05, .55), x = Math.cos(a) * d, z = Math.sin(a) * d, hh = h * rng.range(.65, 1.1), lean = [rng.range(-.12, .12) + Math.cos(a) * .08, rng.range(-.12, .12) + Math.sin(a) * .08], c = mulC(mixC(C(0x4c7a3a), C(0x7a9a48), rng()), .8 + .3 * rng()), segs = Math.max(4, Math.round(hh / .5));
+      let p = [x, -.08, z];
+      for (let i = 1; i <= segs; i++) { const u = i / segs, q = [x + lean[0] * hh * u * u, hh * u, z + lean[1] * hh * u * u]; S.seg(p, q, .035 * (1 - u * .5), .033 * (1 - u * .5), mulC(c, i & 1 ? 1 : .88), { n: 5, sway: u > .5 ? (u - .5) * .5 : 0, jit: .03 }); if (i & 1) S.cyl(.042 * (1 - u * .5), .018, q[0], q[1], q[2], mulC(c, .65), { n: 5, jit: 0, sway: u > .5 ? (u - .5) * .5 : 0 }); p = q;
+        if (u > .45) for (let j = 0; j < 2; j++) { const la = rng() * TAU, ll = rng.range(.3, .6), lc = mulC(mixC(C(0x3c6a30), C(0x74963e), rng()), .8 + .4 * rng()), ex = q[0] + Math.cos(la) * ll, ez = q[2] + Math.sin(la) * ll, ey = q[1] - ll * rng.range(.1, .5), wx = -Math.sin(la) * .07, wz = Math.cos(la) * .07, mx = (q[0] + ex) / 2, mz = (q[2] + ez) / 2, my = (q[1] + ey) / 2 + .06; ribbon(S, [q[0], q[1], q[2]], [mx + wx, my, mz + wz], [ex, ey, ez], [mx - wx, my, mz - wz], lc, [.3, .6, .95, .6]); }
+      }
     }
-    if (rng() < .4) S.ico(.06, 0, hh + .1, 0, C(0xe86a8a), { d: 0, emis: .03 });
+  },
+  huyang(S, rng, h) {
+    const bark = mulC(C(0x5a4630), .85 + .3 * rng()), tips = [];
+    const branch = (a, d, len, r, depth) => {
+      const b = [a[0] + d[0] * len, a[1] + d[1] * len, a[2] + d[2] * len]; S.seg(a, b, r, r * .66, bark, { l: L_WOOD, n: depth ? 5 : 7, sway: depth >= 2 ? .2 : 0 });
+      if (depth >= 2) { tips.push(b); return; }
+      for (let k = 0, n = depth === 0 ? 3 : 2; k < n; k++) { const nd = [d[0] + rng.range(-1, 1), d[1] * .6 + rng.range(.1, .6), d[2] + rng.range(-1, 1)], l = Math.hypot(nd[0], nd[1], nd[2]); branch(b, [nd[0] / l, nd[1] / l, nd[2] / l], len * rng.range(.6, .8), r * .6, depth + 1); }
+    };
+    S.cyl(h * .13, .3, 0, .1, 0, bark, { n: 7, l: L_WOOD, rt: .7 }); branch([0, .05, 0], [rng.range(-.2, .2), 1, rng.range(-.2, .2)], h * .36, h * .085, 0);
+    for (const t of tips) for (let j = 0; j < 2; j++) { const rb = h * rng.range(.13, .2), c = mulC(mixC(C(0xb8862c), C(0xe0b040), rng()), .75 + .4 * rng()); S.ico(rb, t[0] + rng.range(-.2, .2), t[1] + rng.range(-.05, .25), t[2] + rng.range(-.2, .2), c, { sc: [1.15, .8, 1.15], d: 1, l: L_THATCH, sway: .22, r: [rng() * .4, rng() * TAU, rng() * .4], cf: v => .6 + .4 * sat(v.y / (rb * .8) + .5) }); }
+  },
+  wreck(S, rng) {
+    const w = mulC(COL.bark, .7), L = rng.range(3.4, 4.6);
+    for (let k = 0; k < 7; k++) { const u = k / 6 * 2 - 1, wv = .62 * Math.sqrt(1 - u * u * .8), x = u * L / 2; for (const sg of [-1, 1]) { if (rng() < .15) continue; S.seg([x, .0, 0], [x, .28, sg * wv * .8], .05, .045, w, { l: L_WOOD, n: 4 }); S.seg([x, .28, sg * wv * .8], [x, .28 + rng.range(.4, .8), sg * wv], .045, .03, w, { l: L_WOOD, n: 4, emis: rng() < .3 ? .06 : 0 }); } }
+    S.seg([-L / 2 - .3, .5, 0], [L / 2 + .2, .08, 0], .09, .08, w, { l: L_WOOD, n: 5 }); S.seg([-L / 2 - .3, .5, 0], [-L / 2 - .7, 1.2, 0], .08, .04, w, { l: L_WOOD, n: 5 });
+    for (const sg of [-1, 1]) for (let k = 0; k < 4; k++) { if (rng() < .3) continue; const x0 = -L / 2 + .3 + k * L / 4.4; S.box(L / 4.6, .2, .05, x0 + L / 9, .5, sg * .56, mulC(w, .8 + .4 * rng()), { l: L_WOOD, r: [sg * .25, sg * .06, 0] }); }
+    S.seg([.2, .1, 0], [.9, 2.4, .5], .07, .05, w, { l: L_WOOD, n: 5 }); S.seg([.5, 1.5, .1], [1.4, 1.7, -.5], .035, .03, w, { l: L_WOOD, n: 4 });
+    clothPanel(S, { x0: .55, x1: 1.35, yTop: 1.6, len: .9, z: -.15, col: mulC(COL.clothD, 1.2), rng, nx: 4, ny: 4, rag: .6, sway: .7 });
+    S.cyl(.3, .04, -.4, .08, 0, [.8, .22, .03], { n: 7, emis: .25, jit: 0 });
   },
   reeds(S, rng) {
     for (let k = 0, n = rng.int(5, 9); k < n; k++) {
@@ -126,7 +158,7 @@ Object.assign(PROP, {
 });
 
 const BIOME_DRESS = {
-  ashen(X) { for (let k = 0; k < 3; k++) X.drop(T => PROP.log(T, X.rng), .9, { far: 1.2 }); },
+  ashen(X) { for (let k = 0; k < 3; k++) X.drop(T => PROP.log(T, X.rng), .9, { far: 1.2 }); for (let k = 0; k < 2; k++) X.drop(T => PROP.wardrum(T, X.rng), .8, { near: 4.5, far: 1.4 }); },
   frost(X) {
     const { B, rng, drop } = X, snow = B.bio.coverCol;
     for (let k = 0; k < 30; k++) { const r = rng.range(.5, 1.25); drop(T => PROP.drift(T, rng, r, snow), r * .35, { roadMin: .5, ao: null, steep: true }); }
@@ -150,11 +182,13 @@ const BIOME_DRESS = {
     for (let k = 0; k < 16; k++) { const p = drop(T => PROP.shroom(T, rng), .35, { ao: null }); if (p) sh.push(p); }
     for (let k = 0; k < Math.min(2, sh.length); k++) B.env.push({ x: sh[k][0], y: X.H(sh[k][0], sh[k][1]) + .7, z: sh[k][1], c: 0x45e0b8, I: 5, d: 6 });
     for (let k = 0; k < 5; k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
+    for (let k = 0; k < 9; k++) { const hh = rng.range(2.6, 4.2); drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0 }); }
   },
   ember(X) {
     const { B, rng, drop } = X, cols = [COL.stoneD, COL.stone, C(0x5a2a22), COL.stoneD];
     for (let k = 0; k < 9; k++) drop(T => PROP.basalt(T, rng), 1.0, { far: 1.4 });
     for (let k = 0; k < 6; k++) { const hh = rng.range(2.0, 4.2); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
+    for (let k = 0; k < 3; k++) drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 4.5 });
     for (let k = 0; k < 4; k++) { const p = drop(T => PROP.vent(T, rng), .8, { far: 2.2 }); if (p) B.fires.push({ x: p[0], y: X.H(p[0], p[1]) + .12, z: p[1], size: .5, fx: { layers: 0, smoke: 1.3, embers: 1.1, glow: .55 } }); }
     B.env.push({ x: B.bridge.x, y: B.wlc + .55, z: B.bridge.z, c: 0xff5a1e, I: 44, d: 9, flick: 1 });
     if (B.ponds[0]) { const q = B.ponds[0]; B.env.push({ x: q.x, y: q.y + .7, z: q.z, c: 0xff5a1e, I: 40, d: 9, flick: 1 }); }
@@ -165,7 +199,7 @@ const BIOME_DRESS = {
     for (let k = 0; k < 11; k++) drop(T => PROP.cactus(T, rng), .4, { far: .9 });
     for (let k = 0; k < 6; k++) { const hh = rng.range(2.2, 4.6); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
     for (const q of B.ponds) {
-      for (let k = 0; k < 4; k++) { const a = rng() * TAU, d = q.r + rng.range(1.1, 1.9), h = rng.range(3, 4.4); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.palm(T, rng, h), .5); }
+      for (let k = 0; k < 4; k++) { const a = rng() * TAU, d = q.r + rng.range(1.1, 1.9), h = rng.range(3, 4.4); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.huyang(T, rng, h), .5); }
       for (let k = 0; k < 7; k++) { const a = rng() * TAU, d = q.r * rng.range(.8, 1.2); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.reeds(T, rng), 0); }
     }
     for (const pad of B.pads) {

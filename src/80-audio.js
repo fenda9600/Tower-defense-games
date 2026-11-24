@@ -315,11 +315,20 @@ const AU = (function () {
     const f = 146.83 * rr(0.985, 1.015);
     const os = hornNote(d, t, f, 1.5, 0.5, 1);
     for (let i = 0; i < os.length; i++) { const fr = os[i][0].frequency, b = os[i][1]; fr.setValueAtTime(b, t + 0.52); fr.exponentialRampToValueAtTime(b * 1.4983, t + 0.6); }
+    drumHit(d, t, 0.5); drumHit(d, t + 0.28, 0.4); drumHit(d, t + 0.56, 0.6);
+  };
+  S.gong = (d, t, f0, vel) => {
+    const R = [1, 1.48, 2.02, 2.74, 3.76, 4.93, 6.1], A = [1, 0.7, 0.55, 0.4, 0.3, 0.2, 0.12], lp = flt(d, 'lowpass', 5200);
+    lp.frequency.setValueAtTime(1400, t); lp.frequency.linearRampToValueAtTime(5200, t + 0.35); lp.frequency.exponentialRampToValueAtTime(700, t + 3.2);
+    for (let i = 0; i < R.length; i++) { const g = gn(lp), o = osc('sine', f0 * R[i], t, 3.6, g), dec = 3.0 / (1 + i * 0.35); o.frequency.setValueAtTime(f0 * R[i] * 1.03, t); o.frequency.exponentialRampToValueAtTime(f0 * R[i] * 0.955, t + 1.6); g.gain.setValueAtTime(0.0001, t); g.gain.linearRampToValueAtTime(vel * A[i] * 0.22, t + 0.02 + i * 0.03); g.gain.setTargetAtTime(0.0001, t + 0.1 + i * 0.03, dec * 0.4); }
+    const n = gn(d), nf = flt(n, 'bandpass', 3200, 0.6); noi(t, 0.5, nf); ad(n.gain, t, vel * 0.18, 0.004, 0.35);
   };
   S.hornBoss = (d, t) => {
     const f = 73.42 * rr(0.99, 1.01);
-    hornNote(d, t, f, 1.25, 0.55, 0.8);
+    S.gong(d, t, 98, 1);
+    hornNote(d, t + 0.25, f, 1.2, 0.55, 0.8);
     hornNote(d, t + 1.45, f * 0.7937, 1.9, 0.6, 0.85);
+    for (let i = 0; i < 6; i++) drumHit(d, t + 1.45 + i * 0.3, 0.28 + i * 0.07);
     const r = gn(d), rf = flt(r, 'lowpass', 110); noi(t + 1.45, 2.2, rf, bufBrown); ad(r.gain, t + 1.45, 0.35, 0.6, 1.5);
   };
   S.leak = (d, t) => {
@@ -478,12 +487,13 @@ const AU = (function () {
   }
 
   const CH = [
-    { n: [38, 45, 50, 53, 57], m: [62, 65, 69, 72, 74, 76], to: [1, 2, 4, 3] },
-    { n: [34, 41, 50, 53, 58], m: [62, 65, 70, 74, 69], to: [2, 0, 4] },
-    { n: [31, 43, 46, 50, 55], m: [62, 67, 70, 74, 69], to: [0, 3, 1] },
-    { n: [33, 40, 45, 48, 52], m: [64, 69, 72, 76, 67], to: [0, 1] },
-    { n: [29, 41, 45, 48, 53], m: [60, 65, 69, 72, 77, 67], to: [2, 0, 1] },
+    { n: [38, 45, 50, 53, 57], m: [62, 65, 67, 69, 72, 74, 77], to: [1, 2, 4, 3] },
+    { n: [29, 41, 48, 53, 57], m: [65, 69, 72, 74, 77, 67], to: [2, 0, 4] },
+    { n: [31, 43, 50, 55, 60], m: [62, 67, 69, 72, 74, 79], to: [0, 3, 1] },
+    { n: [33, 45, 48, 50, 55], m: [69, 72, 74, 67, 62, 65], to: [0, 1] },
+    { n: [36, 43, 48, 50, 55], m: [60, 62, 67, 72, 74, 65], to: [2, 0, 1] },
   ];
+  const PENTA = [50, 53, 55, 57, 60, 62, 65, 67, 69, 72, 74, 77, 79, 81];
   function padChord(t, c, dur) {
     const v = voice(0, 1, 0.5, nMusic); V = v;
     const env = gn(v.out), hp = flt(env, 'highpass', 50), sides = [], open = rr(560, 700);
@@ -500,22 +510,43 @@ const AU = (function () {
     env.gain.setValueAtTime(0.0001, t); env.gain.linearRampToValueAtTime(1, t + 3.5); env.gain.setTargetAtTime(0.0001, t + dur, 1.3);
     finishVoice(v);
   }
-  function pianoNote(t, m, vel) {
+  function pianoNote(t, m, vel, bend) {
+    // a plucked zither string: bright pick, quick fall, sometimes a slide into the note and a late vibrato
     const f = mtof(m), v = voice(rr(-0.3, 0.3), 1, 0.8, nMusic); V = v;
-    const lp = flt(v.out, 'lowpass', 2200, 0.4);
-    lp.frequency.setValueAtTime(Math.min(3200, f * 5), t); lp.frequency.exponentialRampToValueAtTime(Math.max(300, f * 1.3), t + 2.2);
-    const dec = 3.6 * Math.pow(440 / f, 0.35), H = [[1, 1, 1], [2.002, 0.3, 0.55], [3.006, 0.1, 0.35], [4.012, 0.04, 0.22]];
-    for (let i = 0; i < H.length; i++) { const h = H[i], g = gn(lp); osc('sine', f * h[0], t, dec * h[2] + 0.1, g); ad(g.gain, t, vel * 0.11 * h[1], 0.007, dec * h[2]); }
-    const tg = gn(lp); osc('triangle', f, t, dec * 0.5, tg); ad(tg.gain, t, vel * 0.03, 0.006, dec * 0.4);
-    const n = gn(v.out), nf = flt(n, 'lowpass', 900); noi(t, 0.05, nf); ad(n.gain, t, vel * 0.03, 0.002, 0.03);
+    const lp = flt(v.out, 'lowpass', 2600, 0.6);
+    lp.frequency.setValueAtTime(Math.min(5200, f * 8), t); lp.frequency.exponentialRampToValueAtTime(Math.max(380, f * 1.5), t + 1.1);
+    const dec = 2.4 * Math.pow(440 / f, 0.35), H = [[1, 1, 1], [2.003, 0.5, 0.6], [3.008, 0.28, 0.4], [4.016, 0.14, 0.26], [5.03, 0.07, 0.18]];
+    const slide = bend === undefined ? (rnd() < 0.4 ? rr(0.89, 0.945) : 1) : bend, vib = gn(null, f * 0.011); const vo = osc('sine', rr(5.2, 6.2), t, dec + 0.2, vib); vib.gain.setValueAtTime(0, t); vib.gain.linearRampToValueAtTime(f * 0.011, t + 0.7); void vo;
+    for (let i = 0; i < H.length; i++) {
+      const h = H[i], g = gn(lp), o = osc(i ? 'sine' : 'triangle', f * h[0], t, dec * h[2] + 0.1, g);
+      if (slide < 1) { o.frequency.setValueAtTime(f * h[0] * slide, t); o.frequency.exponentialRampToValueAtTime(f * h[0], t + 0.11); }
+      if (i < 2) { const vg = gn(o.frequency, h[0]); vib.connect(vg); }
+      ad(g.gain, t, vel * 0.1 * h[1], 0.004, dec * h[2]);
+    }
+    const n = gn(v.out), nf = flt(n, 'bandpass', Math.min(6000, f * 6), 1.2); noi(t, 0.03, nf); ad(n.gain, t, vel * 0.05, 0.001, 0.02);
     finishVoice(v);
+  }
+  function pentaRun(t, m, vel) {
+    let k = PENTA.indexOf(m); if (k < 0) k = 6;
+    const dir = rnd() < 0.5 ? 1 : -1, n = 3 + ((rnd() * 3) | 0), gap = rr(0.1, 0.16);
+    for (let i = 0; i < n; i++) { const q = PENTA[cl(k + dir * i, 0, PENTA.length - 1)]; pianoNote(t + i * gap, q, vel * (0.55 + 0.45 * i / n), 1); }
+  }
+  function woodBlock(t, vel) {
+    const v = voice(rr(-0.2, 0.2), 1, 0.3, nMusic); V = v;
+    const g = gn(v.out), bp = flt(g, 'bandpass', 1150, 9); noi(t, 0.05, bp); ad(g.gain, t, vel * 2.4, 0.001, 0.05);
+    const g2 = gn(v.out); osc('sine', 1150, t, 0.08, g2); ad(g2.gain, t, vel * 0.25, 0.001, 0.05);
+    finishVoice(v);
+  }
+  function drumHit(d, t, vel, f0) {
+    const f = f0 || 62, g = gn(d), o = osc('sine', f, t, 1.2, g); sw(o.frequency, t, f * 1.9, f, 0.07); ad(g.gain, t, vel, 0.004, 0.9);
+    const g2 = gn(d), o2 = osc('sine', f * 1.59, t, 0.6, g2); sw(o2.frequency, t, f * 2.4, f * 1.59, 0.05); ad(g2.gain, t, vel * 0.4, 0.004, 0.4);
+    const g3 = gn(d); osc('triangle', f * 2.3, t, 0.3, g3); ad(g3.gain, t, vel * 0.16, 0.003, 0.2);
+    const n = gn(d), nf = flt(n, 'lowpass', 420); noi(t, 0.12, nf); ad(n.gain, t, vel * 0.9, 0.002, 0.07);
+    const sl = gn(d), sf = flt(sl, 'bandpass', 1800, 1.5); noi(t, 0.03, sf); ad(sl.gain, t, vel * 0.25, 0.001, 0.02);
   }
   function timp(t, vel) {
     const v = voice(rr(-0.15, 0.15), 1, 0.6, nMusic); V = v;
-    const g = gn(v.out), o = osc('sine', 73.4, t, 1.3, g); sw(o.frequency, t, 80, 72.5, 0.08); ad(g.gain, t, vel, 0.006, 1.1);
-    const g2 = gn(v.out); osc('sine', 110.4, t, 0.7, g2); ad(g2.gain, t, vel * 0.35, 0.005, 0.5);
-    const g3 = gn(v.out); osc('sine', 147.5, t, 0.4, g3); ad(g3.gain, t, vel * 0.15, 0.004, 0.3);
-    const n = gn(v.out), nf = flt(n, 'lowpass', 200); noi(t, 0.1, nf); ad(n.gain, t, vel * 0.6, 0.003, 0.06);
+    drumHit(v.out, t, vel);
     finishVoice(v);
   }
   function pickNote(c) {
@@ -528,8 +559,9 @@ const AU = (function () {
       const t = Math.max(mus.nextChord, now + 0.05), c = CH[mus.chord], dur = rr(11, 15);
       padChord(t, c, dur);
       if (rnd() < 0.75) {
-        const t1 = t + rr(3, 6.5); pianoNote(t1, pickNote(c), rr(0.6, 1));
-        if (rnd() < 0.35) pianoNote(t1 + rr(2.4, 4.2), pickNote(c), rr(0.45, 0.8));
+        const t1 = t + rr(3, 6.5), m1 = pickNote(c); pianoNote(t1, m1, rr(0.6, 1));
+        if (rnd() < 0.45) pentaRun(t1 + rr(1.2, 2.2), m1, rr(0.4, 0.65));
+        if (rnd() < 0.4) pianoNote(t1 + rr(3.4, 5.0), pickNote(c), rr(0.45, 0.8));
       }
       mus.nextChord = t + dur - 1.0;
       mus.chord = c.to[(rnd() * c.to.length) | 0];
@@ -538,9 +570,12 @@ const AU = (function () {
       if (mus.timpAt < now - 1) mus.timpAt = now + 0.4;
       if (now > mus.timpAt - 0.2) {
         const t = Math.max(mus.timpAt, now + 0.03), vel = 0.22 * cur.tension;
-        timp(t, vel * (mus.timpN % 4 === 0 ? 1 : 0.7));
-        if (mus.timpN % 4 === 3) timp(t + 1.8, vel * 0.45);
-        mus.timpN++; mus.timpAt = t + 2.4;
+        const k = mus.timpN % 4;
+        timp(t, vel * (k === 0 ? 1 : 0.7));
+        if (k === 1) timp(t + 0.9, vel * 0.5);
+        if (k === 2) { woodBlock(t + 0.6, vel); woodBlock(t + 1.2, vel * 0.7); }
+        if (k === 3) { timp(t + 0.6, vel * 0.55); timp(t + 0.9, vel * 0.65); timp(t + 1.2, vel * 0.8); }
+        mus.timpN++; mus.timpAt = t + 1.8;
       }
     }
   }

@@ -55,17 +55,25 @@ function initBestiary() {
   }, 12, N);
   I.wrapHead = new PartBatch(S => { S.cyl(.16, .07, 0, .26, 0, wrap, { n: 8, l: L_CLOTH }); S.cyl(.158, .05, 0, .09, .01, mulC(wrap, .85), { n: 8, l: L_CLOTH }); S.box(.04, .22, .02, .1, .06, -.15, wrap, { l: L_CLOTH, r: [.3, 0, .2] }); }, 12, N);
   I.crown = new PartBatch(S => {
-    const g = mulC(COL.gold, .9);
-    S.cyl(.165, .07, 0, .3, 0, g, { n: 8, l: L_METAL, rough: .35, emis: .03 });
-    for (let a = 0; a < 6; a++) S.cone(.03, .12, Math.cos(a * 1.047) * .15, .39, Math.sin(a * 1.047) * .15, g, { n: 4, l: L_METAL, rough: .35, emis: .03 });
-    for (const s of [-1, 1]) S.box(.05, .3, .16, s * .17, .12, -.02, C(0x2a4a8a), { l: L_CLOTH });
-    S.ico(.03, 0, .31, .16, [.2, .9, .8], { d: 0, emis: .3, jit: 0 });
+    // an emperor's mian: a flat board on a cap, with strings of beads front and back
+    const g = mulC(COL.gold, .9), bk = mulC(COL.black, 3);
+    S.cyl(.165, .12, 0, .28, 0, bk, { n: 8, l: L_CLOTH }); S.cyl(.17, .03, 0, .23, 0, g, { n: 8, l: L_METAL, rough: .35, emis: .03 });
+    S.box(.3, .025, .52, 0, .37, .0, bk, { r: [.14, 0, 0] }); S.box(.31, .03, .04, 0, .335, .255, g, { l: L_METAL, emis: .03 }); S.box(.31, .03, .04, 0, .405, -.255, g, { l: L_METAL, emis: .03 });
+    for (let k = -2; k <= 2; k++) { S.box(.016, .16, .016, k * .06, .25, .26, k & 1 ? [.2, .9, .8] : g, { emis: .2, jit: 0 }); S.box(.016, .14, .016, k * .06, .33, -.26, k & 1 ? g : [.9, .25, .2], { emis: .15, jit: 0 }); }
+    for (const s of [-1, 1]) S.box(.05, .3, .16, s * .17, .12, -.02, C(0x6a1c18), { l: L_CLOTH });
+    S.seg([-.2, .29, 0], [.2, .29, 0], .012, .012, g, { n: 4, l: L_METAL });
   }, 2, N);
   I.khopesh = new PartBatch(S => {
-    const g = mulC(COL.gold, .85); S.box(.04, .2, .04, 0, 0, 0, COL.leather, {}); S.box(.14, .03, .05, 0, .11, 0, g, { l: L_METAL });
-    let p = [.24, 0]; for (const [y, z] of [[.4, .03], [.52, .1], [.62, .2], [.66, .32]]) { const dy = y - p[0], dz = z - p[1], l = Math.hypot(dy, dz); S.box(.02, l + .02, .075, 0, (y + p[0]) / 2, (z + p[1]) / 2, g, { l: L_METAL, rough: .35, r: [Math.atan2(dz, dy), 0, 0] }); p = [y, z]; }
-    S.box(.02, .14, .07, 0, .18, 0, g, { l: L_METAL, rough: .35 });
+    const g = mulC(COL.bronzeG, 1.1), gd = mulC(COL.gold, .85);
+    S.box(.04, .22, .04, 0, 0, 0, COL.lacqD, {}); S.ico(.04, 0, -.13, 0, gd, { d: 0, l: L_METAL }); S.box(.18, .035, .06, 0, .12, 0, gd, { l: L_METAL, rough: .4 });
+    S.box(.022, .5, .1, 0, .39, 0, g, { l: L_METAL, rough: .4 }); S.box(.03, .5, .02, 0, .39, 0, mulC(g, 1.3), { l: L_METAL, rough: .35 }); S.cone(.05, .14, 0, .71, 0, g, { n: 4, l: L_METAL, rough: .4, rz: .012 });
   }, 2, N);
+  I.jhat = new PartBatch(S => {
+    // a hopping corpse: an official's hat and a paper charm over the face
+    const bk = mulC(COL.black, 3.5);
+    S.cyl(.2, .025, 0, .2, .01, bk, { n: 8, rt: .8 }); S.add(gDome(8, 3), { s: [.12, .1, .12], p: [0, .21, .01], c: bk }); S.ico(.03, 0, .32, .01, COL.lacqL, { d: 0, emis: .05 });
+    S.box(.075, .2, .012, 0, .08, .165, C(0xe6c84a), { emis: .1, jit: 0, r: [-.08, 0, 0] }); for (const y of [.02, .08, .14]) S.box(.04, .018, .014, 0, y, .172, COL.lacq, { jit: 0 });
+  }, 40, N);
   I.iceclub = new PartBatch(S => {
     S.seg([0, -.12, 0], [0, .5, 0], .045, .06, COL.wood, { l: L_WOOD, n: 6 });
     for (let a = 0; a < 5; a++) S.add(gOct(), { s: [.09, .25, .09], p: [Math.cos(a * 1.26) * .07, .6 + (a & 1) * .06, Math.sin(a * 1.26) * .07], r: [Math.sin(a * 1.26) * .5, a, -Math.cos(a * 1.26) * .5], c: COL.ice, rough: .15, emis: .05 });

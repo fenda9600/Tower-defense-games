@@ -127,8 +127,31 @@ const PX = (() => {
   for (const ch in SRC) glyphs.set(ch, parse(SRC[ch]));
   const UNKNOWN = parse(UNKNOWN_SRC);
 
-  function measure(str) {
+  // Chinese glyphs come as 12 px and 16 px bitmaps. Each UI scale picks the size and whole-number zoom that best fill the 9 row line of the Latin font.
+  const wide = new Map(), wideSizes = [];
+  let lastS = 3;
+  function wideMode(s) {
+    let best = null;
+    for (const size of wideSizes) { const k = Math.max(1, Math.floor(LINE * s / size)), h = size * k; if (!best || h >= best[0] * best[1] * (size > best[0] ? .85 : 1.18)) best = [size, k]; }
+    return best;
+  }
+  function addWide(chars, ...sets) {
+    const list = Array.from(chars);
+    for (let q = 0; q < sets.length; q += 2) {
+      const size = sets[q], hex = sets[q + 1], dg = Math.ceil(size / 4); wideSizes.push(size);
+      list.forEach((ch, i) => { const rows = new Uint16Array(size); for (let r = 0; r < size; r++) rows[r] = parseInt(hex.substr((i * size + r) * dg, dg), 16); let e = wide.get(ch); if (!e) wide.set(ch, e = {}); e[size] = rows; });
+    }
+  }
+  function hasWide(str) { for (const ch of str) if (wide.has(ch)) return true; return false; }
+  function mixedWidth(str, s) {
+    const [size, cs] = wideMode(s); let px = 0, last = 0;
+    for (const ch of str) { if (wide.has(ch)) { last = cs; px += size * cs + last; } else { last = GAP * s; px += (glyphs.get(ch) || UNKNOWN).w * s + last; } }
+    return px - last;
+  }
+
+  function measure(str, s) {
     str = String(str);
+    if (hasWide(str)) { const k = Math.max(1, Math.round(s || lastS)); return mixedWidth(str, k) / k; }
     let w = 0, n = 0;
     for (const ch of str) { w += (glyphs.get(ch) || UNKNOWN).w + GAP; n++; }
     return n ? w - GAP : 0;
@@ -177,6 +200,36 @@ const PX = (() => {
     return remember(key, { cv, w, o });
   }
 
+  function runMixed(str, color, shadow, outline, s) {
+    const key = 'm\u0001' + s + '\u0001' + str + '\u0001' + color + '\u0001' + shadow + '\u0001' + outline;
+    const hit = cache.get(key);
+    if (hit) { cache.delete(key); cache.set(key, hit); return hit; }
+    const [WIDE, cs] = wideMode(s), wpx = mixedWidth(str, s), o = outline ? 1 : 0, sh = shadow ? 1 : 0, wy = Math.floor((LINE * s - WIDE * cs) / 2);
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, wpx + (2 * o + sh) * s);
+    cv.height = (LINE + 2 * o + sh) * s;
+    const c = cv.getContext('2d');
+    const paint = (dx, dy) => {
+      let x = o * s;
+      for (const ch of str) {
+        const wg = wide.get(ch);
+        if (wg) {
+          const rows = wg[WIDE]; for (let r = 0; r < WIDE; r++) { let b = rows[r], cx = WIDE - 1; while (b) { if (b & 1) c.fillRect(x + (cx + dx) * cs, o * s + wy + (r + dy) * cs, cs, cs); b >>= 1; cx--; } }
+          x += (WIDE + 1) * cs;
+        } else {
+          const g = glyphs.get(ch) || UNKNOWN;
+          for (let r = 0; r < LINE; r++) { let b = g.bits[r], cx = 0; while (b) { if (b & 1) c.fillRect(x + (cx + dx) * s, (o + r + dy) * s, s, s); b >>= 1; cx++; } }
+          x += (g.w + GAP) * s;
+        }
+      }
+    };
+    if (shadow) { c.fillStyle = shadow; paint(1, 1); if (outline) for (const d of DIRS) paint(d[0] + 1, d[1] + 1); }
+    if (outline) { c.fillStyle = outline; for (const d of DIRS) paint(d[0], d[1]); }
+    c.fillStyle = color;
+    paint(0, 0);
+    return remember(key, { cv, w: wpx / s, o, native: true });
+  }
+
   const NOOPT = {};
 
   function text(ctx, str, x, y, s, color, opts) {
@@ -184,7 +237,8 @@ const PX = (() => {
     if (!str.length) return 0;
     s = Math.max(1, Math.round(s || 1));
     const op = opts || NOOPT;
-    const e = run(str, color || '#ffffff', op.shadow || '', op.outline || '');
+    lastS = s;
+    const e = hasWide(str) ? runMixed(str, color || '#ffffff', op.shadow || '', op.outline || '', s) : run(str, color || '#ffffff', op.shadow || '', op.outline || '');
     const wpx = e.w * s;
     let dx = x;
     if (op.align === 'c') dx = x - wpx / 2; else if (op.align === 'r') dx = x - wpx;
@@ -194,7 +248,7 @@ const PX = (() => {
     if (ctx.imageSmoothingEnabled) ctx.imageSmoothingEnabled = false;
     const ga = ctx.globalAlpha;
     if (a < 1) ctx.globalAlpha = ga * a;
-    ctx.drawImage(e.cv, dx - e.o * s, dy - e.o * s, e.cv.width * s, e.cv.height * s);
+    if (e.native) ctx.drawImage(e.cv, dx - e.o * s, dy - e.o * s); else ctx.drawImage(e.cv, dx - e.o * s, dy - e.o * s, e.cv.width * s, e.cv.height * s);
     if (a < 1) ctx.globalAlpha = ga;
     return wpx;
   }
@@ -449,5 +503,5 @@ const PX = (() => {
     return m ? [m[0], m[1]] : [0, 0];
   }
 
-  return { LINE, CAP, measure, text, icon, iconSize, icons: Object.keys(ICONS), palette: PAL };
+  return { LINE, CAP, measure, text, icon, iconSize, addWide, icons: Object.keys(ICONS), palette: PAL };
 })();

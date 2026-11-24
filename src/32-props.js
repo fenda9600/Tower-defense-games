@@ -57,11 +57,11 @@ const PROP = {
   grave(S, rng) {
     const T = new Soup(), w = rng.range(.44, .62), h = rng.range(.62, 1.0), c = mixC(COL.stoneD, COL.stoneL, rng()), kind = rng.int(0, 3);
     if (kind === 0) { T.box(w, h * .8, .15, 0, h * .4, 0, c, { l: L_ROCK }); T.cyl(w / 2, .15, 0, h * .8, 0, c, { n: 8, l: L_ROCK, r: [HPI, 0, 0] }); }
-    else if (kind === 1) { T.box(.15, h * 1.15, .14, 0, h * .57, 0, c, { l: L_ROCK }); T.box(w * 1.1, .15, .14, 0, h * .8, 0, c, { l: L_ROCK }); }
+    else if (kind === 1) { T.box(w * .62, h * 1.1, .13, 0, h * .55, 0, c, { l: L_ROCK }); T.box(w * .86, .1, .2, 0, h * 1.12, 0, mulC(c, 1.15), { l: L_ROCK }); T.box(w * .5, .08, .16, 0, h * 1.2, 0, c, { l: L_ROCK }); T.box(.07, h * .6, .14, 0, h * .6, .005, mulC(COL.lacq, .8), { jit: 0 }); }
     else if (kind === 2) { T.box(w, h * .9, .16, 0, h * .45, 0, c, { l: L_ROCK }); T.box(w * .7, .14, .16, 0, h * .95, 0, c, { l: L_ROCK }); T.box(w * 1.2, .12, .3, 0, .06, 0, mulC(c, .8), { l: L_ROCK }); }
     else { T.box(w * .9, h * .55, .15, 0, h * .27, 0, c, { l: L_ROCK }); T.box(w * .5, h * .2, .15, -w * .18, h * .62, 0, c, { l: L_ROCK, r: [0, 0, .3] }); }
     S.merge(T, { r: [rng.range(-.2, .2), rng.range(-.3, .3), rng.range(-.16, .16)], ao: [0, .4, .55] });
-    S.ico(.5, 0, .0, .62, mulC(COL.earthD, 1.1), { sc: [.75, .22, 1.25], l: L_DIRT, d: 1 });
+    S.ico(.5, 0, .0, -.55, mulC(COL.earthD, 1.1), { sc: [.95, .5, .95], l: L_DIRT, d: 1 });
   },
   cart(S, rng, broken) {
     const w = COL.wood, wd = COL.woodD, o = () => ({ l: L_WOOD });
@@ -110,10 +110,50 @@ const PROP = {
     for (let k = 0; k <= 4; k++) S.seg(a, lerp3(b, c, k / 4), th, th, col, { n: 3, emis: .015, jit: 0, sway: .25 });
     for (let r = 1; r <= 3; r++) for (let k = 0; k < 4; k++) S.seg(lerp3(a, lerp3(b, c, k / 4), r / 3.3), lerp3(a, lerp3(b, c, (k + 1) / 4), r / 3.3 - .04), th, th, col, { n: 3, emis: .015, jit: 0, sway: .25 });
   },
-  banner(S, rng, col, h = 2.8) {
-    S.seg([0, 0, 0], [0, h, 0], .055, .04, COL.woodD, { l: L_WOOD }); S.seg([-.08, h - .2, 0], [.82, h - .2, 0], .03, .03, COL.woodD, { l: L_WOOD, n: 5 });
-    S.cone(.07, .2, 0, h + .1, 0, COL.iron, { n: 4, l: L_METAL });
-    clothPanel(S, { x0: .04, x1: .78, yTop: h - .23, len: 1.45, z: 0, col, col2: mulC(COL.gold, .6), rng });
+  banner(S, rng, col, h = 3.0) { cnBanner(S, 0, 0, h, 0, col, rng, { w: .5, len: 1.5, col2: col === COL.clothD ? COL.lacqL : undefined }); },
+  juma(S, rng, len) {
+    const y = .52; S.seg([-len / 2, y, 0], [len / 2, y, 0], .075, .07, mulC(COL.wood, .8), { l: L_WOOD, n: 6 });
+    for (let x = -len / 2 + .2, k = 0; x < len / 2 - .1; x += .34, k++) {
+      const c = mulC(COL.woodL, .7 + .3 * rng()), a = .78 + rng.range(-.08, .08);
+      for (const sg of [-1, 1]) { const dz = Math.sin(a) * .78 * sg, dy = Math.cos(a) * .78; S.seg([x, y - dy, -dz], [x, y + dy, dz], .04, .035, c, { l: L_WOOD, n: 4 }); S.cone(.04, .14, x, y + dy + .05, dz * 1.07, mulC(COL.steel, .8), { n: 4, l: L_METAL, r: [sg * a, 0, 0] }); }
+    }
+  },
+  rack(S, rng) {
+    for (const sg of [-1, 1]) { S.box(.07, 1.0, .07, sg * .6, .5, 0, COL.woodD, { l: L_WOOD }); S.box(.3, .06, .4, sg * .6, .03, 0, COL.woodD, { l: L_WOOD }); }
+    for (const y of [.42, .92]) S.box(1.3, .06, .06, 0, y, 0, COL.wood, { l: L_WOOD });
+    for (let k = 0; k < 5; k++) {
+      const x = -.48 + k * .24, top = 1.75 + rng.range(-.1, .15), kind = k % 3;
+      S.seg([x, .06, .1], [x, top, -.06], .02, .02, k & 1 ? COL.lacqD : COL.woodD, { l: L_WOOD, n: 4 });
+      if (kind === 0) S.cone(.04, .22, x, top + .1, -.07, COL.steel, { n: 4, l: L_METAL, rough: .4 });
+      else if (kind === 1) { S.cone(.035, .2, x, top + .1, -.07, COL.steel, { n: 4, l: L_METAL, rough: .4 }); S.box(.18, .04, .02, x + .05, top - .06, -.06, COL.steel, { l: L_METAL, rough: .4 }); S.box(.03, .12, .02, x + .13, top - .02, -.06, COL.steel, { l: L_METAL, rough: .4 }); }
+      else { S.box(.11, .4, .02, x + .03, top - .08, -.06, COL.steel, { l: L_METAL, rough: .4 }); }
+      S.ico(.04, x, top - .32, -.03, COL.lacqL, { d: 0, sc: [1, 1.5, 1] });
+    }
+  },
+  wardrum(S, rng) {
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) S.seg([sx * .5, 0, sz * .42], [sx * .34, 1.5, sz * .12], .05, .045, COL.lacqD, { l: L_WOOD, n: 5 });
+    for (const sz of [-1, 1]) S.box(.8, .07, .07, 0, 1.46, sz * .12, COL.lacqD, { l: L_WOOD }); for (const sx of [-1, 1]) S.box(.07, .06, .8, sx * .46, .3, 0, COL.woodD, { l: L_WOOD });
+    const o = () => ({ n: 12, r: [HPI, 0, 0] });
+    S.cyl(.52, .2, 0, .98, -.1, COL.lacq, Object.assign(o(), { rt: 1.12, l: L_WOOD })); S.cyl(.52, .2, 0, .98, .1, COL.lacq, Object.assign(o(), { rt: .89, l: L_WOOD })); 
+    for (const z of [-.21, .21]) { S.cyl(.47, .02, 0, .98, z, C(0xd8c49a), o()); S.add(gTorus(12, .05, 4), { s: .49, p: [0, .98, z * .95], c: COL.brass, l: L_METAL, rough: .4 }); }
+    for (let k = 0; k < 12; k++) { const a = k / 12 * TAU; for (const z of [-.16, .16]) S.box(.035, .035, .03, Math.cos(a) * .55, .98 + Math.sin(a) * .55, z, COL.brass, { l: L_METAL, jit: 0 }); }
+    S.seg([.62, .0, .3], [.5, .9, .2], .025, .02, COL.woodD, { l: L_WOOD, n: 4 }); S.ico(.06, .49, .94, .2, COL.lacqL, { d: 0 });
+  },
+  stoneLamp(S, rng) {
+    const c = mixC(COL.stoneD, COL.stoneL, .5 + .3 * rng());
+    S.cyl(.3, .12, 0, .06, 0, mulC(c, .85), { n: 6, l: L_ROCK }); S.cyl(.13, .7, 0, .47, 0, c, { n: 6, l: L_ROCK, rt: .85 }); S.cyl(.2, .08, 0, .86, 0, mulC(c, 1.1), { n: 6, l: L_ROCK, rt: 1.3 });
+    S.box(.3, .3, .3, 0, 1.05, 0, c, { l: L_ROCK }); for (let k = 0; k < 4; k++) { const a = k * HPI; S.box(.16, .18, .02, Math.sin(a) * .151, 1.05, Math.cos(a) * .151, COL.ember, { emis: .7, jit: 0, r: [0, a, 0] }); }
+    cnRoof(S, { y: 1.2, a: .34, h: .22, lift: .08, n: 2, m: 2, col: mulC(c, .8), layer: L_ROCK, rr: .02, finial: mulC(c, 1.1) });
+  },
+  lion(S, rng, flip = 1) {
+    const c = mixC(COL.stone, COL.stoneL, .5), cd = mulC(c, .78), m = () => ({ l: L_ROCK, d: 1 });
+    S.box(.9, .3, 1.1, 0, .15, 0, COL.stoneD, { l: L_MASON }); S.box(.78, .12, .98, 0, .36, 0, COL.stoneL, { l: L_MASON });
+    S.ico(.34, 0, .72, -.2, c, Object.assign(m(), { sc: [.95, .9, 1.1] })); S.ico(.3, 0, .98, .08, c, Object.assign(m(), { sc: [.95, 1.1, .9] }));
+    for (const sg of [-1, 1]) { S.box(.16, .56, .18, sg * .2, .7, .3, cd, { l: L_ROCK }); S.box(.2, .1, .26, sg * .2, .47, .36, c, { l: L_ROCK }); S.ico(.17, sg * .26, .6, -.3, cd, m()); }
+    S.ico(.27, 0, 1.38, .16, c, Object.assign(m(), { sc: [1.05, .95, 1] })); S.box(.26, .14, .16, 0, 1.3, .38, cd, { l: L_ROCK }); S.box(.2, .04, .05, 0, 1.25, .45, COL.black, { jit: 0 });
+    for (let k = 0; k < 9; k++) { const a = (k / 8 - .5) * 3.6; S.ico(.085, Math.sin(a) * .26, 1.42 + Math.cos(a) * .2, .02 - Math.abs(Math.sin(a)) * .04, cd, { d: 0, l: L_ROCK }); }
+    for (const sg of [-1, 1]) { S.ico(.045, sg * .1, 1.44, .39, COL.black, { d: 0, jit: 0 }); S.cone(.06, .12, sg * .18, 1.62, .12, cd, { n: 4, l: L_ROCK }); }
+    S.sph(.13, flip * .2, .55, .5, cd, { w: 6, h: 4, smooth: false, l: L_ROCK }); S.seg([0, .8, -.5], [0, 1.15, -.62], .07, .04, cd, { n: 5, l: L_ROCK });
   },
   fence(S, rng, len) {
     const nP = Math.max(2, Math.round(len) + 1);
@@ -135,9 +175,9 @@ const PROP = {
   well(S, rng) {
     for (let k = 0; k < 10; k++) { const a = k / 10 * TAU; S.box(.44, .56, .26, Math.cos(a) * .68, .28, Math.sin(a) * .68, mixC(COL.stoneD, COL.stoneL, rng()), { l: L_MASON, r: [0, -a + HPI, 0] }); }
     S.cyl(.6, .06, 0, .3, 0, COL.black, { n: 10, jit: 0 });
-    for (const s of [-1, 1]) S.box(.1, 1.7, .1, s * .72, .85, 0, COL.woodD, { l: L_WOOD });
+    for (const s of [-1, 1]) S.box(.1, 1.7, .1, s * .72, .85, 0, COL.lacqD, { l: L_WOOD });
     S.seg([-.8, 1.45, 0], [.8, 1.45, 0], .05, .05, COL.wood, { l: L_WOOD });
-    for (const s of [-1, 1]) S.box(1.75, .05, .62, 0, 1.86, s * .26, COL.slate, { l: L_SLATE, r: [s * .62, 0, 0] });
+    S.box(1.6, .07, .07, 0, 1.7, 0, COL.lacqD, { l: L_WOOD }); cnRoof(S, { y: 1.72, a: .98, b: .62, h: .42, ridge: .98, lift: .08, sag: 1.3, n: 3, m: 2, rr: .035 });
     S.seg([.15, 1.45, 0], [.15, .75, 0], .012, .012, COL.rope, { n: 3 }); S.cyl(.12, .2, .15, .68, 0, COL.wood, { n: 7, l: L_WOOD, rt: 1.2 });
   },
   wallRun(S, rng, len, hMax) {
@@ -154,39 +194,29 @@ const PROP = {
     S.box(len * .9, .22, .86, 0, .08, 0, COL.stoneD, { l: L_MASON });
   },
   towerRuin(S, rng) {
-    const R = 1.35, n = 10, hs = [];
-    for (let k = 0; k < n; k++) hs.push(clamp(4.4 - k * .42 + rng.range(-.4, .4), .7, 4.6));
-    S.cyl(R + .35, .4, 0, .2, 0, COL.stoneD, { n: 10, l: L_MASON });
-    for (let k = 0; k < n; k++) {
-      if (k === n - 1) continue;
-      const a = k / n * TAU, c = mixC(COL.stoneD, COL.stone, rng());
-      S.box(.92, hs[k], .42, Math.cos(a) * R, hs[k] / 2 + .3, Math.sin(a) * R, c, { l: L_MASON, r: [0, -a + HPI, 0] });
-      if (rng() < .7) S.box(.4, rng.range(.2, .5), .42, Math.cos(a + .1) * R, hs[k] + .5, Math.sin(a + .1) * R, mixC(COL.stoneD, COL.stoneL, rng()), { l: L_MASON, r: [0, -a + HPI, 0] });
-      if (hs[k] > 2.6 && (k & 1)) S.box(.2, .6, .5, Math.cos(a) * R, hs[k] * .65, Math.sin(a) * R, COL.black, { jit: 0, r: [0, -a + HPI, 0] });
+    const A = 1.55, hs = [4.2, 3.4, 1.4, 2.4];
+    S.box(A * 2 + .7, .4, A * 2 + .7, 0, .2, 0, COL.stoneD, { l: L_MASON });
+    for (let k = 0; k < 4; k++) {
+      const ang = k * HPI, cs = Math.cos(ang), sn = Math.sin(ang), n = 4;
+      for (let i = 0; i < n; i++) {
+        if (k === 2 && i === 1) continue;
+        const u = (i + .5) / n * 2 - 1, hh = clamp(hs[k] + (hs[(k + 1) % 4] - hs[k]) * (i / n) + rng.range(-.5, .4), .6, 4.6), wseg = A * 2 / n + .02, x = u * A * cs + A * sn, z = -u * A * sn + A * cs;
+        S.box(wseg, hh, .5, x, .4 + hh / 2, z, mixC(COL.ramD, COL.ram, rng()), { l: L_DIRT, r: [0, ang, 0], jit: .04 });
+        S.box(wseg + .04, .5, .58, x, .62, z, mixC(COL.stoneD, COL.stone, rng()), { l: L_MASON, r: [0, ang, 0] });
+        if (hh > 3.4) S.box(.3, .36, .5, x, .4 + hh + .18, z, mixC(COL.ramD, COL.ram, rng()), { l: L_DIRT, r: [0, ang, 0] });
+        if (hh > 2.6 && (i & 1)) S.box(.2, .6, .56, x, .4 + hh * .62, z, COL.black, { jit: 0, r: [0, ang, 0] });
+      }
     }
-    for (let k = 0; k < 3; k++) { const a = rng() * TAU; S.seg([Math.cos(a) * R, 2.1, Math.sin(a) * R], [Math.cos(a + 2.4) * R * .6, 2.0 - rng() * .8, Math.sin(a + 2.4) * R * .6], .07, .06, COL.woodD, { l: L_WOOD, n: 4 }); }
-    for (let k = 0; k < 7; k++) { const a = rng() * TAU, d = rng.range(1.9, 3.0); S.box(rng.range(.3, .6), rng.range(.2, .4), rng.range(.3, .5), Math.cos(a) * d, .12, Math.sin(a) * d, mixC(COL.stoneD, COL.stone, rng()), { l: L_MASON, r: [rng() * .5, rng() * 3, rng() * .5] }); }
+    for (let k = 0; k < 3; k++) { const a = rng() * TAU; S.seg([Math.cos(a) * A, 2.0, Math.sin(a) * A], [Math.cos(a + 2.4) * A * .6, 1.8 - rng() * .8, Math.sin(a + 2.4) * A * .6], .07, .06, mulC(COL.bark, .7), { l: L_WOOD, n: 4 }); }
+    for (let k = 0; k < 8; k++) { const a = rng() * TAU, d = rng.range(2.2, 3.2); S.box(rng.range(.3, .6), rng.range(.2, .4), rng.range(.3, .5), Math.cos(a) * d, .12, Math.sin(a) * d, mixC(COL.ramD, COL.stone, rng()), { l: L_DIRT, r: [rng() * .5, rng() * 3, rng() * .5] }); }
   },
   signpost(S, rng) {
-    S.box(.1, 1.7, .1, 0, .85, 0, COL.woodD, { l: L_WOOD, r: [0, 0, .06] });
-    S.box(.8, .2, .05, .28, 1.45, .06, COL.woodL, { l: L_WOOD, r: [0, .2, -.08] }); S.box(.7, .18, .05, -.22, 1.15, .06, COL.wood, { l: L_WOOD, r: [0, -.25, .1] });
-  },
-  gibbet(S, rng) {
-    S.box(.16, 3.0, .16, 0, 1.5, 0, COL.woodD, { l: L_WOOD }); S.box(1.2, .13, .13, .5, 2.9, 0, COL.woodD, { l: L_WOOD }); S.seg([0, 2.2, 0], [.6, 2.85, 0], .05, .05, COL.wood, { l: L_WOOD, n: 4 });
-    S.seg([.95, 2.85, 0], [.95, 2.3, 0], .015, .015, COL.iron, { n: 3 });
-    for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; S.seg([.95 + Math.cos(a) * .2, 2.3, Math.sin(a) * .2], [.95 + Math.cos(a) * .2, 1.5, Math.sin(a) * .2], .014, .014, COL.iron, { n: 3, l: L_METAL, sway: .12 }); }
-    for (const y of [2.3, 1.9, 1.5]) S.add(gTorus(8, .08, 3), { s: .2, p: [.95, y, 0], r: [HPI, 0, 0], c: COL.iron, l: L_METAL, sway: .12 });
-    PROP.skull(S, .95, 1.72, 0, .11, 1);
+    const c = mixC(COL.stoneD, COL.stoneL, .6);
+    S.box(.7, .18, .46, 0, .09, 0, mulC(c, .8), { l: L_ROCK }); S.box(.46, 1.3, .2, 0, .82, 0, c, { l: L_ROCK, r: [0, 0, .04] }); S.box(.58, .12, .28, .02, 1.52, 0, mulC(c, 1.1), { l: L_ROCK }); S.box(.4, .1, .22, .02, 1.62, 0, c, { l: L_ROCK });
+    for (const y of [.6, .85, 1.1]) S.box(.14, .16, .02, .01, y, .105, mulC(COL.lacq, .9), { jit: 0 });
   },
   cairn(S, rng) { let y = 0, r = rng.range(.3, .42); for (let k = 0; k < 4; k++) { S.rock(r, rng.range(-.05, .05), y + r * .45, rng.range(-.05, .05), mixC(COL.stoneD, COL.stoneL, rng()), { sq: .6 }); y += r * .72; r *= .74; } },
-  statue(S, rng) {
-    const c = COL.stone, m = () => ({ l: L_ROCK });
-    S.box(1.1, .6, 1.1, 0, .3, 0, COL.stoneD, { l: L_MASON }); S.box(.9, .15, .9, 0, .67, 0, COL.stoneL, { l: L_MASON });
-    for (const s of [-1, 1]) S.box(.2, .75, .22, s * .16, 1.1, 0, c, m());
-    S.box(.62, .7, .34, 0, 1.8, 0, c, m()); S.box(.2, .7, .2, -.42, 1.75, .05, c, { l: L_ROCK, r: [.2, 0, .15] });
-    S.box(.2, .35, .2, .42, 1.95, 0, c, m()); S.box(.1, 1.3, .08, -.5, 1.25, .2, COL.stoneL, m());
-    S.rock(.2, .7, .1, .5, c); S.rock(.16, .5, .08, .75, c);
-  },
+  statue(S, rng) { PROP.lion(S, rng, rng.sign()); },
   tuft(S, rng) {
     const c = mulC(mixC(COL.tuftA, COL.tuftB, rng() * .6), .8 + .5 * rng());
     for (let k = 0; k < rng.int(3, 5); k++) {
@@ -235,60 +265,84 @@ function buildPads(B) {
 }
 
 function buildKeep(B) {
+  // The pass: a brick wall with a gate tower under a double roof, a square beacon tower and a hall in the yard.
   const rng = B.rng, kx = B.kx, ky = B.keepY, oz = -12.35;
   const TG = new Soup(), TT = new Soup();
-  const st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL;
+  const st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL, red = COL.lacq, redD = COL.lacqD;
   const mc = () => mixC(sdk, sl, rng() * .8 + .1);
   const mas = (S, w, h, d, x, y, z, c, o = {}) => S.box(w, h, d, x, y, z, c || mc(), Object.assign({ l: L_MASON }, o));
   mas(TG, 10.6, .5, 6.0, 0, -.2, -2.9, sdk);
   for (let k = 0; k < 9; k++) mas(TG, 1.1, .16, .55, -4.4 + k * 1.1, .1, .25, mc());
-  const tower = (x, z, w, h, broken) => {
-    mas(TG, w + .34, .6, w + .34, x, .3, z, sdk); mas(TG, w, h, w, x, h / 2, z, st, { jit: .03 });
-    for (let c = 0; c < 4; c++) mas(TG, w + .04, .22, w + .04, x, .9 + c * (h - 1.2) / 3.2, z, mc());
-    mas(TG, w + .36, .3, w + .36, x, h + .12, z, sl);
-    for (const [dx, dz] of [[-1, -1], [0, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [0, 1], [1, 1]]) { if (broken && rng() < .55) continue; mas(TG, .42, broken ? rng.range(.2, .5) : .48, .42, x + dx * (w / 2 - .05), h + .5, z + dz * (w / 2 - .05)); }
-    TG.box(.14, .8, .1, x, h * .62, z + w / 2 + .01, COL.black, { jit: 0 }); TG.box(.1, .8, .14, x + w / 2 + .01, h * .5, z, COL.black, { jit: 0 });
-    if (broken) for (let k = 0; k < 3; k++) TG.rock(rng.range(.22, .4), x + rng.range(-1.2, 1.4), .15, z + rng.range(.9, 1.6), mc());
+  const wz = -.95, wall = (x0, x1, h, broken) => {
+    const n = Math.max(1, Math.round(Math.abs(x1 - x0) / 1.1)), dx = (x1 - x0) / n;
+    for (let k = 0; k < n; k++) {
+      const x = x0 + (k + .5) * dx, hh = broken ? Math.max(.5, h - k * rng.range(.5, .95)) : h, whole = hh > h - .2;
+      mas(TG, Math.abs(dx) + .02, hh, 1.05, x, hh / 2, wz, k & 1 ? st : mc(), { jit: .03 }); mas(TG, Math.abs(dx) + .02, .5, 1.25, x, .25, wz, sdk);
+      if (whole) { mas(TG, Math.abs(dx) + .04, .14, 1.2, x, hh + .07, wz, sl); cnMerlons(TG, x - Math.abs(dx) / 2, wz + .5, x + Math.abs(dx) / 2, wz + .5, hh + .14, { rng, h: .36, w: .3, pitch: .55 }); cnMerlons(TG, x - Math.abs(dx) / 2, wz - .5, x + Math.abs(dx) / 2, wz - .5, hh + .14, { rng, h: .3, w: .3, pitch: .55 }); }
+      else { for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), hh + .15, wz); if (hh < 1.8) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.6, .6), .12, wz + rng.range(.3, 1.3), mc()); }
+    }
   };
-  tower(2.3, -.75, 1.95, 3.9, true);
-  mas(TG, 2.7, 1.25, 1.3, 0, 3.2, -.75, st);
-  for (let k = 0; k <= 8; k++) { const th = PI * k / 8; mas(TG, .4, .3, 1.4, Math.cos(th) * 1.12, 1.5 + Math.sin(th) * 1.12, -.75, sl, { r: [0, 0, th - HPI] }); }
-  for (const s of [-1, 1]) { mas(TG, .5, .9, 1.3, s * 1.12, 2.3, -.75, st); mas(TG, .3, 1.5, 1.34, s * 1.2, .75, -.75, sl); }
-  TG.box(2.2, 2.7, .2, 0, 1.35, -1.3, COL.black, { jit: 0 }); TG.box(2.2, .2, 1.2, 0, 2.75, -.8, COL.black, { jit: 0 });
-  for (const bx of [-.8, -.4, 0, .4, .8]) { TG.box(.07, .95, .07, bx, 2.15, -.3, COL.iron, { l: L_METAL }); TG.cone(.06, .16, bx, 1.6, -.3, COL.iron, { n: 4, l: L_METAL, r: [PI, 0, 0] }); }
-  for (const by of [1.95, 2.4]) TG.box(2.0, .07, .07, 0, by, -.3, COL.iron, { l: L_METAL });
-  for (const bx of [-1.02, -.34, .34, 1.02]) mas(TG, .42, .44, .42, bx, 4.05, -.3);
-  mas(TG, 2.9, .2, 1.5, 0, 3.9, -.75, sl);
-  const run = (x0, dir, hs) => hs.forEach((h, k) => {
-    const x = x0 + dir * (k + .5) * 1.35; mas(TG, 1.35, h, .95, x, h / 2, -.95, k & 1 ? st : mc());
-    if (h > 2.4) { mas(TG, 1.45, .2, 1.1, x, h + .1, -.95, sl); for (const dx of [-.4, .4]) mas(TG, .4, .42, .3, x + dx, h + .4, -.55); }
-    else for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), h + .15, -.95);
-    if (h < 1.6) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.7, .7), .12, rng.range(-.2, .9) - .5, mc());
-  });
-  run(-3.3, -1, [3.1, 3.1, 2.3, 1.3, .6]); run(3.3, 1, [3.0, 2.0, 1.1]);
-  for (let k = 0; k < 5; k++) { const h = [3.4, 2.4, 3.6, 1.6, 2.8][k], x = -4.7 + k * 1.3; mas(TG, 1.3, h, .7, x, h / 2, -5.3); if (h > 3) TG.box(.36, 1.0, .74, x, h * .62, -5.3, COL.black, { jit: 0 }); }
-  mas(TG, .7, 2.6, 3.4, -5.0, 1.3, -3.4); mas(TG, .7, 1.2, 1.0, -5.0, .6, -1.5);
-  for (let k = 0; k < 4; k++) TG.seg([-4.6, 2.5 - k * .12, -4.9 + k * .7], [-1.6 + rng() * .8, 1.2 + rng(), -4.6 + k * .7], .08, .07, COL.woodD, { l: L_WOOD, n: 4 });
+  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, true);
+  // gate platform
+  const gh = 3.7, gw = 1.75, gz = -.8, gd = 1.7;
+  for (const s of [-1, 1]) { mas(TG, gw - 1.05, gh, gd, s * (1.05 + (gw - 1.05) / 2), gh / 2, gz, st, { jit: .03 }); mas(TG, gw - .95, .6, gd + .2, s * (1.05 + (gw - 1.05) / 2 + .05), .3, gz, sdk); mas(TG, .26, 1.5, gd + .04, s * 1.12, .75, gz, sl); }
+  mas(TG, gw * 2, gh - 2.55, gd, 0, 2.55 + (gh - 2.55) / 2, gz, st);
+  for (let k = 0; k <= 8; k++) { const th = PI * k / 8; mas(TG, .38, .28, gd + .1, Math.cos(th) * 1.12, 1.5 + Math.sin(th) * 1.12, gz, sl, { r: [0, 0, th - HPI] }); }
+  TG.box(2.1, 2.6, .2, 0, 1.3, gz - gd / 2 + .15, COL.black, { jit: 0 }); TG.box(2.1, .2, gd - .3, 0, 2.7, gz, COL.black, { jit: 0 });
+  for (const s of [-1, 1]) {
+    const T = new Soup(), phi = 1.15, th = Math.atan2(-Math.sin(phi), -s * Math.cos(phi));
+    T.box(.95, 2.35, .1, .475, 1.175, 0, red, { l: L_WOOD }); T.box(.95, .08, .13, .475, 2.3, 0, redD, { l: L_WOOD }); T.box(.95, .08, .13, .475, .1, 0, redD, { l: L_WOOD });
+    for (let i = 0; i < 3; i++) for (let q = 0; q < 4; q++) T.box(.07, .07, .14, .2 + i * .28, .5 + q * .5, 0, COL.gold, { l: L_METAL, rough: .4, emis: .04, jit: 0 });
+    TG.merge(T, { p: [s * 1.02, .05, gz + gd / 2 - .1], ry: th, ao: null });
+  }
+  mas(TG, gw * 2 + .3, .18, gd + .3, 0, gh + .09, gz, sl);
+  cnMerlons(TG, -gw, gz + gd / 2 + .06, gw, gz + gd / 2 + .06, gh + .18, { rng, h: .34, w: .3, pitch: .5 }); for (const s of [-1, 1]) cnMerlons(TG, s * (gw + .06), gz - gd / 2, s * (gw + .06), gz + gd / 2, gh + .18, { rng, h: .34, w: .3, pitch: .5 });
+  TG.box(1.1, .42, .08, 0, 3.12, gz + gd / 2 + .03, C(0x1d2c4a), { jit: 0 }); TG.box(1.22, .06, .1, 0, 3.36, gz + gd / 2 + .03, COL.gold, { l: L_METAL, jit: 0 }); TG.box(1.22, .06, .1, 0, 2.88, gz + gd / 2 + .03, COL.gold, { l: L_METAL, jit: 0 });
+  for (const u of [-.3, 0, .3]) TG.box(.16, .2, .09, u, 3.12, gz + gd / 2 + .04, COL.gold, { l: L_METAL, emis: .05, jit: 0 });
+  // gate hall, two eaves
+  const hy = gh + .18, ha = 1.32, hb = .52;
+  TG.box(ha * 2 + .5, .12, hb * 2 + .5, 0, hy + .06, gz, sdk, { l: L_MASON });
+  TG.box(ha * 2 - .2, 1.0, hb * 2 - .2, 0, hy + .62, gz, COL.plaster, { jit: .02 }); TG.box(.5, .7, .06, 0, hy + .47, gz + hb - .08, COL.black, { jit: 0 });
+  for (const u of [-.8, .8]) { TG.box(.4, .34, .06, u, hy + .68, gz + hb - .08, COL.black, { jit: 0 }); for (const q of [-.1, 0, .1]) TG.box(.025, .34, .07, u + q, hy + .68, gz + hb - .07, redD, { l: L_WOOD }); }
+  for (let i = 0; i < 4; i++) for (const s of [-1, 1]) TG.seg([-ha + i * ha * 2 / 3, hy + .12, gz + s * hb], [-ha + i * ha * 2 / 3, hy + 1.12, gz + s * hb], .06, .055, red, { l: L_WOOD, n: 6 });
+  cnBrackets(TG, 0, hy + 1.14, gz, ha, hb, { h: .1 });
+  cnRoof(TG, { y: hy + 1.24, z: gz, a: ha + .62, b: hb + .62, h: .5, ridge: ha - .1, t0: .34, n: 3, m: 5, lift: .26, rr: .05 });
+  TG.box(ha * 2 - .7, .62, hb * 2 - .3, 0, hy + 1.72, gz, red, { l: L_WOOD, jit: .02 }); for (const u of [-.5, 0, .5]) TG.box(.3, .26, .05, u, hy + 1.76, gz + hb - .13, COL.black, { jit: 0 });
+  cnBrackets(TG, 0, hy + 2.03, gz, ha - .34, hb - .14, { h: .09 });
+  cnRoof(TG, { y: hy + 2.12, z: gz, a: ha + .26, b: hb + .5, h: .72, ridge: ha - .42, n: 4, m: 5, lift: .3, rr: .055 });
+  for (const s of [-1, 1]) { TG.seg([s * 1.32, 1.9, gz + gd / 2 - .02], [s * 1.32, 2.1, gz + gd / 2 + .4], .035, .03, COL.iron, { l: L_METAL, n: 4 }); TG.cyl(.09, .14, s * 1.32, 2.14, gz + gd / 2 + .42, COL.bronze, { n: 6, l: L_METAL, rt: 1.4 }); B.fires.push({ x: kx + s * 1.32, y: ky + 2.3, z: oz + gz + gd / 2 + .42, size: .42, type: 'sconce' }); }
+  for (const s of [-1, 1]) cnBanner(TG, s * (gw + .1), gh + .1, gh + 2.5, gz + gd / 2 + .1, s < 0 ? COL.clothR : COL.clothD, rng, { w: .44, len: 1.3, sway: .8, col2: s < 0 ? undefined : COL.lacqL });
+  cnBanner(TG, 2.9, 3.1, 5.3, wz + .1, COL.clothR, rng, { w: .5, len: 1.4, sway: .8 });
+  // yard: back wall, side wall, a hall and stores
+  for (let k = 0; k < 8; k++) { const x = -4.7 + k * 1.3, h = 2.5; mas(TG, 1.32, h, .7, x, h / 2, -5.3); }
+  cnMerlons(TG, -5.3, -5.05, 5.1, -5.05, 2.5, { rng, h: .3, w: .3, pitch: .55, skip: .12 });
+  mas(TG, .7, 2.5, 4.0, -5.0, 1.25, -3.3); cnMerlons(TG, -5.25, -5.2, -5.25, -1.4, 2.5, { rng, h: .3, w: .3, pitch: .55 });
+  { const hx = 1.5, hz = -3.6, a = 2.0, b = 1.0, wh = 2.5;
+    TG.box(a * 2 + .5, .3, b * 2 + .6, hx, .15, hz, sdk, { l: L_MASON }); TG.box(a * 2 - .2, wh, b * 2 - .2, hx, .3 + wh / 2, hz, COL.plaster, { jit: .02 });
+    for (let i = 0; i < 5; i++) for (const s of [-1, 1]) TG.seg([hx - a + i * a / 2, .3, hz + s * b], [hx - a + i * a / 2, .3 + wh, hz + s * b], .075, .07, red, { l: L_WOOD, n: 6 });
+    TG.box(.7, 1.3, .08, hx, .95, hz + b - .08, COL.black, { jit: 0 }); for (const u of [-1.1, 1.1]) TG.box(.6, .5, .08, hx + u, 1.6, hz + b - .08, COL.black, { jit: 0 });
+    cnBrackets(TG, hx, .3 + wh + .02, hz, a, b, { h: .12 }); cnRoof(TG, { x: hx, z: hz, y: .3 + wh + .14, a: a + .7, b: b + .7, h: 1.05, ridge: a - .5, n: 4, m: 5, lift: .34, rr: .06 }); }
   PROP.barrel(TG, -3.6, .05, -2.2, 1.1, rng); PROP.barrel(TG, -3.1, .05, -2.6, 1, rng); PROP.crate(TG, -3.9, .05, -3.2, .55, rng, .4);
-  clothPanel(TG, { x0: 1.85, x1: 2.75, yTop: 3.2, len: 1.6, z: .25, col: COL.clothR, col2: mulC(COL.gold, .6), rng, sway: .5, rag: .7 });
-  for (const s of [-1, 1]) { TG.seg([s * 1.32, 1.9, -.08], [s * 1.32, 2.1, .32], .035, .03, COL.iron, { l: L_METAL, n: 4 }); TG.cyl(.09, .14, s * 1.32, 2.14, .34, COL.iron, { n: 6, l: L_METAL, rt: 1.4 }); B.fires.push({ x: kx + s * 1.32, y: ky + 2.3, z: oz + .34, size: .42, type: 'sconce' }); }
-  TG.cyl(1.5, 2.4, 2.4, 1.2, -4.2, sdk, { n: 8, l: L_MASON, rt: .92 });
-  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU, h = rng.range(.2, 1.3); if (rng() < .3) continue; mas(TG, .9, h, .4, 2.4 + Math.cos(a) * 1.2, 2.4 + h / 2, -4.2 + Math.sin(a) * 1.2, null, { r: [0, -a + HPI, 0] }); }
-  const bx = -2.6, bz = -.95, bh = 7.3;
-  TT.cyl(1.9, 1.3, bx, .65, bz, sdk, { n: 8, l: L_MASON, rt: .84 });
-  TT.cyl(1.52, bh, bx, bh / 2, bz, st, { n: 8, l: L_MASON, rt: .9, jit: .03 });
-  for (let c = 0; c < 6; c++) TT.cyl(1.54 - c * .027, .2, bx, 1.7 + c * 1.0, bz, mc(), { n: 8, l: L_MASON });
-  TT.cyl(1.42, .55, bx, bh - .15, bz, sl, { n: 8, l: L_MASON, rt: 1.26 });
-  TT.cyl(1.82, .22, bx, bh + .22, bz, st, { n: 8, l: L_MASON });
-  for (let k = 0; k < 8; k++) { const a = (k + .5) / 8 * TAU; if (k === 1) continue; mas(TT, .6, .5, .32, bx + Math.cos(a) * 1.6, bh + .58, bz + Math.sin(a) * 1.6, null, { r: [0, -a + HPI, 0] }); }
-  for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + .4; TT.box(.12, .9, .12, bx + Math.cos(a) * 1.45, bh * (.4 + (k & 1) * .22), bz + Math.sin(a) * 1.45, COL.black, { jit: 0, r: [0, -a, 0] }); }
-  for (let k = 0; k < 5; k++) { const a = k / 5 * TAU + .2; TT.seg([bx + Math.cos(a) * 1.4, bh - .55, bz + Math.sin(a) * 1.4], [bx + Math.cos(a) * 2.2, bh - .4, bz + Math.sin(a) * 2.2], .07, .06, COL.woodD, { l: L_WOOD, n: 4 }); }
-  TT.cyl(.6, .55, bx, bh + .6, bz, sdk, { n: 8, l: L_MASON });
-  TT.cyl(.72, .4, bx, bh + 1.06, bz, COL.iron, { n: 8, l: L_METAL, rt: 1.4, rough: .7 });
+  for (const s of [-1, 1]) { const T = new Soup(); PROP.lion(T, rng, -s); TG.merge(T, { p: [s * 2.35, .16, .95], s: .85, ao: null }); }
+  // beacon tower
+  const bx = -3.5, bz = -.95, bh = 7.3, r0 = 1.95, r1 = 1.5, rot = { r: [0, PI / 4, 0] }, hw = r1 * .7071;
+  TT.cyl(r0 + .3, 1.2, bx, .6, bz, sdk, Object.assign({ n: 4, l: L_MASON, rt: .93 }, rot));
+  TT.cyl(r0, bh, bx, bh / 2, bz, COL.ram, Object.assign({ n: 4, l: L_DIRT, rt: r1 / r0, jit: .03 }, rot));
+  for (let c = 0; c < 6; c++) { const y = 1.5 + c * 1.02, rr2 = lerp(r0, r1, y / bh) + .02; TT.cyl(rr2, .16, bx, y, bz, mixC(COL.ramD, COL.ram, rng() * .5), Object.assign({ n: 4, l: L_DIRT, rt: .99 }, rot)); }
+  for (const [a, b] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) TT.seg([bx + a * r0 * .7071, 0, bz + b * r0 * .7071], [bx + a * hw, bh, bz + b * hw], .2, .17, mc(), { n: 4, l: L_MASON });
+  TT.cyl(r1 + .06, .5, bx, bh - .1, bz, st, Object.assign({ n: 4, l: L_MASON, rt: 1.2 }, rot));
+  TT.box(hw * 2 + .7, .2, hw * 2 + .7, bx, bh + .24, bz, sl, { l: L_MASON });
+  { const e = hw + .3; for (const [x0, z0, x1, z1] of [[-e, e, e, e], [e, e, e, -e], [e, -e, -e, -e], [-e, -e, -e, e]]) cnMerlons(TT, bx + x0, bz + z0, bx + x1, bz + z1, bh + .34, { rng, h: .42, w: .32, pitch: .52 }); }
+  for (const [dx, dz, y, ry] of [[0, 1, .46, 0], [1, 0, .62, HPI], [0, 1, .78, 0], [1, 0, .34, HPI]]) { const rr2 = lerp(r0, r1, y) * .7071 + .02; TT.box(.14, .8, .1, bx + dx * rr2, bh * y, bz + dz * rr2, COL.black, { jit: 0, r: [0, ry, 0] }); }
+  for (let k = 0; k < 3; k++) { const y = bh * (.3 + k * .2), rr2 = lerp(r0, r1, y / bh) * .7071; TT.seg([bx - .5, y, bz + rr2 - .1], [bx - .5, y + .1, bz + rr2 + .6], .06, .05, COL.woodD, { l: L_WOOD, n: 4 }); TT.seg([bx + .5, y, bz + rr2 - .1], [bx + .5, y + .1, bz + rr2 + .6], .06, .05, COL.woodD, { l: L_WOOD, n: 4 }); }
+  TT.cyl(.62, .5, bx, bh + .58, bz, sdk, { n: 8, l: L_MASON });
+  TT.cyl(.72, .4, bx, bh + 1.06, bz, COL.bronze, { n: 8, l: L_METAL, rt: 1.4, rough: .7 });
   for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + .5; TT.seg([bx + Math.cos(a) * .72, bh + .35, bz + Math.sin(a) * .72], [bx + Math.cos(a) * .96, bh + 1.22, bz + Math.sin(a) * .96], .04, .04, COL.iron, { l: L_METAL, n: 4 }); }
   TT.cyl(.9, .1, bx, bh + 1.24, bz, COL.ember, { n: 8, emis: .5, jit: 0 });
   for (let k = 0; k < 4; k++) { const a = k * 1.3; TT.seg([bx + Math.cos(a) * .7, bh + 1.28, bz + Math.sin(a) * .7], [bx - Math.cos(a) * .6, bh + 1.48, bz - Math.sin(a) * .6], .1, .09, mulC(COL.bark, .7), { l: L_WOOD, n: 5, emis: .05 }); }
-  clothPanel(TT, { x0: bx - .45, x1: bx + .45, yTop: 5.2, len: 2.3, z: bz + 1.5, col: COL.clothR, col2: mulC(COL.gold, .6), rng, sway: .45 });
+  clothPanel(TT, { x0: bx - .5, x1: bx + .5, yTop: 5.6, len: 2.5, z: bz + lerp(r0, r1, .6) * .7071 + .08, col: COL.clothR, col2: mulC(COL.gold, .7), rng, sway: .4, rag: .2 });
+  TT.box(1.16, .08, .08, bx, 5.64, bz + lerp(r0, r1, .75) * .7071 + .08, COL.woodD, { l: L_WOOD });
+  cnBanner(TT, bx - hw - .2, bh + .3, bh + 2.6, bz + hw + .2, COL.clothR, rng, { w: .46, len: 1.3 });
   B.structs.push({ soup: new Soup().merge(TG, { p: [kx, ky, oz], ao: [0, .9, .7] }), cx: kx, cy: ky, cz: oz - 2.5, kind: 'keep' });
   B.structs.push({ soup: new Soup().merge(TT, { p: [kx, ky, oz], ao: [0, 1.4, .65] }), cx: kx + bx, cy: ky, cz: oz + bz, kind: 'beaconTower' });
   B.beacon = { x: kx + bx, y: ky + bh + 1.45, z: oz + bz };
@@ -365,10 +419,12 @@ function scatterProps(B) {
     } }
   for (let k = 0; k < 2; k++) { const p = beside(10, B.L - 8, 1.25, 1.1); if (p) drop(T => PROP.cart(T, rng, k === 1), 1.1, { at: p, ry: -p[2] + rng.range(-.3, .3), r: k === 1 ? [0, -p[2] + .4, .22] : undefined }); }
   for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 6, .75, .3); if (p) { const len = rng.range(2.6, 4.2); drop(T => PROP.palisade(T, rng, len), 1.0, { at: p, ry: -p[2] }); } }
-  for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 6, 1.0, .4); if (p) { const len = rng.range(2.5, 4.5); drop(T => PROP.fence(T, rng, len), 1.2, { at: p, ry: -p[2] + rng.range(-.15, .15) }); } }
-  for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 5, .8, .25); if (p) drop(T => PROP.banner(T, rng, k & 1 ? COL.clothR : COL.clothB), .3, { at: p, ry: -p[2] + HPI * p[3] }); }
+  for (let k = 0; k < 5; k++) { const p = beside(8, B.L - 6, 1.0, .4); if (p) { const len = rng.range(2.2, 3.6); drop(T => PROP.juma(T, rng, len), 1.2, { at: p, ry: -p[2] + rng.range(-.15, .15) }); } }
+  for (let k = 0; k < 6; k++) { const p = beside(8, B.L - 5, .8, .25); if (p) drop(T => PROP.banner(T, rng, [COL.clothR, COL.clothD, COL.clothR, COL.clothB][k & 3]), .3, { at: p, ry: -p[2] + HPI * p[3] }); }
   { const p = beside(B.L * .3, B.L * .7, .8, .3); if (p) drop(T => PROP.signpost(T, rng), .3, { at: p, ry: -p[2] }); }
-  { const p = beside(12, B.L * .6, 1.3, .6); if (p) drop(T => PROP.gibbet(T, rng), .6, { at: p, ry: -p[2] + HPI }); }
+  { const p = beside(12, B.L * .6, 1.4, .7); if (p) drop(T => PROP.wardrum(T, rng), .7, { at: p, ry: -p[2] + HPI * p[3] }); }
+  for (let k = 0; k < 3; k++) { const p = beside(8, B.L - 6, .9, .35); if (p) { const q = drop(T => PROP.stoneLamp(T, rng), .35, { at: p, ry: -p[2] }); if (q) B.fires.push({ x: q[0], y: H(q[0], q[1]) + 1.02, z: q[1], size: .2, fx: { smoke: 0, embers: 0, glow: .7 } }); } }
+  for (let k = 0; k < 3; k++) drop(T => PROP.rack(T, rng), .8, { near: 5, far: 1.2 });
   for (const pad of B.pads) {
     if (rng() < .35) continue;
     const a = rng() * TAU, x = pad.x + Math.cos(a) * 2.25, z = pad.z + Math.sin(a) * 2.25;
@@ -381,7 +437,7 @@ function scatterProps(B) {
   for (let k = 0; k < 3; k++) drop(T => PROP.cairn(T, rng), .5, {});
   BIOME_DRESS[bio.key]({ B, rng, drop, find, beside, free, at, H, placed, slope });
   const trees = [];
-  for (const [kind, cnt, h0, h1] of bio.trees) for (let k = 0; k < cnt; k++) { const h = rng.range(h0, h1), p = drop(T => PROP[kind](T, rng, h), kind === 'tree' || kind === 'charred' ? .55 : .8, { far: 1.0, water: kind === 'palm' && k < 6 ? 5.5 : 0 }); if (p && kind === 'tree') trees.push([p, h]); }
+  for (const [kind, cnt, h0, h1] of bio.trees) for (let k = 0; k < cnt; k++) { const h = rng.range(h0, h1), p = drop(T => PROP[kind](T, rng, h), kind === 'tree' || kind === 'charred' ? .55 : .8, { far: 1.0, water: kind === 'huyang' && k < 6 ? 5.5 : 0 }); if (p && kind === 'tree') trees.push([p, h]); }
   for (let k = 0; k < bio.webs && k < trees.length; k++) {
     const [p, h] = trees[k], y = H(p[0], p[1]), a = rng() * TAU, T = new Soup();
     PROP.web(T, [0, h * .42, 0], [Math.cos(a) * .9, h * .55, Math.sin(a) * .9], [Math.cos(a) * .7, h * .18, Math.sin(a) * .7]);

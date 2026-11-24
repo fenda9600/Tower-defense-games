@@ -62,21 +62,25 @@ function humanKit(style, cap) {
     k.uLeg = new PartBatch(S => { S.box(.076, .27, .076, 0, -.135, 0, bone, o()); S.box(.09, .06, .09, 0, -.28, 0, bd, o()); }, limb, { rad: .07, shadow: false });
     k.lLeg = new PartBatch(S => { S.box(.062, .28, .062, 0, -.14, 0, bone, o()); S.box(.09, .05, .19, 0, -.295, .05, bd, o()); }, limb, { rad: .07, shadow: false });
   } else if (style === 'foot') {
-    const mail = COL.steel, cloth = mulC(COL.clothB, 1.75), lea = COL.leather;
-    k.pelvis = new PartBatch(S => { S.box(.28, .14, .19, 0, 0, 0, mulC(COL.clothD, 1.6), { l: L_CLOTH }); S.box(.3, .05, .2, 0, .06, 0, lea, {}); }, cap, { rad: .12 });
+    // Border garrison: red tunic, dark lamellar, a bronze helmet with a red tassel.
+    const lam = mulC(COL.iron, 1.2), lamL = mulC(COL.ironL, 1.05), cloth = mulC(COL.clothR, 1.45), clothDk = mulC(COL.clothR, .9), lea = COL.leather, brz = mulC(COL.brass, .95);
+    k.pelvis = new PartBatch(S => { S.box(.3, .16, .2, 0, -.01, 0, cloth, { l: L_CLOTH }); S.box(.31, .05, .21, 0, .07, 0, lea, {}); S.box(.1, .12, .215, 0, -.03, 0, lam, { l: L_METAL, rough: .55 }); }, cap, { rad: .12 });
     k.torso = new PartBatch(S => {
-      S.box(.34, .4, .22, 0, .21, 0, cloth, { l: L_CLOTH, jit: 0 }); S.box(.12, .34, .23, 0, .2, 0, mulC(cloth, .62), { l: L_CLOTH, jit: 0 });
-      S.box(.42, .1, .25, 0, .4, 0, mail, { l: L_METAL, rough: .5 }); S.box(.16, .08, .16, 0, .45, 0, COL.skin, {});
+      S.box(.34, .4, .22, 0, .21, 0, cloth, { l: L_CLOTH, jit: 0 }); S.box(.3, .3, .235, 0, .2, 0, lam, { l: L_METAL, rough: .55, jit: 0 });
+      for (const y of [.1, .18, .26, .34]) S.box(.305, .018, .24, 0, y, 0, lamL, { l: L_METAL, rough: .45, jit: 0 });
+      S.box(.42, .08, .25, 0, .4, 0, clothDk, { l: L_CLOTH }); S.box(.16, .08, .16, 0, .45, 0, COL.skin, {});
     }, cap, { rad: .17 });
     k.head = new PartBatch(S => {
-      S.box(.19, .2, .19, 0, .12, .0, COL.skin, { jit: .04 }); S.box(.2, .08, .1, 0, .06, -.06, mulC(COL.leather, .7), {});
-      S.add(gDome(8, 3), { s: [.155, .13, .155], p: [0, .19, 0], c: mail, l: L_METAL, rough: .42 }); S.cyl(.21, .03, 0, .19, 0, mulC(mail, .85), { n: 8, l: L_METAL, rough: .42 });
+      S.box(.19, .2, .19, 0, .12, .0, COL.skin, { jit: .04 }); S.box(.21, .13, .1, 0, .08, -.07, lam, { l: L_METAL, rough: .55 });
+      for (const s of [-1, 1]) S.box(.03, .12, .13, s * .1, .09, -.01, lam, { l: L_METAL, rough: .55 });
+      S.add(gDome(8, 3), { s: [.155, .14, .155], p: [0, .19, 0], c: brz, l: L_METAL, rough: .4 }); S.cyl(.19, .03, 0, .19, 0, mulC(brz, .8), { n: 8, l: L_METAL, rough: .42 });
+      S.cyl(.02, .07, 0, .35, 0, brz, { n: 5, l: L_METAL }); S.ico(.055, 0, .41, -.01, COL.lacqL, { d: 0, sc: [1, 1.2, 1.3], emis: .03 });
       for (const s of [-1, 1]) S.box(.03, .03, .02, s * .05, .14, .098, COL.black, { jit: 0 });
     }, cap, { rad: .14 });
-    k.uArm = new PartBatch(S => { S.box(.1, .26, .1, 0, -.13, 0, mail, { l: L_METAL, rough: .5 }); S.box(.13, .09, .13, 0, -.03, 0, mulC(mail, 1.1), { l: L_METAL, rough: .45 }); }, limb, { rad: .07, shadow: false });
+    k.uArm = new PartBatch(S => { S.box(.1, .26, .1, 0, -.13, 0, cloth, { l: L_CLOTH }); S.box(.14, .12, .14, 0, -.04, 0, lam, { l: L_METAL, rough: .5 }); S.box(.145, .018, .145, 0, -.06, 0, lamL, { l: L_METAL, rough: .45, jit: 0 }); }, limb, { rad: .07, shadow: false });
     k.lArm = new PartBatch(S => { S.box(.085, .24, .085, 0, -.12, 0, lea, {}); S.box(.09, .08, .09, 0, -.27, 0, COL.skin, {}); }, limb, { rad: .07, shadow: false });
-    k.uLeg = new PartBatch(S => { S.box(.115, .28, .115, 0, -.14, 0, mulC(COL.clothD, 1.5), { l: L_CLOTH }); }, limb, { rad: .08, shadow: false });
-    k.lLeg = new PartBatch(S => { S.box(.1, .28, .1, 0, -.14, 0, mulC(lea, .7), {}); S.box(.11, .06, .2, 0, -.29, .045, mulC(lea, .6), {}); }, limb, { rad: .08, shadow: false });
+    k.uLeg = new PartBatch(S => { S.box(.115, .28, .115, 0, -.14, 0, clothDk, { l: L_CLOTH }); S.box(.13, .14, .125, 0, -.06, 0, cloth, { l: L_CLOTH }); }, limb, { rad: .08, shadow: false });
+    k.lLeg = new PartBatch(S => { S.box(.1, .28, .1, 0, -.14, 0, mulC(COL.black, 4), {}); S.box(.11, .06, .2, 0, -.29, .045, mulC(COL.black, 3), {}); }, limb, { rad: .08, shadow: false });
   } else {
     const sk = COL.ogre, sdk = COL.ogreD, o = () => ({ jit: .06, d: 1 });
     k.pelvis = new PartBatch(S => { S.ico(.2, 0, 0, 0, sdk, { sc: [1.15, .6, .95], d: 1 }); clothPanel(S, { x0: -.15, x1: .15, yTop: .02, len: .3, z: .17, col: COL.leather, rng: makeRng(3), sway: 0, nx: 3, ny: 4 }); clothPanel(S, { x0: -.14, x1: .14, yTop: .02, len: .24, z: -.17, col: mulC(COL.leather, .7), rng: makeRng(4), sway: 0, nx: 3, ny: 3 }); S.box(.44, .05, .36, 0, .03, 0, mulC(COL.leather, .6), {}); }, cap, { rad: .2 });
@@ -107,10 +111,10 @@ function initKits() {
   for (const k of ['uArm', 'lArm', 'uLeg', 'lLeg']) KIT.giant[k].mesh.castShadow = true;
   const E = KIT.item = {};
   E.sword = new PartBatch(S => { S.box(.035, .13, .035, 0, 0, 0, COL.woodD, {}); S.box(.17, .03, .05, 0, .075, 0, iron, { l: L_METAL }); S.box(.055, .5, .018, 0, .34, 0, rust, { l: L_METAL, rough: .5 }); S.cone(.03, .08, 0, .63, 0, rust, { n: 4, l: L_METAL, rough: .5, rz: .012 }); }, 100, { rad: .05, shadow: false });
-  E.blade = new PartBatch(S => { S.box(.04, .13, .04, 0, 0, 0, COL.leather, {}); S.box(.2, .035, .055, 0, .075, 0, COL.brass, { l: L_METAL, rough: .4 }); S.box(.06, .52, .02, 0, .35, 0, mulC(COL.steel, 1.15), { l: L_METAL, rough: .3 }); S.cone(.032, .09, 0, .655, 0, mulC(COL.steel, 1.15), { n: 4, l: L_METAL, rough: .3 }); }, 40, { rad: .05, shadow: false });
+  E.blade = new PartBatch(S => { const st = mulC(COL.steel, 1.15); S.box(.04, .15, .04, 0, 0, 0, COL.lacqD, {}); S.add(gTorus(6, .3, 3), { s: .04, p: [0, -.11, 0], r: [0, HPI, 0], c: COL.brass, l: L_METAL }); S.box(.1, .03, .05, 0, .085, 0, COL.brass, { l: L_METAL, rough: .4 }); S.box(.02, .5, .065, 0, .35, 0, st, { l: L_METAL, rough: .3 }); S.box(.02, .1, .05, 0, .63, -.012, st, { l: L_METAL, rough: .3, r: [.3, 0, 0] }); }, 40, { rad: .05, shadow: false });
   E.torch = new PartBatch(S => { S.box(.04, .42, .04, 0, .1, 0, COL.woodD, { l: L_WOOD }); S.cyl(.06, .1, 0, .34, 0, mulC(COL.black, 3), { n: 6 }); S.cyl(.05, .03, 0, .4, 0, COL.ember, { n: 6, emis: .5, jit: 0 }); }, 80, { rad: .05, shadow: false });
   E.shieldR = new PartBatch(S => { S.cyl(.27, .05, 0, 0, 0, COL.woodD, { n: 8, r: [HPI, 0, 0], l: L_WOOD }); S.add(gTorus(8, .13, 4), { s: .25, p: [0, 0, .01], c: iron, l: L_METAL }); S.sph(.075, 0, 0, .04, COL.ironL, { l: L_METAL, w: 6, h: 4, smooth: false }); for (let a = 0; a < 4; a++) S.box(.03, .42, .012, 0, 0, .03, iron, { l: L_METAL, r: [0, 0, a * PI / 4] }); }, 60, { rad: .2, shadow: false });
-  E.shieldH = new PartBatch(S => { const sc = mulC(COL.clothB, 1.6); S.box(.36, .3, .045, 0, .08, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.26, .12, .045, 0, -.12, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.14, .1, .045, 0, -.22, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.07, .5, .05, 0, -.02, .004, mulC(COL.gold, .8), { l: L_METAL, rough: .45, jit: 0 }); S.box(.36, .06, .05, 0, .1, .004, mulC(COL.gold, .8), { l: L_METAL, rough: .45, jit: 0 }); }, 40, { rad: .2, shadow: false });
+  E.shieldH = new PartBatch(S => { const sc = mulC(COL.lacq, 1.25), g = mulC(COL.brass, 1.05); S.box(.34, .52, .04, 0, -.02, 0, sc, { l: L_WOOD, jit: 0 }); S.box(.36, .05, .05, 0, .235, .002, g, { l: L_METAL, rough: .45, jit: 0 }); S.box(.36, .05, .05, 0, -.275, .002, g, { l: L_METAL, rough: .45, jit: 0 }); S.sph(.07, 0, -.02, .035, g, { l: L_METAL, w: 6, h: 4, smooth: false }); for (const [x, y] of [[-.1, .12], [.1, .12], [-.1, -.16], [.1, -.16]]) S.box(.04, .04, .05, x, y, .004, g, { l: L_METAL, jit: 0 }); }, 40, { rad: .2, shadow: false });
   E.helm = new PartBatch(S => { S.add(gDome(8, 3), { s: [.18, .175, .195], p: [0, .16, 0], c: iron, l: L_METAL, rough: .5 }); S.box(.035, .13, .03, 0, .15, .185, COL.ironL, { l: L_METAL }); for (const s of [-1, 1]) S.box(.03, .14, .13, s * .165, .1, .03, iron, { l: L_METAL }); S.cone(.03, .16, 0, .4, 0, COL.ironL, { n: 4, l: L_METAL }); }, 60, { rad: .16, shadow: false });
   E.plate = new PartBatch(S => { S.box(.35, .31, .25, 0, .27, 0, iron, { l: L_METAL, rough: .5 }); S.box(.2, .2, .26, 0, .29, .005, COL.ironL, { l: L_METAL, rough: .45 }); for (const s of [-1, 1]) S.sph(.1, s * .21, .44, 0, COL.ironL, { l: L_METAL, w: 6, h: 4, smooth: false, sc: [1, .8, 1.1] }); }, 60, { rad: .2, shadow: false });
   E.bow = new PartBatch(S => { let p = [0, -.36, 0]; for (let i = 1; i <= 6; i++) { const t = i / 6 * 2 - 1, q = [0, t * .36, (1 - t * t) * .12]; S.seg(p, q, .016, .016, COL.woodL, { n: 4, l: L_WOOD }); p = q; } S.seg([0, -.36, 0], [0, .36, 0], .005, .005, COL.bone, { n: 3, jit: 0 }); }, 40, { rad: .1, shadow: false });
@@ -198,7 +202,7 @@ function rigHuman(kit, sp, e) {
   if (e.helm) I.helm.put(M3, fl, null);
   if (e.plate) I.plate.put(M2, fl, null);
   if (e.hood) I.hood.put(M3, fl, null); if (e.robe) I.robe.put(M2, fl, null); if (e.drum) I.drum.put(M2, fl, null); if (e.standard) I.standard.put(M2, 0, null);
-  if (e.keg) I.keg.put(M2, fl, null); if (e.wraps) { I.wraps.put(M2, fl, null); I.wrapHead.put(M3, fl, null); } if (e.crown) I.crown.put(M3, fl, null);
+  if (e.keg) I.keg.put(M2, fl, null); if (e.wraps) { I.wraps.put(M2, fl, null); I.wrapHead.put(M3, fl, null); } if (e.crown) I.crown.put(M3, fl, null); if (e.jhat) I.jhat.put(M3, fl, null);
   const kL = Math.max(0, cw) * 1.0 * mv, kR = Math.max(0, -cw) * 1.0 * mv;
   const M10 = xf(_M[10], M1, sp.hipX, 0, 0, -sw - kL * .25, 0, 0), M11 = xf(_M[11], M10, 0, -sp.uLeg, 0, kL, 0, 0);
   const M12 = xf(_M[12], M1, -sp.hipX, 0, 0, sw - kR * .25, 0, 0), M13 = xf(_M[13], M12, 0, -sp.uLeg, 0, kR, 0, 0);
