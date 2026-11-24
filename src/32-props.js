@@ -374,6 +374,8 @@ function scatterProps(B) {
     if (Math.abs(x) > BH - .7 - r || Math.abs(z) > BH - .7 - r) return false;
     if (B.dRoadAt(x, z) < ROAD_HALF + roadMin + r) return false;
     if (B.dStrAt(x, z) < 1.5 + r) return false;
+    if (B.sea !== undefined && H(x, z) < B.sea + .3) return false;
+    if (B.ter.abyss !== undefined && H(x, z) < B.ter.abyss) return false;
     for (const p of B.pads) if (dist2(x, z, p.x, p.z) < (2.15 + r) * (2.15 + r)) return false;
     if (Math.abs(x - B.kx) < 5.7 + r && z < -11.2 + r) return false;
     if (x < -12.4 && Math.abs(z - B.zc) < 3.4 + r) return false;
@@ -381,7 +383,7 @@ function scatterProps(B) {
     for (const q of placed) if (dist2(x, z, q[0], q[1]) < (q[2] + r) * (q[2] + r)) return false;
     return true;
   };
-  const waterD = (x, z) => { let d = B.dStrAt(x, z); for (const q of B.ponds) d = Math.min(d, Math.hypot(x - q.x, z - q.z) - q.r); return d; };
+  const waterD = (x, z) => { let d = B.ter.dry ? 99 : B.dStrAt(x, z); if (B.sea !== undefined && H(x, z) < B.sea + .6) d = 0; for (const q of B.ponds) d = Math.min(d, Math.hypot(x - q.x, z - q.z) - q.r); return d; };
   const slope = (x, z) => Math.abs(H(x + .5, z) - H(x - .5, z)) + Math.abs(H(x, z + .5) - H(x, z - .5));
   const find = (r, o = {}) => {
     for (let t = 0; t < 90; t++) {

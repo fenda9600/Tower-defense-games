@@ -43,7 +43,7 @@ void main(){
 function buildBoard(seed, index) {
   let lay = null, ls = seed;
   while (!lay) { lay = genLayout(ls); ls += 101; }
-  const bio = biomeFor(index), RL = bio.relief; applyBiomePalette(bio);
+  const bio = biomeFor(index), RL = bio.relief, TER = bio.terrain || {}; applyBiomePalette(bio);
   const rng = makeRng(seed * 9176 + 11); soupRng = makeRng(seed * 131 + 5);
   const sd = (seed * 53) % 997;
   const P = lay.pts, n = P.length, L = lay.L, kx = lay.kx, zc = lay.cave.z;
@@ -51,15 +51,20 @@ function buildBoard(seed, index) {
   for (let i = 0; i < n; i++) { px[i] = P[i][0]; pz[i] = P[i][1]; }
   for (let i = 0; i < n; i++) { const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1); const dx = px[b] - px[a], dz = pz[b] - pz[a], l = Math.hypot(dx, dz) || 1; tx[i] = dx / l; tz[i] = dz / l; }
 
-  const hBase = (x, z) => {
+  const liftAt = TER.lift ? (x, z) => TER.lift(x, z, kx, zc, sd) : () => 0;
+  const hBase0 = (x, z) => {
     let h = (fbm(x * .055 + sd, z * .055 + 3.1, sd, 3) - .5) * RL[0] + (fbm(x * .17 + 3, z * .17 + 7, sd + 5, 2) - .5) * RL[1] + .9 * smooth(7, -13, z);
     if (RL[3]) { const w = x * .42 + z * .2 + (fbm(x * .09, z * .09, sd + 70, 2) - .5) * 5, r = 1 - Math.abs(Math.sin(w)); h += RL[3] * r * r * (.4 + .9 * fbm(x * .07 + 9, z * .07, sd + 71, 2)); }
     return h;
   };
+  const hBase = (x, z) => hBase0(x, z) + liftAt(x, z);
 
-  { const raw = new Float32Array(n); for (let i = 0; i < n; i++) raw[i] = hBase(px[i], pz[i]) * .6;
+  { const raw = new Float32Array(n); for (let i = 0; i < n; i++) raw[i] = hBase0(px[i], pz[i]) * .6 + liftAt(px[i], pz[i]);
     let a = raw, b = new Float32Array(n);
-    for (let pass = 0; pass < 2; pass++) { for (let i = 0; i < n; i++) { let s = 0, c = 0; for (let k = -16; k <= 16; k++) { const j = clamp(i + k, 0, n - 1); s += a[j]; c++; } b[i] = s / c; } const t = a; a = b; b = t; }
+    const blur = () => { for (let i = 0; i < n; i++) { let s = 0, c = 0; for (let k = -16; k <= 16; k++) { const j = clamp(i + k, 0, n - 1); s += a[j]; c++; } b[i] = s / c; } const t = a; a = b; b = t; };
+    blur(); blur();
+    // a river or lake board keeps its road on a causeway above the water
+    if (TER.sea !== undefined) { const lo = TER.sea + (TER.bank || .6); for (let pass = 0; pass < 2; pass++) { for (let i = 0; i < n; i++) a[i] = Math.max(a[i], lo); if (!pass) blur(); } }
     py.set(a); }
 
   const SP = lay.stream, sn = SP.length, swl = new Float32Array(sn);
@@ -96,6 +101,9 @@ function buildBoard(seed, index) {
     let y = 1e9; for (let k = 0; k < 24; k++) { const a = k / 12 * TAU, d = r + (k < 12 ? 1.3 : 2.1); y = Math.min(y, hBase(x + Math.cos(a) * d, z + Math.sin(a) * d)); }
     ponds.push({ x, z, r, y: Math.min(y, hBase(x, z)) - .22 });
   }
+  const SCX = { kx, zc, sd, keepY, pads, rng, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), hBase };
+  if (TER.prep) TER.prep(SCX);
+  const SEA = TER.sea;
   const pondD = (q, x, z) => Math.hypot(x - q.x, z - q.z) * (.82 + .36 * vnoise(x * .55 + q.x, z * .55 + q.z, sd + 60));
   let _cl = 0;
   const hAt = (x, z) => {
@@ -113,6 +121,19 @@ function buildBoard(seed, index) {
     for (const q of ponds) { const d = pondD(q, x, z); if (d < q.r + 1.5) h = lerp(h, q.y - .45, smooth(q.r + 1.5, q.r * .4, d)); }
     const dkx = Math.max(0, Math.abs(x - kx) - 5.2), dkz = Math.max(0, z + 11.7), dk = Math.hypot(dkx, dkz);
     if (dk < 1.8) h = lerp(h, keepY, smooth(1.8, .2, dk));
+    let q = 0;
+    if (TER.sculpt) {
+      // Battle terrain: carve or raise everything away from the road, the tower pads, the keep, the cave mouth and the stream.
+      let pd = 1e9; for (const p of pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
+      const pr = TER.prot || 0;
+      let prot = Math.max(smooth(ROAD_HALF + 2.6 + pr, ROAD_HALF + .55, dr), smooth(3.3 + pr * .5, 2.45, pd), smooth(3.4, .6, dk));
+      if (x < -10.4) prot = Math.max(prot, smooth(4.4, 2.6, Math.abs(z - zc)) * smooth(-10.4, -12.4, x));
+      q = TER.sculpt(x, z, dr, ds, SCX);
+      if (!TER.dry && (!TER.freeStream || q > 0)) prot = Math.max(prot, smooth(3.8, 2.4, ds));
+      q *= 1 - prot;
+      if (TER.step && Math.abs(q) > .02) { const st = TER.step, v = q / st, f = Math.floor(v); q = (f + smooth(.42, .88, v - f)) * st; }
+      h += q;
+    }
     const dcl = x + BH + (fbm(z * .23 + 1.7, x * .11, sd + 9, 2) - .5) * 2.6;
     let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, -15, z)) * RL[2];
     const dbr = z + BH + (fbm(x * .23 + 5.1, z * .11, sd + 13, 2) - .5) * 2.4;
@@ -120,7 +141,7 @@ function buildBoard(seed, index) {
     c = Math.max(c, c2) + 1.5 * smooth(11, 1, Math.hypot(x + BH, z + BH)) * smooth(7, 2.5, Math.min(x + BH, z + BH));
     if (c > .02) { const v = c / 1.2, f = Math.floor(v); c = (f + smooth(.45, .9, v - f)) * 1.2; }
     if (x < -12.2) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(-12.2, -13.2, x);
-    _cl = c; return h + c;
+    _cl = Math.max(c, Math.abs(q) * (TER.rock === undefined ? 1 : TER.rock)); return h + c;
   };
 
   const chunks = [];
@@ -141,8 +162,9 @@ function buildBoard(seed, index) {
     const fx = clamp((x + BH) / CELL, 0, NV - 1.001), fz = clamp((z + BH) / CELL, 0, NV - 1.001), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * NV + i;
     return (HG[o] * (1 - u) + HG[o + 1] * u) * (1 - v) + (HG[o + NV] * (1 - u) + HG[o + NV + 1] * u) * v;
   };
-  const tcol = (x, z, ny, cl) => {
+  const tcol = (x, z, ny, cl, y) => {
     const n1 = fbm(x * .3 + sd, z * .3, 3, 2), n2 = h2(Math.floor(x * 2 + 99), Math.floor(z * 2 + 99), sd + 2);
+    if (SEA !== undefined && y < SEA + .3) { const wet = smooth(SEA + .3, SEA - .2, y); return [mulC(mixC(mixC(COL.earthD, COL.mud, n1), COL.mud, wet), (.55 + .25 * n2) * (1 - .4 * smooth(SEA - .4, SEA - 2.5, y))), L_DIRT, lerp(.9, .4, wet)]; }
     if (cl > .5 || ny < .8) {
       let c = mixC(COL.stoneD, COL.stone, n1 * .9 + .1); if (ny > .93 && n1 > .5) c = mixC(c, COL.grassD, .4);
       return [mulC(c, .82 + .32 * n2), L_ROCK, .96];
@@ -162,7 +184,7 @@ function buildBoard(seed, index) {
     const tris = ((i + j) & 1) ? [[a, d, c], [a, c, b]] : [[a, d, b], [b, d, c]];
     for (const t of tris) {
       _sa.set(t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]); _sb.set(t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]); _sn.crossVectors(_sa, _sb).normalize();
-      const m = tcol((t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][2] + t[1][2] + t[2][2]) / 3, _sn.y, cl);
+      const m = tcol((t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][2] + t[1][2] + t[2][2]) / 3, _sn.y, cl, (t[0][1] + t[1][1] + t[2][1]) / 3);
       S.tri(t[0], t[1], t[2], m[0], m[1], m[2], m[3] ? { emis: m[3] } : undefined);
     }
   }
@@ -268,7 +290,22 @@ function buildBoard(seed, index) {
       for (const [dx, dz] of [[0, 0], [0, 1], [1, 1], [0, 0], [1, 1], [1, 0]]) waterV(S, x + dx, q.y, z + dz, (x + dx) * .8, (z + dz) * .8, .02, .14);
     }
   }
-  if (bio.key === 'ember') {
+  if (SEA !== undefined) {
+    // open water: a sheet over every cell that dips below the river or lake, and a dark face where it meets the board edge
+    const deep = mulC(C(bio.watEdge || 0x0c1820), 1);
+    for (let j = 0; j < NV - 1; j++) for (let i = 0; i < NV - 1; i++) {
+      const o = j * NV + i, lo = Math.min(HG[o], HG[o + 1], HG[o + NV], HG[o + NV + 1]);
+      if (lo > SEA - .02) continue;
+      const x0 = -BH + i * CELL, z0 = -BH + j * CELL, x1 = x0 + CELL, z1 = z0 + CELL, S = chunkAt(x0 + CELL / 2, z0 + CELL / 2);
+      for (const [x, z] of [[x0, z0], [x0, z1], [x1, z1], [x0, z0], [x1, z1], [x1, z0]]) waterV(S.water, x, SEA, z, x * .8, z * .8, TER.flow || .05, .12);
+      const side = (ax, az, bx, bz, ha, hb, ox, oz) => { if (ha < SEA || hb < SEA) facing(S.soup, [ax, SEA, az], [ax, Math.min(ha, SEA), az], [bx, Math.min(hb, SEA), bz], [bx, SEA, bz], ox, oz, deep, L_PLAIN, .2); };
+      if (i === 0) side(x0, z0, x0, z1, HG[o], HG[o + NV], -1, 0);
+      if (i === NV - 2) side(x1, z0, x1, z1, HG[o + 1], HG[o + NV + 1], 1, 0);
+      if (j === 0) side(x0, z0, x1, z0, HG[o], HG[o + 1], 0, -1);
+      if (j === NV - 2) side(x0, z1, x1, z1, HG[o + NV], HG[o + NV + 1], 0, 1);
+    }
+  }
+  if (bio.cracks) {
     for (let q = 0; q < 46; q++) {
       let x = rng.range(-BH + 1.5, BH - 1.5), z = rng.range(-BH + 1.5, BH - 1.5), a = rng.range(0, TAU);
       if (dfAt(dRoad, x, z) < ROAD_HALF + .6 || dfAt(dStr, x, z) < 1.4 || dfAt(dStr, x, z) > 9 || Math.abs(hAt(x + .6, z) - hAt(x - .6, z)) > .3) continue;
@@ -293,11 +330,15 @@ function buildBoard(seed, index) {
       sv.push([x, swl[u], z, -dz / l * w, dx / l * w, u * .5, w]);
     }
     for (let u = 0; u < sv.length - 1; u++) {
+      if (TER.dry) break;
       const a = sv[u], b = sv[u + 1], S = chunkAt((a[0] + b[0]) / 2, (a[2] + b[2]) / 2).water;
+      if (SEA !== undefined && (Math.max(a[1], b[1]) < SEA + .05 || heightAt((a[0] + b[0]) / 2, (a[2] + b[2]) / 2) < SEA)) continue;
+      if (TER.freeStream && heightAt((a[0] + b[0]) / 2, (a[2] + b[2]) / 2) < Math.min(a[1], b[1]) - 1) continue;
       const q = [[a[0] - a[3], a[1], a[2] - a[4], -a[6], a[5]], [a[0] + a[3], a[1], a[2] + a[4], a[6], a[5]], [b[0] + b[3], b[1], b[2] + b[4], b[6], b[5]], [b[0] - b[3], b[1], b[2] - b[4], -b[6], b[5]]];
       for (const k of [0, 1, 2, 0, 2, 3]) waterV(S, q[k][0], q[k][1], q[k][2], q[k][3], q[k][4], 1.25, .24);
     }
     const e = sv[sv.length - 1], ox = Math.abs(e[0]) > BH - .01 ? Math.sign(e[0]) : 0, oz = ox ? 0 : Math.sign(e[2]);
+    if (!TER.dry && !(SEA !== undefined && e[1] < SEA + .4)) {
     const bed = e[1] - .3, top = bed + .5, ax = Math.abs(oz), az = Math.abs(ox), w = e[6];
     let ext = .4; for (let d = 0; d <= 1.0; d += .1) ext = Math.max(ext, wallReach(top, bed - d) + .22);
     ext = Math.min(ext, .95);
@@ -312,11 +353,11 @@ function buildBoard(seed, index) {
       const q = [[a0, -w, e[5]], [a1, w, e[5]], [b1, w, u1], [b0, -w, u1]];
       for (const k of [0, 1, 2, 0, 2, 3]) waterV(S.water, q[k][0][0], q[k][0][1], q[k][0][2], q[k][1], q[k][2], 1.25, .24); }
     fallAt = { x: e[0], y: e[1], z: e[2], ox, oz, w, ext, v0 };
-  }
+  } }
 
   const B = {
     seed, index, lay, L, n, px, pz, py, tx, tz, pads, kx, zc, keepY, heightAt, hAt, chunks, structs, fires, glows, chunkAt, rng, sd, bio, ponds, env: [],
-    dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), cross: lay.cross, ci0, wlc, swl, SP, fallAt, mirrored: (index % 2) === 1,
+    sea: SEA, ter: TER, scx: SCX, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), cross: lay.cross, ci0, wlc, swl, SP, fallAt, mirrored: (index % 2) === 1,
     put(T, x, z, o = {}) { const y = o.y === undefined ? heightAt(x, z) + (o.dy || 0) : o.y; chunkAt(x, z).soup.merge(T, { p: [x, y, z], ry: o.ry || 0, r: o.r, s: o.s, tint: o.tint, ao: o.ao === undefined ? [0, .55, .6] : o.ao }); },
   };
   buildBridge(B); buildPads(B); buildKeep(B); buildCave(B); scatterProps(B);
