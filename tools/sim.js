@@ -36,7 +36,7 @@ const { chromium } = require('playwright');
   for (const r of res) {
     const d = r.out.find(e => e.res === 'DEFEAT');
     reach.push(d ? d.lv + (d.k - 1) / 5 : ML);
-    console.log('seed', r.seed, r.out.map(e => e.res === 'clear' ? `L${e.lv}:♥${e.lives}(min${e.min}) lk${e.leaks} p${e.press} g${e.gold} ${e.wall}` : `L${e.lv} DEFEAT@w${e.k} lk${e.leaks} p${e.press} ${e.wall}`).join(' | '));
+    console.log('seed', r.seed, r.out.map(e => e.res === 'clear' ? `L${e.lv}:♥${e.lives}(min${e.min}) lk${e.leaks} p${e.press} g${e.gold} ${e.tw} ${e.wall}` : `L${e.lv} DEFEAT@w${e.k} lk${e.leaks} p${e.press} ${e.wall}`).join(' | '));
   }
   console.log('mean reach', (reach.reduce((a, b) => a + b, 0) / reach.length).toFixed(2), 'defeats', reach.filter(x => x < ML).length + '/' + reach.length, JSON.stringify(reach));
   await browser.close();

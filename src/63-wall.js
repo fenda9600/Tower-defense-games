@@ -45,7 +45,7 @@ function wallReinforce(byPlayer) {
   UI.ping(G.B.gate.x, G.B.gate.y, G.B.gate.z, byPlayer); return true;
 }
 function wallUpgrade(byPlayer) {
-  const W = G.wall; if (!W || G.phase !== 'play' || W.lvl >= WALL.tiers.length - 1) return false; const c = WALL.cost[W.lvl + 1]; if (G.gold < c) return false;
+  const W = G.wall; if (!W || G.phase !== 'play' || W.lvl >= Math.min(WALL.tiers.length - 1, tierCap())) return false; const c = WALL.cost[W.lvl + 1]; if (G.gold < c) return false;
   G.gold -= c; UI.goldShown = Math.min(UI.goldShown, G.gold); const g0 = gateMax(); W.lvl++; W.gate += gateMax() - g0;
   for (const m of W.men) { const r = m.hp / m.maxHp; m.maxHp = WALL.hp[W.lvl]; m.hp = m.maxHp * Math.max(r, .6); m.appear = .35; fxDust(m.sl.x, m.sl.y + .2, m.sl.z, 5, .6, { speed: 1.4 }); }
   const tr = WALL.tiers[W.lvl]; UI.banner(WALL.name + ' · ' + tr[0], 3.6, false, tr[1]);
