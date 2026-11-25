@@ -4,9 +4,9 @@ const G = {
   towers: [], mons: [], men: [], arrows: [], shells: [], stuck: [], hbars: [], phase: 'play',
 };
 const TOWER = {
-  archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['汉 · 望楼弓手：居高放火箭，', '射速快，可射飞行之敌。'], tiers: [['汉 · 望楼弓手', '汉代烽燧望楼，弓手居高放火箭。'], ['唐 · 强弩手', '唐军弩手分番迭射，箭不绝声。'], ['宋 · 神臂弓', '宋神臂弓射三百四十步，可穿重甲。']] },
-  bombard: { name: '砲车台', short: '砲车', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['汉 · 发石机：装填慢，', '落石砸伤一片，只打地面。'], tiers: [['汉 · 发石机', '汉代以机发石，重十二斤，行二百步。'], ['唐 · 抛车', '唐军攻辽东，抛车飞大石过三百步。'], ['宋 · 霹雳火砲', '宋《武经总要》霹雳火球，以砲抛出。']] },
-  spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [40, 52, 66], desc: ['汉 · 大黄弩：一发贯数敌，', '中者迟滞，可射飞敌。'], tiers: [['汉 · 大黄弩', '李广以大黄弩射杀匈奴裨将。'], ['唐 · 车弩', '唐《通典》车弩以绞轴张弦，中垒即摧。'], ['宋 · 三弓床弩', '宋三弓床弩七十人张发，射三百步。']] },
+  archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [60, 80, 100, 140], range: [6.0, 6.2, 6.8, 7.4], dmg: [7, 9, 11, 14], rate: [.9, .85, .78, .7], air: true, ground: true, light: [70, 80, 105, 140], desc: ['秦 · 弓弩前锋：居高放箭，', '射速快，可射飞行之敌。'], tiers: [['秦 · 弓弩前锋', '兵马俑一号坑前锋三排弓弩手，持弩列阵。'], ['汉 · 望楼弓手', '汉代烽燧望楼，弓手居高放火箭。'], ['唐 · 强弩手', '唐军弩手分番迭射，箭不绝声。'], ['宋 · 神臂弓', '宋神臂弓射三百四十步，可穿重甲。']] },
+  bombard: { name: '砲车台', short: '砲车', icon: 'bombard', cost: [110, 120, 130, 190], range: [7.2, 7.4, 8.0, 8.6], minRange: 2.3, dmg: [30, 44, 62, 98], splash: [1.45, 1.6, 1.8, 2.1], rate: [3.0, 2.9, 2.7, 2.5], air: false, ground: true, light: [46, 50, 62, 80], desc: ['汉 · 发石机：装填慢，', '落石砸伤一片，只打地面。'], tiers: [['汉 · 发石机', '汉代以机发石，重十二斤，行二百步。'], ['三国 · 霹雳车', '官渡之战，曹操造发石车击袁绍楼橹，号霹雳车。'], ['唐 · 抛车', '唐军攻辽东，抛车飞大石过三百步。'], ['宋 · 霹雳火砲', '宋《武经总要》霹雳火球，以砲抛出。']] },
+  spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [100, 110, 120, 180], range: [5.2, 5.5, 6.0, 6.5], dmg: [13, 17, 25, 35], jumps: [2, 3, 4, 6], rate: [2.5, 2.3, 2.1, 1.9], slow: [.3, .36, .42, .48], slowT: [1.1, 1.3, 1.5, 1.7], air: true, ground: true, light: [34, 40, 52, 66], desc: ['秦 · 连弩：一发贯数敌，', '中者迟滞，可射飞敌。'], tiers: [['秦 · 连弩', '《史记》：始皇于之罘以连弩射杀巨鱼。'], ['汉 · 大黄弩', '李广以大黄弩射杀匈奴裨将。'], ['唐 · 车弩', '唐《通典》车弩以绞轴张弦，中垒即摧。'], ['宋 · 三弓床弩', '宋三弓床弩七十人张发，射三百步。']] },
   guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [70, 80, 100, 150], range: [3.3, 3.5, 3.8, 4.0], n: [2, 2, 3, 3], hp: [50, 66, 95, 135], dmg: [6, 8, 11, 15], rate: [7.5, 7, 6, 5], air: false, ground: true, light: [50, 58, 72, 90], desc: ['秦 · 锐士：出营拦路，', '与敌近身搏杀。'], tiers: [['秦 · 锐士', '秦兵俑所见：铆钉札甲、右侧发髻，持青铜戈。'], ['汉 · 戍卒', '汉代边郡戍卒，铁札甲、环首刀与盾。'], ['唐 · 陌刀手', '唐陌刀手披明光铠，列阵如墙破骑。'], ['宋 · 步人甲', '宋步人甲重约二十九公斤，斩马刀破骑。']] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
@@ -224,7 +224,7 @@ class Tower {
   get range() { return this.def.range[this.lvl]; }
   w(l, out) { out.x = this.x + l[0] * this.cs + l[2] * this.sn; out.y = this.y + l[1]; out.z = this.z - l[0] * this.sn + l[2] * this.cs; return out; }
   begin() {
-    const bp = blueprint(this.kind, this.kind === 'guard' ? Math.max(0, this.lvl - 1) : this.lvl); this.bp = bp; this.mounts = bp.mounts; this.bt = 0; this.state = this.lvl ? 'upgrade' : 'build';
+    const bp = blueprint(this.kind, this.vl); this.bp = bp; this.mounts = bp.mounts; this.bt = 0; this.state = this.lvl ? 'upgrade' : 'build';
     this.clearModel(true);
     const n = bp.pieces.length, gap = Math.min(.2, 1.45 / n);
     bp.pieces.forEach((p, i) => {
@@ -253,7 +253,7 @@ class Tower {
     if (mt.flame2) { const p = this.w(mt.flame2, {}); this.flame2 = addFlame({ x: p.x, y: p.y, z: p.z, size: mt.flameSize, on: 0 }); }
     if (mt.lightAt) { const p = this.w(mt.lightAt, {}); this.em.x = p.x; this.em.y = p.y; this.em.z = p.z; this.em.r = .45; this.em.g = .72; this.em.b = 1; }
     this.em.I = d.light[lvl]; this.em.range = this.kind === 'archer' ? 12 : 10.5;
-    if (this.kind === 'archer') mt.archers.forEach((a, i) => this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + i * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, xbow: lvl >= 1, helm: lvl === 2, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }));
+    if (this.kind === 'archer') mt.archers.forEach((a, i) => this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + i * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, xbow: lvl !== 1, helm: lvl === 3, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }));
     if (this.kind === 'bombard') this.makeGun();
     if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
@@ -265,7 +265,7 @@ class Tower {
   }
   makeGun() {
     // A traction trebuchet on a turning base: one pole for the Han stone thrower, a bigger frame for the Tang throwing cart, bundled poles and a fire ball for the Song thunderbolt trebuchet.
-    const mt = this.mounts, lvl = this.lvl, S = new Soup(), wd = COL.woodD, w = COL.wood, fh = [1.05, 1.25, 1.4][lvl], fw = [.34, .4, .46][lvl];
+    const mt = this.mounts, lvl = this.vl, S = new Soup(), wd = COL.woodD, w = COL.wood, fh = [1.05, 1.25, 1.4][lvl], fw = [.34, .4, .46][lvl];
     S.cyl(.5, .12, 0, .06, 0, wd, { n: 8, l: L_WOOD });
     for (const sg of [-1, 1]) { S.seg([sg * fw, .1, -.32], [sg * fw, fh, 0], .05, .045, w, { n: 5, l: L_WOOD }); S.seg([sg * fw, .1, .32], [sg * fw, fh, 0], .05, .045, w, { n: 5, l: L_WOOD }); S.box(.08, .06, .7, sg * fw, .14, 0, wd, { l: L_WOOD }); }
     S.cyl(.045, fw * 2 + .14, 0, fh, 0, COL.iron, { n: 6, r: [0, 0, HPI], l: L_METAL });
@@ -303,6 +303,8 @@ class Tower {
     this.gunYaw = this.yaw;
   }
   get maxLvl() { return this.def.tiers.length - 1; }
+  // the buildings have three visual stages; four-tier lines share the first stage between their first two tiers
+  get vl() { return Math.max(0, this.lvl - (this.def.tiers.length - 3)); }
   upgrade() { if (this.lvl >= this.maxLvl || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
   sell() {
     this.alive = false; this.em.alive = false; this.em.on = 0; LT.emitters[this.idx] = null; this.pad.tower = null;
@@ -369,7 +371,7 @@ class Tower {
       if (aligned && this.cool <= 0) {
         this.cool = d.rate[lvl] * rr(.95, 1.08); this.recoil = 1;
         this.barrel.rotation.x = .5; this.carriage.updateMatrixWorld(true); const mz = _tv.set(0, this.armL, 0).applyMatrix4(this.barrel.matrixWorld);
-        const gy = G.B.heightAt(q.x, q.z), fire = lvl === 2;
+        const gy = G.B.heightAt(q.x, q.z), fire = lvl === this.maxLvl;
         G.shells.push({ x0: mz.x, y0: mz.y, z0: mz.z, tx: q.x, ty: Math.max(gy, q.y - tgt.hitH) + .05, tz: q.z, t: 0, T, dmg: d.dmg[lvl], splash: d.splash[lvl], tower: this, x: mz.x, y: mz.y, z: mz.z, sm: 0, arc: 2.2 + dist * .25, fire });
         fxDust(this.x, this.y + .3, this.z, 3, .7, { speed: 1.4, a: .35 });
         sfx('bossStep', this.x, this.z, .7, .2); sfx('zap', this.x, this.z, .4, 1);
@@ -400,7 +402,7 @@ class Tower {
         cur = nb;
       }
       fxDust(ox, oy, oz, 4, .5, { speed: 1.6, a: .4 });
-      sfx('zap', this.x, this.z, 1, lvl / 2); FX.shake = Math.min(1, FX.shake + .05);
+      sfx('zap', this.x, this.z, 1, lvl / 3); FX.shake = Math.min(1, FX.shake + .05);
     }
   }
   updGuard(dt, d, lvl) {
