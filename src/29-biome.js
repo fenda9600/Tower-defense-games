@@ -23,7 +23,7 @@ const BIOMES = [
       },
     },
     wx: { n: [.08, .05], velA: [.3, -.1, .15], swayA: [.5, .5], sizeA: [.03, .05], colA: [.75, .85, .9, 1], alA: [.45, 0, 0], yA: [-2, 9], velB: [.1, .05, .05], swayB: [1.2, .4], sizeB: [.03, .05], colB: [1.2, 1.5, .5, 0], alB: [.8, 1.2, 0], yB: [0, 3], amb: [.12, .16, .2] },
-    mobs: { ghoul: 1.5, knight: 1.6, drummer: 1.4, wraith: 1.2 }, early: { knight: 3, drummer: 5 }, boss: ['giant', 'ogre'], tints: { wisp: [.7, 1.2, 1.1] }, wispHex: 0x90e0c0,
+    mobs: { ghoul: 1.5, knight: 1.6, drummer: 1.4, wraith: 1.2 }, early: { knight: 3, drummer: 5 }, boss: ['giant', 'ogre'], tints: {}, wispHex: 0xff9040,
     trees: [['song', 9, 3.0, 4.8], ['tree', 4, 2.6, 4.2], ['bamboo', 5, 2.6, 3.8]], stumps: 3, rocks: 40, tufts: 260, webs: 0,
   },
   {
@@ -71,7 +71,7 @@ const BIOMES = [
       },
     },
     wx: { n: [.26, .14], velA: [.3, -.42, .16], swayA: [.5, .7], sizeA: [.035, .07], colA: [.3, .28, .3, 1], alA: [.85, 0, 0], yA: [-3, 14], velB: [.2, .95, .12], swayB: [.7, .9], sizeB: [.03, .05], colB: [2.6, .9, .14, 0], alB: [1, 2.2, .3], yB: [-2, 10], amb: [.5, .3, .26] },
-    mobs: { bomber: 2.4, gargoyle: 1.8, golem: 1.5, toad: 0, slime: .5, wisp: 1.4, skel: 1.4 }, early: { bomber: 2, gargoyle: 4, golem: 6 }, boss: ['colossus'], tints: { golem: [1.5, .5, .26], wolf: [.75, .45, .4], wisp: [1.5, .6, .2], gargoyle: [1.2, .7, .6], toad: [1.2, .7, .5] }, wispHex: 0xff8030,
+    mobs: { bomber: 2.4, gargoyle: 1.8, golem: 1.5, toad: 0, slime: .5, wisp: 1.4, skel: 1.4 }, early: { bomber: 2, gargoyle: 4, golem: 6 }, boss: ['colossus'], tints: {}, wispHex: 0xff9040,
     trees: [['charred', 7, 2.6, 4.4], ['song', 3, 2.8, 4.0]], stumps: 4, rocks: 40, tufts: 60, webs: 0,
   },
   {
@@ -94,7 +94,7 @@ const BIOMES = [
       },
     },
     wx: { n: [.4, .1], velA: [1.6, -.9, .7], swayA: [.4, 1.2], sizeA: [.04, .07], colA: [1, 1.05, 1.12, 1], alA: [.7, 0, .2], yA: [-4, 14], velB: [3.2, -.4, 1.4], swayB: [.3, 1.5], sizeB: [.03, .05], colB: [.9, .95, 1.05, 1], alB: [.4, 0, .7], yB: [-4, 10], amb: [.32, .38, .5] },
-    mobs: { wolf: 2.2, gargoyle: 2.2, bat: 1.8, golem: 1.2, toad: 0, slime: .4 }, early: { gargoyle: 3, wolf: 2 }, boss: ['jotun'], tints: { wolf: [1.6, 1.7, 1.9], gargoyle: [.9, 1.0, 1.2], wisp: [.6, .9, 1.4] }, wispHex: 0x90b8ff,
+    mobs: { wolf: 2.2, gargoyle: 2.2, bat: 1.8, golem: 1.2, toad: 0, slime: .4 }, early: { gargoyle: 3, wolf: 2 }, boss: ['jotun'], tints: {}, wispHex: 0xff9040,
     trees: [], stumps: 0, rocks: 30, tufts: 120, webs: 0,
   },
   {
@@ -141,7 +141,7 @@ const BIOMES = [
       },
     },
     wx: { n: [.2, .18], velA: [.3, -.38, .16], swayA: [.5, .7], sizeA: [.035, .065], colA: [.32, .3, .3, 1], alA: [.8, 0, 0], yA: [-2, 12], velB: [.25, 1.1, .12], swayB: [.8, .9], sizeB: [.03, .05], colB: [2.6, 1.0, .18, 0], alB: [1, 2.2, .3], yB: [-1, 9], amb: [.42, .3, .24] },
-    mobs: { spider: 2, brood: 1.6, toad: 1.6, wisp: 1.4, bomber: 1.2, slime: .6 }, early: { spider: 2, brood: 6 }, boss: ['queen'], tints: { wisp: [1.5, .7, .25], golem: [1.1, .8, .6] }, wispHex: 0xff9040,
+    mobs: { spider: 2, brood: 1.6, toad: 1.6, wisp: 1.4, bomber: 1.2, slime: .6 }, early: { spider: 2, brood: 6 }, boss: ['queen'], tints: {}, wispHex: 0xff9040,
     trees: [], stumps: 6, rocks: 34, tufts: 200, webs: 2,
   },
   {
@@ -238,7 +238,7 @@ const BIOMES = [
       },
     },
     wx: { n: [.1, .2], velA: [.5, -.05, .25], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .82, .62, 1], alA: [.45, 0, 0], yA: [-1, 8], velB: [3.4, -.1, 1.6], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .76, .58, 1], alB: [.36, 0, .9], yB: [-.5, 4.5], amb: [.3, .24, .28] },
-    mobs: { knight: 1.8, skel: 1.6, wolf: 1.4, drummer: 1.5, mummy: 1.1, toad: 0, slime: .4 }, early: { knight: 3, drummer: 5 }, boss: ['king'], tints: { wolf: [1.4, 1.2, .9], golem: [1.4, 1.1, .75] }, wispHex: 0xffc070,
+    mobs: { knight: 1.8, skel: 1.6, wolf: 1.4, drummer: 1.5, mummy: 1.1, toad: 0, slime: .4 }, early: { knight: 3, drummer: 5 }, boss: ['king'], tints: {}, wispHex: 0xff9040,
     trees: [['song', 6, 2.8, 4.4], ['tree', 6, 2.4, 3.8]], stumps: 3, rocks: 50, tufts: 160, webs: 0,
   },
   {
@@ -250,7 +250,7 @@ const BIOMES = [
     clear: [.007, .006, .011], mistAmb: [.08, .07, .09], mist: [-.3, .4, .5, .1], sky: [.034, .03, .044], lift: [.016, .013, .024], sat: .92, expo: .92, sprAmb: [.08, .07, .09],
     cover: [.85, .7, .9, .7], coverCol: [.34, .28, .19], coverP: [.95, .5, .25, .05],
     wat: [0, 1, 1, 0], watA: [.01, .02, .02], watB: [.3, .3, .3], fall: [0, 1, 1, 0], fallA: [.02, .04, .04], fallB: [.2, .3, .3], spray: 'none',
-    relief: [1.0, .3, 1.0, 0], puddles: 0, ponds: 0, sway: 1.0, wind: 1.1, cracks: 0,
+    relief: [1.0, .3, 1.0, 0], puddles: 0, ponds: 0, sway: 1.0, wind: 1.1,
     terrain: {
       dry: true, rock: .08, prot: -.6,
       // how far (x, z) lies inside the hill's foot: the foot keeps a strip of open ground to the road, the pads and the keep, where the besiegers stand
@@ -282,7 +282,7 @@ const BIOMES = [
       },
     },
     wx: { n: [.08, .22], velA: [.4, -.05, .2], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .82, .62, 1], alA: [.45, 0, 0], yA: [-1, 8], velB: [3.8, -.1, 1.7], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .76, .58, 1], alB: [.4, 0, .9], yB: [-.5, 4.5], amb: [.3, .25, .26] },
-    mobs: { skel: 1.6, knight: 1.5, wolf: 1.6, scarab: 1.2, drummer: 1.3, toad: 0, slime: .3 }, early: { knight: 3, drummer: 4 }, boss: ['ogre', 'giant'], tints: { wolf: [1.3, 1.15, .9] }, wispHex: 0xffc060,
+    mobs: { skel: 1.6, knight: 1.5, wolf: 1.6, scarab: 1.2, drummer: 1.3, toad: 0, slime: .3 }, early: { knight: 3, drummer: 4 }, boss: ['ogre', 'giant'], tints: {}, wispHex: 0xff9040,
     trees: [['tree', 6, 2.2, 3.4], ['charred', 3, 2.2, 3.4]], stumps: 6, rocks: 48, tufts: 110, webs: 0,
   },
   {
@@ -294,7 +294,7 @@ const BIOMES = [
     wat: [0, 1, 1, 0], watA: [.012, .02, .03], watB: [.3, .4, .5], fall: [0, 1, 1, 0], fallA: [.022, .034, .054], fallB: [.2, .27, .38], spray: 'water',
     relief: [1.7, .5, 1, 0], puddles: 11, ponds: 1, sway: 1, wind: 1,
     wx: { n: [.05, 0], velA: [.35, -.12, .18], swayA: [.5, .5], sizeA: [.03, .055], colA: [.75, .8, .95, 1], alA: [.5, 0, 0], yA: [-1, 9], velB: [0, 0, 0], swayB: [0, 0], sizeB: [.05, .05], colB: [1, 1, 1, 1], alB: [0, 0, 0], yB: [0, 1], amb: [.1, .14, .22] },
-    mobs: { ghoul: 1.6, wraith: 1.6, necro: 1.5 }, early: { wraith: 3, necro: 5 }, boss: ['giant', 'ogre'], tints: { wisp: [.75, .6, 1.3] }, wispHex: 0xb090ff,
+    mobs: { wolf: 1.8, ghoul: 1.4, wraith: 1.5, necro: 1.4 }, early: { wolf: 2, wraith: 3, necro: 5 }, boss: ['ogre', 'giant'], tints: {}, wispHex: 0xff9040,
     trees: [['tree', 8, 2.6, 4.6], ['song', 6, 3.0, 4.6]], stumps: 6, rocks: 70, tufts: 320, webs: 4,
   },
   {
@@ -307,7 +307,7 @@ const BIOMES = [
     wat: [1, 0, .3, .35], watA: [.03, .075, .12], watB: [.4, .48, .58], fall: [1, 0, .96, 0], fallA: [.1, .17, .27], fallB: [.46, .58, .72], spray: 'none',
     relief: [1.5, .4, 1.15, 0], puddles: 8, ponds: 2, sway: .8, wind: 1.25, beacon: .8,
     wx: { n: [.68, .16], velA: [.55, -1.5, .3], swayA: [.28, 1.1], sizeA: [.055, .1], colA: [1, 1.05, 1.15, 1], alA: [.95, 0, .12], yA: [-3, 15], velB: [2.6, -1.1, 1.3], swayB: [.5, 1.6], sizeB: [.035, .06], colB: [.95, 1, 1.1, 1], alB: [.6, 0, .5], yB: [-2, 9], amb: [.4, .48, .62] },
-    mobs: { wolf: 2.4, golem: 1.8, wraith: 1.3, toad: 0, wisp: .5, slime: .6 }, early: { wolf: 2, golem: 6 }, boss: ['jotun'], tints: { wolf: [1.9, 2.0, 2.2], golem: [.8, 1.05, 1.5], wisp: [.5, .9, 1.5], gargoyle: [.9, 1.1, 1.4], toad: [.8, 1.1, 1.4], brute: [1.3, 1.25, 3.0] }, wispHex: 0x80c0ff,
+    mobs: { wolf: 2.4, golem: 1.8, wraith: 1.3, toad: 0, wisp: .5, slime: .6 }, early: { wolf: 2, golem: 6 }, boss: ['jotun'], tints: {}, wispHex: 0xff9040,
     trees: [['pine', 13, 2.8, 5.4], ['song', 5, 3.0, 4.4], ['tree', 3, 2.6, 4.2]], stumps: 4, rocks: 52, tufts: 110, webs: 0,
   },
   {
@@ -320,7 +320,7 @@ const BIOMES = [
     wat: [3, .3, .55, 0], watA: [.012, .026, .012], watB: [.1, .2, .045], fall: [0, .8, .9, 0], fallA: [.016, .034, .018], fallB: [.17, .27, .18], spray: 'water',
     relief: [1.0, .3, .7, 0], puddles: 15, ponds: 4, sway: .6, wind: .7,
     wx: { n: [.045, .09], velA: [.12, .02, .08], swayA: [1.3, .45], sizeA: [.05, .085], colA: [1.3, 1.9, .4, 0], alA: [1, 1.3, 0], yA: [.3, 3.4], velB: [.2, -.07, .12], swayB: [.6, .4], sizeB: [.03, .05], colB: [.7, .95, .7, 1], alB: [.5, 0, 0], yB: [-1, 7], amb: [.09, .2, .15] },
-    mobs: { toad: 3.5, wisp: 1.8, spider: 2, brood: 2, slime: 1.6, mummy: 0, bomber: .5 }, early: { toad: 2, wisp: 3, brood: 6 }, boss: ['queen'], tints: { golem: [.75, 1.0, .6], wisp: [.5, 1.4, .7], wolf: [.7, .75, .6], gargoyle: [.8, 1, .8] }, wispHex: 0x70ffa0,
+    mobs: { toad: 3.5, wisp: 1.8, spider: 2, brood: 2, slime: 1.6, mummy: 0, bomber: .5 }, early: { toad: 2, wisp: 3, brood: 6 }, boss: ['queen'], tints: {}, wispHex: 0xff9040,
     trees: [['willow', 9, 3.0, 4.6], ['tree', 5, 2.6, 4.4]], stumps: 8, rocks: 42, tufts: 420, webs: 3,
   },
   {
@@ -333,12 +333,13 @@ const BIOMES = [
     wat: [0, 1, 1, 0], watA: [.008, .04, .045], watB: [.3, .4, .4], fall: [0, 1, 1, 0], fallA: [.02, .06, .07], fallB: [.24, .36, .38], spray: 'water',
     relief: [1.4, .25, .8, .55], puddles: 0, ponds: 2, sway: 1.3, wind: 1.2, beacon: .62,
     wx: { n: [.1, .22], velA: [.5, -.05, .25], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .78, .6, 1], alA: [.5, 0, 0], yA: [-1, 8], velB: [4.2, -.1, 1.9], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .72, .55, 1], alB: [.42, 0, .9], yB: [-.5, 4.5], amb: [.3, .22, .3] },
-    mobs: { mummy: 3, scarab: 2.4, spider: .6, bomber: 1.3, ghoul: 1.3, toad: 0, slime: .4 }, early: { mummy: 4, scarab: 2 }, boss: ['king'], tints: { golem: [1.5, 1.1, .72], wolf: [1.5, 1.2, .8], wisp: [1.4, 1.0, .4], gargoyle: [1.5, 1.2, .9], toad: [1.3, 1.1, .7] }, wispHex: 0xffc060,
+    mobs: { wolf: 2.4, mummy: 1.4, scarab: 1.8, spider: .6, bomber: 1, ghoul: 1.3, toad: 0, slime: .4 }, early: { wolf: 2, mummy: 4, scarab: 2 }, boss: ['king'], tints: {}, wispHex: 0xff9040,
     trees: [['huyang', 9, 3.0, 4.4], ['tree', 3, 2.4, 3.4]], stumps: 2, rocks: 44, tufts: 150, webs: 0,
   },
 ];
 const BIOME = { start: 0 };
-function biomeFor(index) { return BIOMES[((BIOME.start + index) % BIOMES.length + BIOMES.length) % BIOMES.length]; }
+// battlefields come in campaign order (src/64-campaign.js); index is the campaign level
+function biomeFor(index) { const n = stageCount(), k = CAMPAIGN.order[((BIOME.start + index) % n + n) % n]; return BIOMES.find(b => b.key === k); }
 function applyBiomePalette(b) { Object.assign(COL, COL0); for (const k in b.col) COL[k] = C(b.col[k]); }
 
 const LOOK = { cur: null, to: null, bio: null };

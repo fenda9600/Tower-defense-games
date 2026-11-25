@@ -176,24 +176,18 @@ const AU = (function () {
     const r = gn(d), rf = flt(r, 'lowpass', 180); noi(t + 0.05, 1.1 * L, rf, bufBrown); ad(r.gain, t + 0.05, 0.4, 0.1, 0.9 * L);
   };
   S.charge = (d, t) => {
-    const k = rr(0.94, 1.06), D = 0.55, lp = flt(d, 'lowpass', 3200), g = gn(lp);
-    const o = osc('sine', 380 * k, t, D, g); sw(o.frequency, t, 380 * k, 1500 * k, D);
-    const o2 = osc('triangle', 572 * k, t, D, gn(g, 0.35)); sw(o2.frequency, t, 572 * k, 2270 * k, D);
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.11, t + D * 0.85); g.gain.exponentialRampToValueAtTime(0.0001, t + D);
-    const n = gn(d), nf = flt(n, 'bandpass', 2000, 3); noi(t, D, nf); sw(nf.frequency, t, 1500, 5200, D);
-    n.gain.setValueAtTime(0.0001, t); n.gain.exponentialRampToValueAtTime(0.05, t + D * 0.9); n.gain.exponentialRampToValueAtTime(0.0001, t + D + 0.02);
+    // the winch ratchet clicking as the bed crossbow is drawn
+    const lp = flt(d, 'lowpass', 5200);
+    for (let i = 0; i < 7; i++) { const t0 = t + i * 0.085 + rr(-0.006, 0.006), c = gn(lp), cf = flt(c, 'bandpass', rr(1500, 2100), 4); noi(t0, 0.03, cf); ad(c.gain, t0, 0.32, 0.0008, 0.018); const k = gn(lp), ko = osc('sine', rr(260, 300), t0, 0.04, k); ad(k.gain, t0, 0.18, 0.001, 0.025); }
+    const g = gn(d), f = flt(g, 'bandpass', 380, 1.5); noi(t, 0.62, f, bufBrown); ad(g.gain, t, 0.12, 0.05, 0.5);
   };
   S.zap = (d, t, p) => {
-    const k = rr(0.9, 1.1), lp = flt(d, 'lowpass', 7500);
-    const c = gn(lp), cf = flt(c, 'highpass', 1700); noi(t, 0.1, cf); ad(c.gain, t, 0.8, 0.0005, 0.045);
-    const t2 = t + rr(0.03, 0.07), c2 = gn(lp), cf2 = flt(c2, 'bandpass', 2600 * k, 0.8); noi(t2, 0.12, cf2); ad(c2.gain, t2, 0.5, 0.0005, 0.07);
-    const z = gn(lp, 0), zf = flt(z, 'bandpass', 2100 * k, 2.2), zo = osc('sawtooth', 96 * k, t, 0.24, zf); sw(zo.frequency, t, 130 * k, 70 * k, 0.2);
-    z.gain.setValueAtTime(0, t);
-    for (let i = 0; i < 9; i++) z.gain.setValueAtTime(rnd() < 0.7 ? rr(0.15, 0.4) : 0.02, t + 0.002 + i * 0.022);
-    z.gain.linearRampToValueAtTime(0, t + 0.23);
-    grains(lp, t + 0.02, 10, 0.28, 0.3, 0.004, 0.014, 2800, 6000, 3, 1);
-    const r = gn(d), rf = flt(r, 'lowpass', 170); noi(t, 1.0, rf, bufBrown); ad(r.gain, t + 0.01, 0.55 + 0.25 * p, 0.03, 0.8);
-    const th = gn(d), to = osc('sine', 70, t, 0.3, th); sw(to.frequency, t, 80, 38, 0.2); ad(th.gain, t, 0.45, 0.003, 0.22);
+    // the release: a heavy wooden thump, the string's twang and the bolts hissing away
+    const k = rr(0.92, 1.08) * (1 - 0.12 * p), sh = shape(d, 1.6);
+    const g = gn(sh), o = osc('sine', 110 * k, t, 0.3, g); sw(o.frequency, t, 140 * k, 55 * k, 0.16); ad(g.gain, t, 0.9, 0.002, 0.22);
+    const s2 = gn(d), so = osc('triangle', 190 * k, t, 0.35, flt(s2, 'bandpass', 600, 2)); sw(so.frequency, t, 230 * k, 160 * k, 0.3); ad(s2.gain, t, 0.5, 0.002, 0.3);
+    const c = gn(d), cf = flt(c, 'highpass', 1500); noi(t, 0.06, cf); ad(c.gain, t, 0.5, 0.0005, 0.03);
+    const w = gn(d), wf = flt(w, 'bandpass', 2000, 1.2); noi(t + 0.01, 0.35, wf); sw(wf.frequency, t + 0.01, 2800, 900, 0.3); ad(w.gain, t + 0.01, 0.3, 0.02, 0.28);
   };
   S.clash = (d, t) => {
     const f0 = rr(1500, 2300), lp = flt(d, 'lowpass', 7000);
