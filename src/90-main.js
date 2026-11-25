@@ -46,7 +46,7 @@ function sfx(name, x, z, gain = 1, p = 0) {
 }
 
 const _mm = new THREE.Matrix4(), _mq = new THREE.Quaternion(), _mv = new THREE.Vector3(), _ms = new THREE.Vector3(1, 1, 1), _torch = [];
-function step(rdt) {
+function step(rdt, quiet) {
   G.slowmo = Math.max(0, G.slowmo - rdt);
   const dt = rdt * (G.slowmo > 0 ? lerp(1, .32, sat(G.slowmo / .35)) : 1);
   G.t += dt; SH.uTime.value = G.t;
@@ -87,6 +87,7 @@ function step(rdt) {
   updateTorchLights(dt, _torch, CAM.x, CAM.z);
   collectMistLights();
   endParts(); endFX();
+  if (quiet) return; // a fast-forward substep: the HUD and the sound mix advance once per real frame
   UI.update(rdt);
   if (AU.ready) { let lit = 0; for (const t of G.towers) if (t.alive && t.em.on > .5 && t.kind !== 'spire') lit++; AU.setAmbience(sat((.3 + lit * .06) * LT.beaconOn + .05), sat((G.phase === 'play' ? .5 : .85) * B.bio.wind), G.bossAlive && G.phase === 'play' ? 1 : 0); AU.update(rdt); }
 }
@@ -95,6 +96,8 @@ let _last = 0, _acc = 0, _frames = 0, _slow = 0, _fast = 0, _hold = 0, _back = 1
 function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - _last) / 1000, rdt = Math.min(.05, Math.max(.001, raw)); _last = now; R.frameDt = rdt;
+  // fast-forward: run extra fixed-size substeps instead of a bigger dt, so collisions, the wall garrison and the AI see the same steps as at 1x
+  const n = G.speed > 1 ? G.speed : 1; for (let i = 1; i < n; i++) step(rdt, true);
   step(rdt);
   R.fade = Math.min(1, R.fade + rdt * 1.6);
   applyCamera(); renderFrame(); UI.draw();

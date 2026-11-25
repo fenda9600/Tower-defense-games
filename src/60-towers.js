@@ -1,6 +1,6 @@
 
 const G = {
-  B: null, t: 0, gold: 0, lives: 20, maxLives: 20, wave: 0, slain: 0, level: 0, run: 1,
+  B: null, t: 0, gold: 0, lives: 20, maxLives: 20, speed: 1, wave: 0, slain: 0, level: 0, run: 1,
   towers: [], mons: [], men: [], arrows: [], shells: [], stuck: [], hbars: [], phase: 'play',
 };
 const TOWER = {

@@ -2,7 +2,7 @@
 const UI = (() => {
   const U = {
     ctx: null, s: 3, insetTop: 0, goldShown: 0, hurt: 0, coins: [], msg: null, hover: null, menu: null, armed: null, idle: 99, mx: -1, my: -1, inside: false,
-    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
+    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, speedRect: null, statsRect: null, statsTap: -1e9, downT: 0, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
   };
   const COLR = { bg: 'rgba(9,11,17,0.86)', bg2: 'rgba(24,27,38,0.94)', bd: '#5d4c35', bdHi: '#e8b04a', tx: '#efe4cd', dim: '#a79e8a', amber: '#e8b04a', ember: '#ff8a3c', cold: '#8fc7ff', red: '#e5553c', dark: '#0b0d14', ok: '#9fd08a' };
   const _pv = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3();
@@ -40,26 +40,31 @@ const UI = (() => {
     window.addEventListener('pointermove', e => { U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.moved = 0; U.gp.active = false; });
     window.addEventListener('pointerleave', () => { U.inside = false; });
     document.addEventListener('mouseleave', () => { U.inside = false; });
-    window.addEventListener('pointerdown', e => { U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.gp.active = false; audioGesture(); onDown(); e.preventDefault(); }, { passive: false });
+    window.addEventListener('pointerdown', e => { if (CHEAT.owns(e.target)) return; U.downT = e.timeStamp; U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.gp.active = false; audioGesture(); onDown(); e.preventDefault(); }, { passive: false });
     window.addEventListener('pointerup', () => { U.press = null; });
     window.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => {
+      if (CHEAT.owns(e.target)) return;
       if (e.repeat) return; audioGesture();
       const k = e.key;
       if (k >= '1' && k <= '4') { pickKind(TOWER_KINDS[+k - 1]); e.preventDefault(); }
       else if (k === ' ' || k === 'Enter') { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); else sfx('uiDeny', CAM.x, CAM.z, .5); e.preventDefault(); }
-      else if (k === 'Escape') { U.closeMenu(); }
+      else if (k === 'Escape') { if (CHEAT.open) CHEAT.hide(); else U.closeMenu(); }
       else if (k === 'u' || k === 'U') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doUpgrade(t); } }
       else if (k === 'x' || k === 'X' || k === 'Delete' || k === 'Backspace') { const t = U.menu && U.menu.tower; if (t) { touchInput(); doSell(t); } }
       else if (k === 'm' || k === 'M') { AU.setMuted(!AU.muted); }
       else if (k === 'c' || k === 'C') { toggleCommand(); }
       else if (k === 'r' || k === 'R') { doReinforce(); }
       else if (k === 'g' || k === 'G') { doWallUp(); }
+      else if (k === 'f' || k === 'F') { cycleSpeed(); }
     });
   }
   function audioGesture() { if (!AU.ready) AU.unlock(); }
   function touchInput() { U.idle = 0; U.manual = true; }
   function toggleCommand() { U.setManual(!U.manual); U.idle = 0; sfx('uiClick', CAM.x, CAM.z, .8); }
+  const SPEEDS = [1, 2, 4];
+  function cycleSpeed() { G.speed = SPEEDS[(SPEEDS.indexOf(G.speed) + 1) % SPEEDS.length]; sfx('uiClick', CAM.x, CAM.z, .8); }
+  U.cycleSpeed = cycleSpeed;
   function deny() { U.deny = 1; sfx('uiDeny', CAM.x, CAM.z, .6); }
   function doBuild(pad, kind) { touchInput(); if (buildTower(pad, kind, true)) { sfx('uiClick', pad.x, pad.z, .8); U.menu = null; U.armed = null; return true; } deny(); return false; }
   function doUpgrade(t) { if (upgradeTower(t, true)) { sfx('uiClick', t.x, t.z, .8); U.menu = null; return true; } deny(); return false; }
@@ -88,6 +93,10 @@ const UI = (() => {
   }
   function onDown() {
     const sr = U.soundRect; if (sr && U.mx >= sr.x && U.mx <= sr.x + sr.w && U.my >= sr.y && U.my <= sr.y + sr.h) { if (AU.ready && sr.armed) AU.setMuted(!AU.muted); sr.armed = true; return; }
+    const inR = r => r && U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h;
+    if (inR(U.speedRect)) { cycleSpeed(); return; }
+    // double-tap the resource bar (top left) to open the hidden resource editor
+    if (inR(U.statsRect)) { const now = U.downT; if (now - U.statsTap < 400) { U.statsTap = 0; CHEAT.toggle(); } else U.statsTap = now; return; }
     const cr = U.cmdRect; if (cr && U.mx >= cr.x && U.mx <= cr.x + cr.w && U.my >= cr.y && U.my <= cr.y + cr.h) { toggleCommand(); return; }
     if (U.hotBtn) { touchInput(); U.press = U.hotBtn.id; U.hotBtn.fn(); return; }
     for (const r of U.wallRects) if (U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h) { r.fn(); return; }
@@ -133,6 +142,7 @@ const UI = (() => {
     if (G.slain !== U.lastSlain) { U.lastSlain = G.slain; U.slainBump = 1; }
     U.s = Math.max(2, Math.round(R.dh / 430));
     pollGamepad(dt);
+    if (CHEAT.open) CHEAT.sync();
     if (U.menu) { U.menu.t += dt; if ((U.menu.tower && !U.menu.tower.alive) || G.phase !== 'play') U.menu = null; else if (U.menu.pad.tower !== U.menu.tower) U.menu.tower = U.menu.pad.tower; }
     if (G.phase !== 'play') { U.armed = null; U.hover = null; }
     else U.hover = (U.inside && !U.hotBtn) ? pickPad(U.mx, U.my) : null;
@@ -145,7 +155,7 @@ const UI = (() => {
       let range = 0; if (tgt.tower) range = tgt.tower.range; else { const kind = (U.menu && U.hotBtn && U.hotBtn.kind) || U.armed || (U.menu && U.btns[U.menu.focus] && U.gp.active && U.btns[U.menu.focus].kind) || 'archer'; range = TOWER[kind].range[0]; }
       setRing(U.rangeMesh, pad.x, pad.z, range, .07); U.rangeMesh.material.opacity = .34;
     } else { U.padMesh.visible = false; U.rangeMesh.visible = false; }
-    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot) || U.wallRects.some(r => r.hot)) ? 'pointer' : 'default';
+    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot) || (U.speedRect && U.speedRect.hot) || U.wallRects.some(r => r.hot)) ? 'pointer' : 'default';
   }
 
   function draw() {
@@ -164,7 +174,7 @@ const UI = (() => {
     const stats = [['flame', '' + G.lives, U.hurt > 0 ? COLR.red : COLR.tx], ['coin', '' + Math.floor(U.goldShown), U.deny > 0 ? COLR.red : (U.goldBump > 0 ? '#ffe2a0' : COLR.tx)], ['skull', '' + G.slain, U.slainBump > .5 ? '#ffffff' : COLR.tx]];
     let wS = pad; for (const st of stats) wS += PX.iconSize(st[0])[0] * s + 2 * s + Math.max(tw(st[1]), tw('000')) + 6 * s; wS += pad - 6 * s;
     const hS = 10 * s + pad * 2 - 2 * s, x0 = 5 * s, y0 = 5 * s + U.insetTop;
-    plate(x0, y0, wS, hS, U.hurt > 0 ? { bd: COLR.red } : {});
+    plate(x0, y0, wS, hS, U.hurt > 0 ? { bd: COLR.red } : CHEAT.open ? { bd: COLR.bdHi } : {}); U.statsRect = { x: x0, y: y0, w: wS, h: hS };
     let x = x0 + pad; const goldPos = { x: 0, y: 0 };
     for (const st of stats) {
       const [iw, ih] = PX.iconSize(st[0]); const iy = y0 + Math.round((hS - ih * s) / 2);
@@ -195,8 +205,11 @@ const UI = (() => {
     { const on = AU.ready && !AU.muted, lbl = AU.ready ? (AU.muted ? '已静音' : '声音开') : '点击开启声音', icn = on ? 'sound' : 'mute', iw2 = PX.iconSize(icn)[0] * s, w = iw2 + 3 * s + tw(lbl) + pad * 2, h = LH + pad * 2 - s, xs = 5 * s, ys = H - h - 5 * s;
       const hotS = U.inside && U.mx >= xs && U.mx <= xs + w && U.my >= ys && U.my <= ys + h;
       plate(xs, ys, w, h, hotS ? { bd: COLR.bdHi, bg: COLR.bg2 } : {}); PX.icon(c, icn, xs + pad, ys + pad - s, s, AU.ready ? 1 : .8); text(lbl, xs + pad + iw2 + 3 * s, ys + pad - s, AU.ready ? COLR.dim : COLR.tx);
-      U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false }; }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+      U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false };
+      const fast = G.speed > 1, sl = '快进 ' + G.speed + '倍', sw = tw('快进 4倍') + pad * 2, sxp = xs + w + 3 * s, hotF = U.inside && U.mx >= sxp && U.mx <= sxp + sw && U.my >= ys && U.my <= ys + h;
+      plate(sxp, ys, sw, h, hotF ? { bd: COLR.bdHi, bg: COLR.bg2 } : fast ? { bd: COLR.ember } : {}); text(sl, sxp + sw / 2, ys + pad - s, fast ? COLR.amber : COLR.dim, { align: 'c' });
+      U.speedRect = { x: sxp, y: ys, w: sw, h, hot: hotF }; }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · F 快进 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
     // the wall: its garrison, the reinforce skill and the garrison upgrade
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {
@@ -204,7 +217,7 @@ const UI = (() => {
       const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = '城防 ' + G.lives + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + WALL.dmg[lv];
       const la = full ? '守军已满' : 'R 增兵 ' + WALL.addCost, lu = maxed ? '已满级' : 'G 升级 ' + upc;
       const bh = LH + 4 * s, w = Math.max(tw(t1), tw(t2), (Math.max(tw(la), tw(lu)) + 8 * s) * 2 + 3 * s) + pad * 2, h = LH * 2 + bh + pad * 2 + 3 * s;
-      const xp = Math.round(W / 2 - w / 2), sr = U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
+      const xp = Math.round(W / 2 - w / 2), sr = U.speedRect || U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
       plate(xp, yp, w, h, Wl.siegeN ? { bd: COLR.ember } : {}); U.wallBox = { x: xp, y: yp, w, h };
       text(t1, xp + pad, yp + pad - s, COLR.amber); text(t2, xp + pad, yp + pad + LH, Wl.siegeN ? COLR.ember : COLR.dim);
       const by = yp + pad + LH * 2 + 2 * s, bw2 = Math.floor((w - pad * 2 - 3 * s) / 2);
