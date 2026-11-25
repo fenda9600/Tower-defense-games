@@ -91,7 +91,7 @@ function foeRoutes(B) {
       let ok = true, d = .5, h0 = B.heightAt(px, pz), edge = false;
       for (; d < S.len[1]; d += .5) {
         const x = px + dx * d, z = pz + dz * d; if (Math.abs(x) > lim || Math.abs(z) > lim) { edge = true; break; }
-        const h = B.heightAt(x, z); if (Math.abs(h - h0) > .75) ok = false; h0 = h;
+        const h = B.heightAt(x, z); if (Math.abs(h - h0) > .75 || (B.sea !== undefined && h < B.sea + .3) || (B.ter.abyss !== undefined && h < B.ter.abyss)) ok = false; h0 = h;
         if (d > 3.4 && B.dRoadAt(x, z) < ROAD_HALF + 1.4) ok = false;
         if (B.dStrAt(x, z) < 1.2 || dist2(x, z, B.gate.x, B.gate.z) < 100 || dist2(x, z, B.cave.x, B.cave.z) < 49) ok = false;
         for (const q of B.ponds) if (dist2(x, z, q.x, q.z) < (q.r + .8) * (q.r + .8)) ok = false;

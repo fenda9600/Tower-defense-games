@@ -188,9 +188,9 @@ Object.assign(BIOME_DRESS, {
       }
       for (const [x, z, f] of rim) if (f) X.placed.push([x, z, .45]);
     }
-    for (let k = 0; k < 4; k++) { const p = waterSpot(X, 1.1); if (!p) break; const T = new Soup(); PROP.sampan(T, rng); B.put(T, p[0], p[1], { y: sea - .06, ry: rng() * TAU, ao: null }); X.placed.push([p[0], p[1], 1.1]); }
-    for (let k = 0; k < 7; k++) { const hh = rng.range(2.6, 4); X.drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0, maxSlope: .4 }); }
-    for (let k = 0; k < 2; k++) X.drop(T => PROP.log(T, rng), .9, { far: 1.2, maxSlope: .15 });
+    for (let k = 0; k < Math.round(4 * LIN); k++) { const p = waterSpot(X, 1.1); if (!p) break; const T = new Soup(); PROP.sampan(T, rng); B.put(T, p[0], p[1], { y: sea - .06, ry: rng() * TAU, ao: null }); X.placed.push([p[0], p[1], 1.1]); }
+    for (let k = 0; k < Math.round(7 * AREA); k++) { const hh = rng.range(2.6, 4); X.drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0, maxSlope: .4 }); }
+    for (let k = 0; k < Math.round(2 * AREA); k++) X.drop(T => PROP.log(T, rng), .9, { far: 1.2, maxSlope: .15 });
   },
   chibi(X) {
     const { B, rng, H } = X, SC = 1.25, LEN = 5.1, GAP = 5.3, sea = B.sea, ships = [];
@@ -200,9 +200,9 @@ Object.assign(BIOME_DRESS, {
       for (let k = 0; k < n; k++) { const d = rng.range(.6, 3.4), w = rng.range(-1, 1) * (.4 + d * .3); T.box(rng.range(.35, .9), .01, rng.range(.06, .12), (d - w) * .7071, 0, (d + w) * .7071, [.9, .32, .07], { emis: rng.range(.12, .3) * (1.2 - d * .25), r: [0, -PI / 4, 0] }); }
       B.put(T, x, z, { y: sea + .015, ao: null });
     };
-    // a ship's whole footprint, oars included, must lie on open water, and in view: the camera cuts off the near corner
+    // a ship's whole footprint, oars included, must lie on open water, and in the camera's window
     const afloat = (x, z, dx, dz, w = 1.3) => {
-      if (x + z > 17) return false;
+      if (viewRoom(x, z) < 2.4) return false;
       for (let a = -LEN / 2; a <= LEN / 2 + .01; a += LEN / 6) for (const b of [-w, -.7, 0, .7, w]) {
         const px = x + dx * a - dz * b, pz = z + dz * a + dx * b;
         if (Math.abs(px) > BH - .2 || Math.abs(pz) > BH - .2 || H(px, pz) > sea - (Math.abs(b) > .71 ? 0 : .35) || B.dRoadAt(px, pz) < ROAD_HALF + .8) return false;
@@ -224,7 +224,7 @@ Object.assign(BIOME_DRESS, {
       if (H(x, z) > sea - .35) continue;
       for (let d = 0; d < 16; d++) {
         const a = d / 16 * TAU; if (!afloat(x, z, Math.cos(a), Math.sin(a), .85)) continue;
-        const f = grow(x, z, a), m = f[f.length >> 1], sc = f.length * 100 - Math.abs(m[0] + m[1] - 8) - Math.abs(m[0] - m[1]) * .6;
+        const f = grow(x, z, a), m = f[f.length >> 1], sc = f.length * 100 - Math.abs(m[0] + m[1] - (VIEW.far + 3 * VIEW.near) / 4) - Math.abs(m[0] - m[1] - (VIEW.left + VIEW.right) / 2) * .6;
         if (sc > bestSc) { bestSc = sc; fleet = f; }
       }
     }
@@ -242,15 +242,15 @@ Object.assign(BIOME_DRESS, {
     // the fire lights the water under the fleet
     for (let i = 0, n = Math.min(3, fleet.length); i < n; i++) { const f = fleet[n === 1 ? 0 : Math.round(i * (fleet.length - 1) / (n - 1))]; B.env.push({ x: f[0], y: sea + .9, z: f[1], c: 0xff6a24, I: 60, d: 11, flick: 1 }); }
     // Cao Cao's ships still at anchor, and Huang Gai's fire boats among them
-    for (let t = 0, n = 0; t < 400 && n < 3; t++) {
+    for (let t = 0, n = 0; t < 400 && n < Math.round(3 * LIN); t++) {
       const x = rng.range(-BH + 3, BH - 3), z = rng.range(-BH + 3, BH - 3), a = rng() * PI, dx = Math.cos(a), dz = Math.sin(a);
       if (!afloat(x, z, dx, dz)) continue;
       const burning = n === 0, T = new Soup(); PROP.warship(T, rng, { burning, flag: COL.clothR, L: 3.5 });
       B.put(T, x, z, { y: sea - .12, ry: -a, s: SC, ao: null }); X.placed.push([x, z, 3]); ships.push([x, z]); n++;
       if (burning) { addFire(B, x, sea + 1.0, z, .6, 1.8); glare(x, z, 8); }
     }
-    for (let k = 0; k < 2; k++) X.drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 2.5 });
-    for (let k = 0; k < 5; k++) { const hh = rng.range(2.0, 4.0); X.drop(T => PROP.spire(T, rng, hh, [COL.stoneD, COL.stone, C(0x7a2e22), COL.stoneL]), hh * .28, { far: 1.6, maxSlope: .35, dy: -.1 }); }
+    for (let k = 0; k < Math.round(2 * AREA); k++) X.drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 2.5 });
+    for (let k = 0; k < Math.round(5 * AREA); k++) { const hh = rng.range(2.0, 4.0); X.drop(T => PROP.spire(T, rng, hh, [COL.stoneD, COL.stone, C(0x7a2e22), COL.stoneL]), hh * .28, { far: 1.6, maxSlope: .35, dy: -.1 }); }
   },
   yinping(X) {
     const { B, rng, H } = X;
@@ -267,8 +267,8 @@ Object.assign(BIOME_DRESS, {
       }
     }
     // Deng Ai's men left their mark: felt rolls and rope at the steepest drops, and a cairn to the dead
-    for (let k = 0; k < 4; k++) X.drop(T => PROP.cairn(T, rng), .5, {});
-    for (let k = 0; k < 14; k++) { const hh = rng.range(2.4, 4.6), p = treeSpot(X, hh, { far: 1.0, steep: true }); if (p) X.drop(T => PROP.pine(T, rng, hh), .7, { at: p }); }
+    for (let k = 0; k < Math.round(4 * AREA); k++) X.drop(T => PROP.cairn(T, rng), .5, {});
+    for (let k = 0; k < Math.round(14 * AREA); k++) { const hh = rng.range(2.4, 4.6), p = treeSpot(X, hh, { far: 1.0, steep: true }); if (p) X.drop(T => PROP.pine(T, rng, hh), .7, { at: p }); }
   },
   yiling(X) {
     const { B, rng, H } = X, camps = B.scx.camps;
@@ -288,12 +288,12 @@ Object.assign(BIOME_DRESS, {
     for (const c of camps) if (c.state === 'smoking') addFire(B, c.x, H(c.x, c.z) + .15, c.z, .35, 2.8);
     for (const c of camps) if (c.state === 'untouched') addFire(B, c.x, H(c.x, c.z) + .2, c.z, .3, .5);
     // the wooded gorge sides, mostly pine; the trees round the burnt camps are scorched
-    for (let k = 0, song = 0; k < 22; k++) {
+    for (let k = 0, song = 0; k < Math.round(22 * AREA); k++) {
       const h = rng.range(2.6, 4.4), p = treeSpot(X, h, { far: 1.6, steep: true }); if (!p) continue;
       const kind = camps.some(c => c.state !== 'untouched' && Math.hypot(p[0] - c.x, p[1] - c.z) < 4.5) ? 'charred' : song < 3 && rng() < .3 ? (song++, 'song') : 'pine';
       X.drop(T => PROP[kind](T, rng, h), .7, { at: p });
     }
-    for (let k = 0; k < 3; k++) { const hh = rng.range(2.6, 4), p = treeSpot(X, hh, { far: 1.2, steep: true }); if (p) X.drop(T => PROP.bamboo(T, rng, hh), .7, { at: p }); }
+    for (let k = 0; k < Math.round(3 * AREA); k++) { const hh = rng.range(2.6, 4), p = treeSpot(X, hh, { far: 1.2, steep: true }); if (p) X.drop(T => PROP.bamboo(T, rng, hh), .7, { at: p }); }
   },
   jingxing(X) {
     const { B, rng, H } = X, sea = B.sea, F = B.scx.line, R = B.ter.ranks, ry = Math.atan2(-F.wx, -F.wz);
@@ -322,14 +322,14 @@ Object.assign(BIOME_DRESS, {
     if (fires.length > 1) { const [x, z] = at(0, R.shields[0]); B.env.push({ x, y: H(x, z) + 1.4, z, c: 0xff9a50, I: 16, d: 7, flick: 1 }); }
     X.placed.push(...B.scx.sites);
     // the two thousand red flags Han Xin's riders planted on the heights above the pass
-    for (let k = 0, m = 0; k < 300 && m < 14; k++) {
-      const x = rng.range(-BH + 1.5, 4), z = rng.range(-BH + 1.5, BH - 1.5);
+    for (let k = 0, m = 0; k < 300 * AREA && m < Math.round(14 * AREA); k++) {
+      const x = rng.range(-BH + 1.5, BW + 22), z = rng.range(-BH + 1.5, BH - 1.5);
       if (H(x, z) < 3.6 || !X.free(x, z, .3, .4) || X.slope(x, z) > .5) continue;
       const T = new Soup(); PROP.banner(T, rng, COL.hanR, 2.6); B.put(T, x, z, { ry: rng() * TAU }); X.placed.push([x, z, .5]); m++;
     }
     // Zhao's camp at the mouth of the pass
     for (let t = 0; t < 60; t++) { const x = B.lay.cave.x + rng.range(3, 8), z = B.zc + rng.sign() * rng.range(3.5, 6); if (campSpot(X, x, z, 1.9)) { campAt(X, x, z, rng() * TAU, { flag: COL.weiB, n: 3 }); X.placed.push([x, z, 2.2]); addFire(B, x, H(x, z) + .2, z, .3, .5); break; } }
-    for (let k = 0; k < 3; k++) { const p = waterSpot(X, 1.0); if (!p) break; const T = new Soup(); PROP.sampan(T, rng); B.put(T, p[0], p[1], { y: sea - .06, ry: rng() * TAU, ao: null }); X.placed.push([p[0], p[1], 1.0]); }
+    for (let k = 0; k < Math.round(3 * LIN); k++) { const p = waterSpot(X, 1.0); if (!p) break; const T = new Soup(); PROP.sampan(T, rng); B.put(T, p[0], p[1], { y: sea - .06, ry: rng() * TAU, ao: null }); X.placed.push([p[0], p[1], 1.0]); }
   },
   jieting(X) {
     const { B, rng, H } = X, h = B.scx.hill, y = H(h.x, h.z), inside = (x, z) => B.ter.foot(B.scx, x, z, B.dRoadAt(x, z));

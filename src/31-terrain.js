@@ -107,7 +107,9 @@ function buildBoard(seed, index) {
     if (x < BW + 5.8) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(BW + 5.8, BW + 4.8, x);
     return c;
   };
-  const SCX = { kx, zc, sd, keepY, pads, rng, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), hBase, cliffAt };
+  // distance from the levelled ground of the keep and its gate
+  const dKeepAt = (x, z) => Math.hypot(Math.max(0, Math.abs(x - kx) - 5.2), Math.max(0, z - BN - 6.3));
+  const SCX = { kx, zc, sd, keepY, pads, rng, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), hBase, cliffAt, dKeepAt };
   if (TER.prep) TER.prep(SCX);
   const SEA = TER.sea;
   const pondD = (q, x, z) => Math.hypot(x - q.x, z - q.z) * (.82 + .36 * vnoise(x * .55 + q.x, z * .55 + q.z, sd + 60));
@@ -125,7 +127,7 @@ function buildBoard(seed, index) {
     }
     for (const p of pads) { const d = Math.hypot(x - p.x, z - p.z); if (d < 2.7) h = lerp(h, p.y0, smooth(2.7, 1.5, d)); }
     for (const q of ponds) { const d = pondD(q, x, z); if (d < q.r + 1.5) h = lerp(h, q.y - .45, smooth(q.r + 1.5, q.r * .4, d)); }
-    const dkx = Math.max(0, Math.abs(x - kx) - 5.2), dkz = Math.max(0, z - BN - 6.3), dk = Math.hypot(dkx, dkz);
+    const dk = dKeepAt(x, z);
     if (dk < 1.8) h = lerp(h, keepY, smooth(1.8, .2, dk));
     const c = cliffAt(x, z);
     let q = 0;

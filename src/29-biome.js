@@ -1,9 +1,15 @@
 
 const COL0 = Object.assign({}, COL);
+// The camera frames a window of fixed size, not the whole board, so a battlefield's set piece is placed by the window, not by the board edge.
+// Measured on 40 boards at the start and mid-battle: ground with far < x + z < near and left < x - z < right is on screen on 95 % of them.
+const VIEW = { far: -28, near: 21, left: -27, right: 19 };
+// how far (x, z) lies inside that window; negative outside
+function viewRoom(x, z) { const s = x + z, d = x - z; return Math.min(VIEW.near - s, s - VIEW.far, VIEW.right - d, d - VIEW.left) / Math.SQRT2; }
 const BIOMES = [
   // ---- Six battlefields, each a terrain that reads at a glance: the shape of the ground is the story of the battle ----
   {
-    // 钓鱼城 (1259): a walled city on a cliff-girt mountain where the Jialing and Qu rivers meet; the river wraps the board's two near sides.
+    // 钓鱼城 (1259): a walled city on a cliff-girt mountain where the Jialing and Qu rivers meet; the river wraps the board's two near sides,
+    // its inner bank drawn in far enough that the cliff, the wall on its rim and the water below all stand in the camera's window.
     key: 'diaoyu', name: '钓鱼城', en: 'Diaoyu Fortress',
     col: { stone: 0x7a6a5c, stoneD: 0x4a3f38, stoneL: 0xa49282, earth: 0x403a2a, earthD: 0x2a261c, grass: 0x3a5230, grassD: 0x2a3c24, moss: 0x48602e, road: 0x7c7468, roadD: 0x575048, mud: 0x2a2820, bark: 0x30261c, tuftA: 0x4a6a32, tuftB: 0x7c8a48, leaf: 0x264a2c, leafL: 0x3e6a3a },
     strata: [0x8a6a54, 0x5a4438, 0x9c7c62, 0x6e5444, 0xb08c6c, 0x4c3a30, 0x8e7058, 0x5e4a3c],
@@ -14,12 +20,14 @@ const BIOMES = [
     relief: [1.5, .45, 1.2, 0], puddles: 6, ponds: 0, sway: .9, wind: 1.1,
     terrain: {
       sea: -2.1, bank: .8, step: 1.3, rock: 1, flow: .3, freeStream: true,
-      lift: (x, z) => 1.5 * smooth(17, 11, Math.max(x, z)),
+      // how near (x, z) is to the river side; along the right edge the river bends away before the keep, so the keep stands on the raised city
+      edge: (x, z) => Math.max(x - 12 * smooth(BN + 15, BN + 9, z), z),
+      lift(x, z) { return 1.5 * smooth(VIEW.near - 7, VIEW.near - 13, this.edge(x, z)); },
       // the cliff keeps a shoulder clear of the road and the tower pads, wide enough for the city wall
-      sculpt: (x, z, dr, ds, K) => {
-        const e = Math.max(x, z) + (fbm(x * .16 + 3, z * .16, K.sd + 80, 2) - .5) * 3.2;
+      sculpt(x, z, dr, ds, K) {
+        const e = this.edge(x, z) + (fbm(x * .16 + 3, z * .16, K.sd + 80, 2) - .5) * 3.2;
         let pd = 9; for (const p of K.pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
-        return -6.2 * smooth(11.8, 15.2, e) * smooth(ROAD_HALF + 1.3, ROAD_HALF + 2.3, dr) * smooth(2.4, 3.2, pd);
+        return -6.2 * smooth(VIEW.near - 12.2, VIEW.near - 8.8, e) * smooth(ROAD_HALF + 1.3, ROAD_HALF + 2.3, dr) * smooth(2.4, 3.2, pd);
       },
     },
     wx: { n: [.08, .05], velA: [.3, -.1, .15], swayA: [.5, .5], sizeA: [.03, .05], colA: [.75, .85, .9, 1], alA: [.45, 0, 0], yA: [-2, 9], velB: [.1, .05, .05], swayB: [1.2, .4], sizeB: [.03, .05], colB: [1.2, 1.5, .5, 0], alB: [.8, 1.2, 0], yB: [0, 3], amb: [.12, .16, .2] },
@@ -38,24 +46,32 @@ const BIOMES = [
     relief: [1.3, .4, 1.5, 0], puddles: 0, ponds: 0, sway: .7, wind: .9,
     terrain: {
       sea: -.75, bank: .6, rock: .7, flow: .4, freeStream: true, prot: -1.5,
-      // the road winds differently on every board, so the river floods the open ground on the near side wherever the road leaves room
+      // the road winds differently on every board, so the river floods the open ground on the near side of the camera's window wherever
+      // the road leaves room; where the road crowds that side, the river reaches further back until it fills a fair share of the window
       prep(K) {
-        const N = 72, at = i => -17.75 + i * .5, free = new Uint8Array(N * N), seen = new Uint8Array(N * N);
+        const N = 4 * BH, at = i => -BH + .25 + i * .5, open = new Uint8Array(N * N);
         let m = new Float32Array(N * N), t = new Float32Array(N * N);
         for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
           const x = at(i), z = at(j);
-          if (x + z < -4 || K.dRoadAt(x, z) < ROAD_HALF + 1.15 || (z < -9 && Math.abs(x - K.kx) < 7) || (x < -10 && Math.abs(z - K.zc) < 5)) continue;
-          if (!K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 2.7)) free[j * N + i] = 1;
+          if (K.dRoadAt(x, z) < ROAD_HALF + 1.15 || (z < BN + 9 && Math.abs(x - K.kx) < 7) || (x < BW + 8 && Math.abs(z - K.zc) < 5)) continue;
+          if (!K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 2.7)) open[j * N + i] = 1;
         }
-        for (let s = 0; s < N * N; s++) {
-          if (!free[s] || seen[s]) continue;
-          const cells = [], st = [s]; seen[s] = 1;
-          while (st.length) {
-            const c = st.pop(), i = c % N; cells.push(c);
-            for (const o of [i > 0 ? c - 1 : -1, i < N - 1 ? c + 1 : -1, c - N, c + N]) if (o >= 0 && o < N * N && free[o] && !seen[o]) { seen[o] = 1; st.push(o); }
+        for (const back of [.5, .35, .2]) {
+          const s0 = VIEW.far + back * (VIEW.near - VIEW.far), seen = new Uint8Array(N * N);
+          let wet = 0, inView = 0;
+          m.fill(0);
+          for (let s = 0; s < N * N; s++) {
+            if (!open[s] || seen[s] || at(s % N) + at((s - s % N) / N) < s0) continue;
+            const cells = [], st = [s]; seen[s] = 1;
+            while (st.length) {
+              const c = st.pop(), i = c % N; cells.push(c);
+              for (const o of [i > 0 ? c - 1 : -1, i < N - 1 ? c + 1 : -1, c - N, c + N]) if (o >= 0 && o < N * N && open[o] && !seen[o] && at(o % N) + at((o - o % N) / N) >= s0) { seen[o] = 1; st.push(o); }
+            }
+            // a pocket boxed in by the road would only be a pond
+            if (cells.length >= 150 * AREA) for (const c of cells) m[c] = 1;
           }
-          // a pocket boxed in by the road would only be a pond
-          if (cells.length >= 150) for (const c of cells) m[c] = 1;
+          for (let c = 0; c < N * N; c++) if (viewRoom(at(c % N), at((c - c % N) / N)) > 0) { inView++; wet += m[c]; }
+          if (wet > .25 * inView) break;
         }
         for (let pass = 0; pass < 4; pass++) {
           const dx = pass & 1 ? N : 1;
@@ -65,7 +81,7 @@ const BIOMES = [
         K.river = { m, N };
       },
       sculpt: (x, z, dr, ds, K) => {
-        const R = K.river, f = v => clamp((v + 17.75) * 2, 0, R.N - 1.001), fx = f(x), fz = f(z), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * R.N + i, m = R.m;
+        const R = K.river, f = v => clamp((v + BH - .25) * 2, 0, R.N - 1.001), fx = f(x), fz = f(z), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * R.N + i, m = R.m;
         const w = (m[o] * (1 - u) + m[o + 1] * u) * (1 - v) + (m[o + R.N] * (1 - u) + m[o + R.N + 1] * u) * v;
         return -3.2 * smooth(.3, .7, w + (fbm(x * .25, z * .25, K.sd + 81, 2) - .5) * .3);
       },
@@ -89,7 +105,7 @@ const BIOMES = [
       sculpt: (x, z, dr, ds, K) => {
         const n = fbm(x * .12 + 5, z * .12, K.sd + 82, 3), m = fbm(x * .31, z * .31 + 4, K.sd + 85, 2);
         // the keep's gate opens onto level ground, not onto a pillar or a drop
-        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7));
+        const dk = K.dKeepAt(x, z);
         return lerp(-5.2, 5.6 * (.75 + .5 * m), smooth(.52, .7, n)) * smooth(ROAD_HALF + .4, ROAD_HALF + 1.6, dr) * smooth(2.4, 4.2, dk);
       },
     },
@@ -109,26 +125,27 @@ const BIOMES = [
     relief: [1.2, .4, 1.1, 0], puddles: 4, ponds: 0, sway: .8, wind: .9,
     terrain: {
       rock: .15, prot: -1,
-      ramp: (x, z, dr, K) => 3.6 * smooth(2.8, 9.5, dr) * (.55 + .9 * fbm(x * .09, z * .09, K.sd + 83, 3)),
+      // the slopes stand back from the keep, so its gate opens onto level ground
+      ramp: (x, z, dr, K) => 3.6 * smooth(2.8, 9.5, dr) * smooth(1, 4, K.dKeepAt(x, z)) * (.55 + .9 * fbm(x * .09, z * .09, K.sd + 83, 3)),
       prep(K) {
         // camp sites strung along both sides of the road a little way up the wooded slopes, spread as evenly as the ground allows.
         // A camp reaches 1.8 from its centre and must clear the zones the board protects from sculpting (road, stream, pads, keep, cave),
         // or its shelf would not come out level; and it keeps to the foot of the edge cliffs, not notched into their face
         const cand = [];
-        for (let z = -15; z <= 15; z += .5) for (let x = -15; x <= 15; x += .5) {
+        for (let z = -BH + 3; z <= BH - 3; z += .5) for (let x = -BH + 3; x <= BH - 3; x += .5) {
           const dr = K.dRoadAt(x, z);
           if (dr < ROAD_HALF + 3.5 || dr > ROAD_HALF + 8.5 || K.dStrAt(x, z) < 5.6 || K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 4.7)) continue;
-          if (Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)) < 5.3 || (x < -8.6 && Math.abs(z - K.zc) < 6.2)) continue;
+          if (K.dKeepAt(x, z) < 5.3 || (x < BW + 9.4 && Math.abs(z - K.zc) < 6.2)) continue;
           if (K.cliffAt(x, z) > 1.3) continue;
           cand.push([x, z, dr]);
         }
-        // nearest the road first, so the camps line it; then, if there are more than nine, keep the nine that spread furthest along it
+        // nearest the road first, so the camps line it; then, if there are more than fit the road's length, keep those that spread furthest along it
         const near = [];
         for (const c of cand.sort((a, b) => a[2] - b[2])) if (near.every(q => Math.hypot(c[0] - q[0], c[1] - q[1]) >= 3.8)) near.push(c);
         K.camps = [];
-        while (K.camps.length < Math.min(9, near.length)) {
+        while (K.camps.length < Math.min(Math.round(9 * LIN), near.length)) {
           let best = null, far = -1;
-          for (const c of near) { let d = Math.hypot(c[0] - K.kx, c[1] + 15); for (const q of K.camps) d = Math.min(d, Math.hypot(c[0] - q.x, c[1] - q.z)); if (d > far) { far = d; best = c; } }
+          for (const c of near) { let d = Math.hypot(c[0] - K.kx, c[1] - BN - 3); for (const q of K.camps) d = Math.min(d, Math.hypot(c[0] - q.x, c[1] - q.z)); if (viewRoom(c[0], c[1]) < 1) d *= .5; if (d > far) { far = d; best = c; } }
           K.camps.push({ x: best[0], z: best[1], y: K.hBase(best[0], best[1]) + K.cliffAt(best[0], best[1]) + this.ramp(best[0], best[1], best[2], K) });
         }
         K.sites = K.camps.map(c => [c.x, c.z, 1.9]);
@@ -159,41 +176,40 @@ const BIOMES = [
       // Han Xin's line, by distance inland from the top of the bank: standards, two ranks of shields, the chevaux-de-frise.
       // The standards and shields stand within core of the bank, the chevaux-de-frise within deep; the line is at most cap long
       ranks: { back: .45, shields: [1.0, 1.6], juma: 2.6, core: 1.9, deep: 3.3, cap: 9.8 },
-      rv: (x, z, K) => x + (fbm(x * .09 + 3, z * .09, K.sd + 87, 2) - .5) * 4,
+      rv: (x, z, K) => (x + z - VIEW.near) / Math.SQRT2 + (fbm(x * .09 + 3, z * .09, K.sd + 87, 2) - .5) * 4,
       prep(K) {
         // Pick the straight reach of bank for the line: the shields and standards on ground the board barely shields from sculpting, so
-        // their shelf comes out level, with water carved from the bank on to the board edge or the river, and all of it in the default view.
-        // The chevaux-de-frise only need room for a piece. A reach facing the river on the right is preferred; one on the near edge is the fallback
+        // their shelf comes out level, with water carved from the bank on to the board edge or the river, and all of it in the camera's window.
+        // The chevaux-de-frise only need room for a piece. The river runs along the near side of the window, so the line faces the camera
         // room: 1 a piece fits, 2 land the sculpt reaches, 4 the same for water, where the stream bed does not matter
-        const R = this.ranks, N = 145, room = new Uint8Array(N * N);
+        const R = this.ranks, N = 8 * BH + 1, room = new Uint8Array(N * N);
         for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
           const x = -BH + i * .25, z = -BH + j * .25, dr = K.dRoadAt(x, z), ds = K.dStrAt(x, z);
-          if (Math.abs(x) > BH - .9 || Math.abs(z) > BH - .9 || K.cliffAt(x, z) > .4 || (x < -10 && Math.abs(z - K.zc) < 4.6)) continue;
+          if (Math.abs(x) > BH - .9 || Math.abs(z) > BH - .9 || K.cliffAt(x, z) > .4 || (x < BW + 8 && Math.abs(z - K.zc) < 4.6)) continue;
           let pd = 1e9; for (const p of K.pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
-          const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)), open = dr > ROAD_HALF + 2.1 && pd > 3.1 && dk > 3;
+          const dk = K.dKeepAt(x, z), open = dr > ROAD_HALF + 2.1 && pd > 3.1 && dk > 3;
           room[j * N + i] = (dr > 2.2 && pd > 2.55 && dk > .9 && ds > 2.6 ? 1 : 0) | (open && ds > 2.8 ? 2 : 0) | (open ? 4 : 0);
         }
         const get = (x, z) => room[clamp(Math.round((z + BH) * 4), 0, N - 1) * N + clamp(Math.round((x + BH) * 4), 0, N - 1)];
-        // the default camera cuts off the near corner and the two side corners
-        const seen = (x, z, m) => x + z < 19.5 + m && Math.abs(x - z) < 27 + m;
+        const seen = (x, z, m) => viewRoom(x, z) > -m / Math.SQRT2;
         // a cross-section of the bank at u: 0 if the shields or the water have no room; else 1, plus 2 if the chevaux-de-frise fit too,
         // 8 if it reaches into the foot of the pass, 16 if it comes near a side of the view. A line turned far from the camera shows its shields edge on
         const search = (core, pool, face) => {
           let best = { score: -1e9 };
-          for (const [p0, a0, a1, pen] of [[0, -.8, .8, 0], [HPI, -.8, 0, 1.5]]) for (let a = a0; a <= a1 + 1e-6; a += .2) {
-            const wx = Math.cos(p0 + a), wz = Math.sin(p0 + a), edgeOn = 5 * Math.max(0, .5 - Math.cos(p0 + a - PI / 4));
-            for (let bz = -16; bz <= 16; bz += .5) for (let bx = p0 ? -10 : 6; bx <= 16; bx += .5) {
+          for (let a = -.8; a <= .8 + 1e-6; a += .2) {
+            const wx = Math.cos(PI / 4 + a), wz = Math.sin(PI / 4 + a), edgeOn = 5 * Math.max(0, .5 - Math.cos(a));
+            for (let bz = -BH + 2; bz <= BH - 2; bz += .5) for (let bx = BW + 8; bx <= BE - 2; bx += .5) {
               // the line faces the pass the enemy comes out of, not the keep behind it
               if ((-wx * (-BH - bx) - wz * (K.zc - bz)) / Math.hypot(-BH - bx, K.zc - bz) < face) continue;
               const sec = u => {
                 const cx = bx - wz * u, cz = bz + wx * u;
                 let f = 1;
-                for (let v = .2; v < R.core; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & core) || !seen(x, z, 0)) return 0; if (x < -1) f |= 8; if (!seen(x, z, -2)) f |= 16; }
+                for (let v = .2; v < R.core; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & core) || !seen(x, z, 0)) return 0; if (x < BW + 17) f |= 8; if (!seen(x, z, -4)) f |= 16; }
                 for (let w = .2; ; w += .4) {
                   const x = cx + wx * w, z = cz + wz * w;
                   if (x > BH - .9 || z > BH - .9) { if (w < 1) return 0; break; }
                   if (!(get(x, z) & 4) || w > 6 || (w < 1 && !seen(x, z, 1))) { if (pool && w > 1.6) break; return 0; }
-                  if (this.rv(x, z, K) > 14.5) break;
+                  if (this.rv(x, z, K) > -6) break;
                 }
                 for (let v = R.core; v <= R.deep; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & 1) || !seen(x, z, 0)) return f; }
                 return f | 2;
@@ -202,7 +218,7 @@ const BIOMES = [
               let k = 0, m = [s0];
               for (; (k + 1) * .7 <= R.cap; k++) { const s1 = sec((k + 1) * .35), s2 = sec(-(k + 1) * .35); if (!s1 || !s2) break; m.push(s1, s2); }
               const frac = b => m.filter(s => s & b).length / m.length, L = k * .7;
-              const score = L * (.8 + .2 * frac(2)) - pen - edgeOn - 2 * frac(8) - 2 * frac(16);
+              const score = L * (.8 + .2 * frac(2)) - edgeOn - 2 * frac(8) - 3 * frac(16);
               if (score > best.score) best = { score, L, x: bx, z: bz, wx, wz, pool };
             }
           }
@@ -224,9 +240,9 @@ const BIOMES = [
       },
       sculpt(x, z, dr, ds, K, h) {
         // the pass walls stop short of the ground in front of the keep gate
-        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5), Math.max(0, z + 8.5));
-        const pass = 5.8 * smooth(1.5, -5.5, x + (fbm(x * .1, z * .1 + 6, K.sd + 86, 2) - .5) * 5) * smooth(2.2, 4.6, dr) * smooth(.5, 3.5, dk);
-        const q = pass - 4.2 * smooth(12.2, 15.2, this.rv(x, z, K));
+        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5), Math.max(0, z - BN - 9.5));
+        const pass = 5.8 * smooth(BW + 19.5, BW + 12.5, x + (fbm(x * .1, z * .1 + 6, K.sd + 86, 2) - .5) * 5) * smooth(2.2, 4.6, dr) * smooth(.5, 3.5, dk);
+        const q = pass - 4.2 * smooth(-8.3, -5.3, this.rv(x, z, K));
         const F = K.line, dx = x - F.x, dz = z - F.z, u = -dx * F.wz + dz * F.wx, v = dx * F.wx + dz * F.wz;
         const w = smooth(F.L / 2 + 2.4, F.L / 2 + .6, Math.abs(u)) * smooth(-this.ranks.deep - 2, -this.ranks.deep, v) * (F.pool ? smooth(7.5, 6, v) : 1);
         if (!w) return q;
@@ -257,17 +273,18 @@ const BIOMES = [
       foot(K, x, z, dr) {
         const h = K.hill; let c = Math.min(dr - ROAD_HALF - 1.0, h.R - Math.hypot(x - h.x, z - h.z));
         for (const p of K.pads) c = Math.min(c, Math.hypot(x - p.x, z - p.z) - 2.8);
-        return Math.min(c, Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)) - 2.6);
+        return Math.min(c, K.dKeepAt(x, z) - 2.6);
       },
       prep(K) {
         // the hill stands apart: clear of the road, the pads and the keep, and well off the rock walls along the back and left edges
         let best = -1, bx = 0, bz = 0;
-        for (let z = -12; z <= 15; z += .5) for (let x = -12; x <= 15; x += .5) {
+        for (let z = BN + 6; z <= BE - 3; z += .5) for (let x = BW + 6; x <= BE - 3; x += .5) {
           let d = K.dRoadAt(x, z) - ROAD_HALF; for (const p of K.pads) d = Math.min(d, Math.hypot(x - p.x, z - p.z) - 1.6);
-          const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7));
-          d = Math.min(d, dk - 1, x + BH - 8, z + BH - 8, BH - 3 - Math.abs(x), BH - 3 - Math.abs(z));
+          const dk = K.dKeepAt(x, z);
+          d = Math.min(d, dk - 1, x + BH - 8, z + BH - 8, BH - 3 - Math.abs(x), BH - 3 - Math.abs(z), viewRoom(x, z) - 1.2);
           if (d > best) { best = d; bx = x; bz = z; }
         }
+        best = Math.min(best, 7);
         const w = clamp(best - 3.2, 1.0, 2.4);
         K.hill = { x: bx, z: bz, R: best + 1.2, w, tiers: w > 1.7 ? 3 : 2, y0: K.hBase(bx, bz) + K.cliffAt(bx, bz) };
         // the summit's reach in 24 directions, for laying out the camp on it
