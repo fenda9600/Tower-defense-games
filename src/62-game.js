@@ -184,6 +184,7 @@ function activateBoard(B, lit) {
   LT.beaconPos = b; LT.beaconOn = lit ? 1 : 0; LT.beaconLevel = 1; LT.envSrc = B.env.slice(0, LT.env.length); LT.envK = lit ? 1 : 0; setBiomeLook(B, lit);
   FX.groundAt = B.heightAt;
   G.padCov = null;
+  UI.showLore(B.bio);
 }
 function beginBattle(first) {
   const B = G.B;
