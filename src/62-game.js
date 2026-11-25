@@ -21,12 +21,12 @@ function waveMenu(k, level) {
 }
 function bossType() { const b = G.B.bio.boss; return b[Math.floor(G.level / BIOMES.length) % b.length]; }
 function buildWave(k, level) {
-  const q = [], boss = k === 5, lv = 1 + .15 * level;
-  let budget = (34 + 25 * (k - 1)) * lv * G.press * (boss ? .7 : 1), heavy = 0, air = budget * .2;
-  const hpMul = (1 + .13 * (k - 1)) * (1 + .22 * level) * (.85 + .15 * G.press);
+  const q = [], boss = k === 5, lv = 1 + .15 * level, ez = campaignEase(level);
+  let budget = (34 + 25 * (k - 1)) * lv * G.press * (boss ? .7 : 1) * ez[0], heavy = 0, air = budget * .2;
+  const hpMul = (1 + .13 * (k - 1)) * (1 + .22 * level) * (.85 + .15 * G.press) * ez[1];
   const menu = waveMenu(k, level), tot = menu.reduce((a, b) => a + b[1], 0);
   let t = .6;
-  if (boss) q.push({ t: 2.2, type: bossType(), hpMul: (1 + .4 * level) * Math.pow(G.press, .4) });
+  if (boss) q.push({ t: 2.2, type: bossType(), hpMul: (1 + .4 * level) * Math.pow(G.press, .4) * ez[2] });
   while (budget > 0) {
     let r = rnd() * tot, type = 'skel'; for (const [ty, w] of menu) { r -= w; if (r <= 0) { type = ty; break; } }
     let R = ROSTER[type];
@@ -66,7 +66,7 @@ function updateWaves(dt) {
       G.bossAlive = G.mons.some(m => m.def.boss && !m.dead);
       if (G.bossWave && G.bossAlive) {
         G.trickle -= dt;
-        if (G.trickle <= 0 && G.trickleN < 9) { G.trickleN++; G.trickle = rr(3.2, 4.6); const tm = waveMenu(5, G.level).filter(e => ROSTER[e[0]][0] < 13), ty = tm[Math.floor(rnd() * tm.length)][0], n = Math.max(1, Math.min(5, Math.round(8 / ROSTER[ty][0]))), hpMul = (1 + .5) * (1 + .22 * G.level); for (let i = 0; i < n; i++) G.queue.push({ t: G.waveT + i * .4, type: ty, hpMul }); }
+        if (G.trickle <= 0 && G.trickleN < 9) { G.trickleN++; G.trickle = rr(3.2, 4.6); const tm = waveMenu(5, G.level).filter(e => ROSTER[e[0]][0] < 13), ty = tm[Math.floor(rnd() * tm.length)][0], n = Math.max(1, Math.min(5, Math.round(8 / ROSTER[ty][0]))), hpMul = (1 + .5) * (1 + .22 * G.level) * campaignEase(G.level)[1]; for (let i = 0; i < n; i++) G.queue.push({ t: G.waveT + i * .4, type: ty, hpMul }); }
       } else { G.spawning = false; endWave(); G.nextIn = G.bossWave ? -1 : 6.5; G.clearT = 0; }
     }
   } else if (G.bossWave) {
@@ -86,12 +86,12 @@ function padCoverage(pad, range, air) {
   return c;
 }
 function buildTower(pad, kind, byPlayer) {
-  const def = TOWER[kind]; if (pad.tower || G.gold < def.cost[0] || G.phase !== 'play') return null;
+  const def = TOWER[kind]; if (pad.tower || !kindUnlocked(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
   G.gold -= def.cost[0]; UI.goldShown = Math.min(UI.goldShown, G.gold);
   const t = new Tower(pad, kind, G.B.pads.indexOf(pad)); G.towers.push(t); UI.ping(pad.x, pad.y, pad.z, byPlayer); return t;
 }
 function upgradeTower(t, byPlayer) {
-  if (!t || t.lvl >= t.maxLvl || t.state !== 'active' || G.phase !== 'play') return false; const c = t.def.cost[t.lvl + 1]; if (G.gold < c) return false;
+  if (!t || t.lvl >= Math.min(t.maxLvl, tierCap()) || t.state !== 'active' || G.phase !== 'play') return false; const c = t.def.cost[t.lvl + 1]; if (G.gold < c) return false;
   G.gold -= c; UI.goldShown = Math.min(UI.goldShown, G.gold); t.upgrade(); UI.ping(t.x, t.y, t.z, byPlayer); return true;
 }
 function sellTower(t) {
@@ -109,7 +109,9 @@ function aiThink(dt) {
   const lt = G.leakTypes; let air = 0, armor = 0, swarm = 0; for (const ty in lt) { const c = MON[ty].cat; if (c === 'air') air += lt[ty]; else if (c === 'armor') armor += lt[ty]; else if (c === 'swarm') swarm += lt[ty]; }
   const gatePress = sat(G.leaks / 8);
   const opts = [];
+  const cap = tierCap();
   for (const kind of TOWER_KINDS) {
+    if (!kindUnlocked(kind)) continue;
     const def = TOWER[kind];
     let need = ideal[kind] * (N + 1.6) - cnt[kind] + .35;
     if (kind === 'archer') need += air * .2 + (N === 0 ? 1 : 0); if (kind === 'spire') need += air * .12 + armor * .1; if (kind === 'bombard') need += armor * .08 + swarm * .06 + (N >= 2 && cnt.bombard === 0 ? .5 : 0); if (kind === 'guard') need += swarm * .04 + (N >= 1 && cnt.guard === 0 ? .9 : 0);
@@ -128,7 +130,7 @@ function aiThink(dt) {
     }
   }
   for (const t of towers) {
-    if (t.state !== 'active' || t.lvl >= t.maxLvl) continue;
+    if (t.state !== 'active' || t.lvl >= Math.min(t.maxLvl, cap)) continue;
     const c = t.def.cost[t.lvl + 1], use = sat(t.recent / 60);
     let sc = (.5 + use * .9 + (t.lvl === 0 ? .12 : 0)) * (N >= 4 ? 1.25 : .7) * (empty.length === 0 ? 1.6 : 1) * (110 / c);
     if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05;
@@ -137,7 +139,7 @@ function aiThink(dt) {
   // the wall: reinforce when the storming party is more than the garrison can shoot down, upgrade once it is well manned
   { const W = G.wall, threat = sat((W.stormN + W.ladderN + (W.open ? 2 : 0) + (1 - W.gate / gateMax()) * 2) / AI.wall[0]), hurt = 1 - G.lives / G.maxLives, late = sat((N - 3) / 4);
     if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 + (W.n < WALL.start ? 1.5 : 0) - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
-    if (W.lvl < WALL.tiers.length - 1) { const c = WALL.cost[W.lvl + 1]; opts.push({ sc: (AI.wall[1] + late * AI.wall[2] + threat * .8 + hurt * 1.1) * (.4 + W.n / 5) * (empty.length === 0 ? 1.4 : 1) * (170 / c), cost: c, act: 'wallUp' }); } }
+    if (W.lvl < Math.min(WALL.tiers.length - 1, cap)) { const c = WALL.cost[W.lvl + 1]; opts.push({ sc: (AI.wall[1] + late * AI.wall[2] + threat * .8 + hurt * 1.1) * (.4 + W.n / 5) * (empty.length === 0 ? 1.4 : 1) * (170 / c), cost: c, act: 'wallUp' }); } }
   if (!opts.length) return;
   opts.sort((a, b) => b.sc - a.sc);
   let pick = opts[0];
@@ -153,7 +155,7 @@ function aiThink(dt) {
 
 function setPhase(p) {
   G.phase = p; G.phaseT = 0;
-  if (p === 'clear') { G.advance = true; UI.banner('关隘无恙', 3.2, false); UI.closeMenu(); }
+  if (p === 'clear') { G.advance = true; const nw = campaignCleared(), last = (G.level + 1) % stageCount() === 0; UI.banner('关隘无恙', nw || last ? 4.2 : 3.2, false, nw ? '解锁 · ' + nw.name : last ? '五关皆守 · 再战更强之敌' : undefined); UI.closeMenu(); }
   if (p === 'defeat') { UI.banner('关城失守', 4.2, true, '烽火熄灭'); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
   if (p === 'crumble') startCrumble();
   if (p === 'rise') startRise();
@@ -176,11 +178,11 @@ function startCrumble() {
 function startRise() {
   if (G.B) { for (const t of G.towers) { t.clearModel(false); } G.towers.length = 0; clearDebris(); disposeBoard(G.B); }
   for (let i = 0; i < LT.emitters.length; i++) LT.emitters[i] = null;
-  const B = G.B = buildBoard(G.boardSeed++, G.boardIndex++);
+  const B = G.B = buildBoard(G.boardSeed++, G.level);
   R.scene.add(B.group); activateBoard(B, false);
   setBoardCasting(B, true);
   for (const p of B.pieces) { p.t = 0; p.delay = sat((p.cx + p.cz + 36) / 72) * 1.7 + rnd() * .25 + (p.kind === 'chunk' ? 0 : 2.0 + rnd() * .3); p.mesh.visible = false; }
-  sfx('rise', 0, 0, 1.2); UI.banner(B.bio.name, 3.6, false);
+  { const nw = CAMPAIGN.news; CAMPAIGN.news = null; sfx('rise', 0, 0, 1.2); UI.banner(stageLabel(G.level) + ' · ' + B.bio.name, nw ? 6 : 3.6, false, nw ? '新解锁 ' + nw.name + '：' + nw.sub : undefined); }
 }
 function activateBoard(B, lit) {
   B.flames = [];
@@ -210,7 +212,7 @@ function updatePhase(dt) {
   if (G.phase === 'clear') { if (t > 2.6) setPhase('crumble'); }
   else if (G.phase === 'defeat') {
     for (const tw of G.towers) { tw.em.on = damp(tw.em.on, 0, 1.5 + tw.idx * .15, dt); if (tw.flame) tw.flame.on = tw.em.on; if (tw.flame2) tw.flame2.on = tw.em.on; }
-    if (t > 4.4) { G.level = 0; G.press = Math.max(.8, G.press * .85); G.run++; setPhase('crumble'); }
+    if (t > 4.4) { G.press = Math.max(.8, G.press * .85); G.run++; setPhase('crumble'); }
   } else if (G.phase === 'crumble') {
     let done = true;
     for (const p of B.pieces) {

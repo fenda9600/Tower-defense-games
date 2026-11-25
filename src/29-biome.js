@@ -67,7 +67,8 @@ const BIOMES = [
   },
 ];
 const BIOME = { start: 0 };
-function biomeFor(index) { return BIOMES[((BIOME.start + index) % BIOMES.length + BIOMES.length) % BIOMES.length]; }
+// battlefields come in campaign order (src/64-campaign.js); index is the campaign level
+function biomeFor(index) { const n = BIOMES.length, k = CAMPAIGN.order[((BIOME.start + index) % n + n) % n]; return BIOMES.find(b => b.key === k); }
 function applyBiomePalette(b) { Object.assign(COL, COL0); for (const k in b.col) COL[k] = C(b.col[k]); }
 
 const LOOK = { cur: null, to: null, bio: null };
