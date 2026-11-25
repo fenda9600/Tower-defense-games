@@ -320,7 +320,7 @@ const HERO = (() => {
       const p = UI.proj(u.x, u.y + (d.mount ? 2.75 : 2.05) * u.scale, u.z), talk = u.sayT > 0 && u.say;
       PX.text(c, talk ? u.say : d.name, Math.round(p.x), Math.round(p.y - LH), s, talk ? '#ffd9a8' : '#e8b04a', { align: 'c', outline: '#0b0d14' });
     }
-    if (!live || UI.titleT < 7) { H.rect = null; return; }
+    if (!live) { H.rect = null; return; }
     const cr = UI.cmdRect; if (!cr) return;
     const t1 = d.name + ' · ' + d.title, chips = d.skills.map((sk, i) => { const lv = lvOf(i); return { t: sk.name, lv, cd: sk.cd && lv ? u.cds[i] : 0, max: sk.cd && lv ? sk.cd[lv - 1] : 1 }; });
     const t3 = H.save.pts > 0 ? 'H 名将 · 勋 ' + H.save.pts + ' 转可加点' : 'H 名将与技能';
