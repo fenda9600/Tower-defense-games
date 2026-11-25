@@ -9,7 +9,7 @@ const ROSTER = {
   skel: [4, 3, 6, .5, 1, 5], rat: [1.7, 5, 9, .2, 2, 3], bat: [4.6, 2, 4, .35, 2, 1.0], ghoul: [5.5, 2, 4, .4, 2, 2],
   slime: [9.5, 1, 3, .9, 3, 2], spider: [3, 3, 6, .25, 3, 2], scarab: [1.9, 5, 8, .18, 2, 0], knight: [12.5, 1, 3, .5, 4, 2], wolf: [5.5, 2, 4, .35, 4, 1.6], bomber: [6, 1, 2, .8, 4, 1.2],
   wraith: [9, 1, 3, .7, 5, 1.4], toad: [8, 1, 3, .7, 5, .7], wisp: [3.4, 3, 5, .25, 5, .45], drummer: [13, 1, 1, 1, 6, .9], gargoyle: [14, 1, 2, .6, 6, .6],
-  necro: [18, 1, 1, 1.2, 7, .9], mummy: [15, 1, 2, .9, 7, .9], brute: [32, 1, 1, 2, 8, .7], golem: [40, 1, 1, 2, 8, .7], brood: [30, 1, 1, 2, 9, .6],
+  ladder: [8, 1, 2, .9, 3, .8], necro: [18, 1, 1, 1.2, 7, .9], mummy: [15, 1, 2, .9, 7, .9], brute: [32, 1, 1, 2, 8, .7], golem: [40, 1, 1, 2, 8, .7], brood: [30, 1, 1, 2, 9, .6],
 };
 function waveMenu(k, level) {
   const w = level * 5 + k, bio = G.B.bio, menu = [];
@@ -36,6 +36,8 @@ function buildWave(k, level) {
     for (let i = 0; i < n && budget > 0; i++) { q.push({ t, type, hpMul }); t += gap * rr(.8, 1.25); budget -= R[0]; if (MON[type].fly) air -= R[0]; }
     t += rr(1.1, 2.3) * (boss ? 1.5 : 1);
   }
+  // from the third wave on a storming party always brings ladders, more of them on later battlefields; they march in the middle of the column
+  if (k >= SIEGE.ladderFrom) { const n = Math.min(3, 1 + (level >> 1)); for (let i = 0; i < n; i++) q.push({ t: t * (.3 + .18 * i) + rr(0, 1), type: 'ladder', hpMul }); }
   q.sort((a, b) => a.t - b.t);
   return q;
 }
@@ -97,7 +99,7 @@ function sellTower(t) {
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
-const AI = { think: .15, wait: 0, last: '', wall: [8, .15, .35, .06] };
+const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06] };
 function aiThink(dt) {
   if (G.phase !== 'play' || UI.playerActive()) return;
   AI.think -= dt; if (AI.think > 0) return; AI.think = .5;
@@ -133,8 +135,8 @@ function aiThink(dt) {
     opts.push({ sc, cost: c, act: 'up', t });
   }
   // the wall: reinforce when the storming party is more than the garrison can shoot down, upgrade once it is well manned
-  { const W = G.wall, threat = sat(W.siegeHp / (wallDps() * AI.wall[0]) / 2), hurt = 1 - G.lives / G.maxLives, late = sat((N - 3) / 4);
-    if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
+  { const W = G.wall, threat = sat((W.stormN + W.ladderN + (W.open ? 2 : 0) + (1 - W.gate / gateMax()) * 2) / AI.wall[0]), hurt = 1 - G.lives / G.maxLives, late = sat((N - 3) / 4);
+    if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 + (W.n < WALL.start ? 1.5 : 0) - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
     if (W.lvl < WALL.tiers.length - 1) { const c = WALL.cost[W.lvl + 1]; opts.push({ sc: (AI.wall[1] + late * AI.wall[2] + threat * .8 + hurt * 1.1) * (.4 + W.n / 5) * (empty.length === 0 ? 1.4 : 1) * (170 / c), cost: c, act: 'wallUp' }); } }
   if (!opts.length) return;
   opts.sort((a, b) => b.sc - a.sc);
