@@ -194,7 +194,7 @@ function killFootman(f, dx, dz) {
 }
 function slotPos(f, out) {
   const B = G.B, n = f.tower.def.n[f.tower.lvl], lat = (n === 2 ? [-.48, .48] : [-.66, 0, .66])[f.slot % n] || 0;
-  const p = pathAt(B, f.tower.pad.s, out); p.x += -p.tz * lat; p.z += p.tx * lat; return p;
+  const p = pathAt(B, f.muster != null ? f.muster : f.tower.pad.s, out); p.x += -p.tz * lat; p.z += p.tx * lat; return p;
 }
 const _fp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
 function footmanThink(f, dt) {
@@ -202,11 +202,11 @@ function footmanThink(f, dt) {
   if (f.lvlUp) { f.lvlUp = false; const d = tw.def, r = f.hp / f.maxHp; f.maxHp = d.hp[tw.lvl]; f.hp = f.maxHp * Math.max(r, .6); f.dmg = d.dmg[tw.lvl]; f.scale = .9 + tw.lvl * .04; }
   if (!tw.alive) f.leave = true;
   let gx, gz, face = null, speed = 2.1, fighting = false;
-  const rally = slotPos(f, _fp), rs = tw.pad.s;
+  const rally = slotPos(f, _fp), rs = f.muster != null ? f.muster : tw.pad.s; // muster: the general's rallying horn (64-hero.js) calls the men to the wall foot
   if (f.leave) { f.gone = true; f.alive = false; if (f.flame) { removeFlame(f.flame); f.flame = null; } fxDust(f.x, f.y + .3, f.z, 4, .6); return; }
   let m = f.target;
   if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > 3.0 || m.dying || (m.wallSt && !m.rove))) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
-  if (!m && f.state !== 'march') {
+  if (!m && f.state !== 'march' && Math.abs(f.s - rs) < 4) {
     let best = null, bd = 1e9;
     for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost || (q.wallSt && !q.rove)) continue; if (Math.abs(q.s - rs) > 2.5) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
     if (best) { m = f.target = best; best.men++; }
@@ -217,7 +217,7 @@ function footmanThink(f, dt) {
     const d = Math.hypot(m.x - f.x, m.z - f.z);
     face = Math.atan2(m.x - f.x, m.z - f.z);
     if (d < reach + .3) { fighting = true; if (!m.foe && !m.def.slip) m.foe = f; if (d < reach + .12) { gx = f.x; gz = f.z; } }
-  } else { gx = rally.x; gz = rally.z; if (f.state === 'march' && Math.hypot(gx - f.x, gz - f.z) < .2) f.state = 'ready'; }
+  } else { gx = rally.x; gz = rally.z; if (Math.abs(f.s - rs) > 2.5) { const q = pathAt(B, f.onRoad ? f.s + Math.sign(rs - f.s) * 1.6 : f.s, _ap); gx = q.x; gz = q.z; speed = 4.2; } if (f.state === 'march' && Math.hypot(gx - f.x, gz - f.z) < .2) f.state = 'ready'; }
   const dx = gx - f.x, dz = gz - f.z, dl = Math.hypot(dx, dz);
   if (dl > .06) { const st = Math.min(dl, speed * dt); f.x += dx / dl * st; f.z += dz / dl * st; f.ph += st * 6.2; f.mv = damp(f.mv, 1, 12, dt); if (!fighting) face = Math.atan2(dx, dz); }
   else { f.mv = damp(f.mv, 0, 10, dt); if (!m) { const p = pathAt(B, rs, _ap); face = Math.atan2(-p.tx, -p.tz); } }

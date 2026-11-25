@@ -7,7 +7,7 @@ const HERO_ZHEN = ['上阵', '中阵', '下阵'], HERO_HUO = ['上获', '中获'
 // 每项技能：v 为各级数值，cd 为各级冷却秒数（没有 cd 的是常驻效果），fx 把数值写成说明。
 const HEROES = {
   huo: {
-    name: '霍去病', era: '西汉', title: '骠骑将军', mount: true, dmg: 20, rate: .75, spd: 4.4, reach: .95,
+    name: '霍去病', era: '西汉', title: '骠骑将军', mount: true, hp: 900, dmg: 20, rate: .75, spd: 4.4, reach: .95,
     bio: '汉武帝时名将，十八岁初战即以八百骑深入匈奴腹地；河西、漠北两役打通河西走廊，年二十四而卒。',
     src: '《史记·卫将军骠骑列传》《汉书·卫青霍去病传》',
     skills: [
@@ -20,7 +20,7 @@ const HEROES = {
     ],
   },
   bai: {
-    name: '白起', era: '战国 · 秦', title: '武安君', mount: false, dmg: 26, rate: .9, spd: 2.7, reach: .9,
+    name: '白起', era: '战国 · 秦', title: '武安君', mount: false, hp: 1100, dmg: 26, rate: .9, spd: 2.7, reach: .9,
     bio: '秦昭襄王时名将，伊阙、鄢郢、华阳、长平诸役皆胜，一生未尝败绩，封武安君。',
     src: '《史记·白起王翦列传》',
     skills: [
@@ -33,7 +33,7 @@ const HEROES = {
     ],
   },
   yue: {
-    name: '岳飞', era: '南宋', title: '武胜定国军节度使', mount: true, dmg: 22, rate: .8, spd: 4.0, reach: .95,
+    name: '岳飞', era: '南宋', title: '武胜定国军节度使', mount: true, hp: 1000, dmg: 22, rate: .8, spd: 4.0, reach: .95,
     bio: '南宋抗金名将，绍兴十年（1140 年）北伐，连捷于郾城、颍昌，兵锋直抵朱仙镇，后被召回，遇害于临安。',
     src: '《宋史·岳飞传》',
     skills: [
@@ -46,7 +46,7 @@ const HEROES = {
     ],
   },
   li: {
-    name: '李陵', era: '西汉', title: '骑都尉', mount: false, ranged: true, range: 7.4, dmg: 17, rate: .6, spd: 2.6, reach: 0,
+    name: '李陵', era: '西汉', title: '骑都尉', mount: false, ranged: true, range: 7.4, hp: 650, dmg: 17, rate: .6, spd: 2.6, reach: 0,
     bio: '李广之孙，善骑射。天汉二年（前 99 年）率步卒五千出居延，在浚稽山遇单于主力，以寡敌众，转战多日，矢尽援绝而降。',
     src: '《汉书·李广苏建传》',
     skills: [
@@ -60,10 +60,14 @@ const HEROES = {
   },
 };
 const HERO_KEYS = ['huo', 'bai', 'yue', 'li'];
+// 名将阵亡与复活：花金币立刻复活，或等 wait 秒自动归队；过关后下一关照常出战。
+const HERO_DOWN = { wait: 150, cost: 100, costLv: 40, regen: .025, calm: 6, flee: .3, back: .6 };
+// 集合号角：人人皆有，不需加点。名将在场时吹角，各戍卒营的士卒沿大路赶到城墙下列阵厮杀，last 秒后各归本营。
+const HERO_HORN = { name: '集合号角', cd: 75, last: 40, src: '《孙子·军争》引《军政》：「言不相闻，故为金鼓；视不相见，故为旌旗。」军中以鼓角旌旗聚众，号角一响，各营向主将所在集结。' };
 
 const HERO = (() => {
-  const H = { save: null, u: null, wallRef: null, phase: '', stats: null, eval: null, panel: null, open: false, tab: 'huo', evalMode: false, holdT0: 0, rect: null, pending: null, dealt: 0, recent: 0, kills: 0 };
-  const _p = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
+  const H = { save: null, u: null, wallRef: null, phase: '', stats: null, eval: null, panel: null, open: false, tab: 'huo', evalMode: false, holdT0: 0, rect: null, pending: null, dealt: 0, recent: 0, kills: 0, down: null, sel: false, horn: { cd: 0, t: 0 }, reviveRect: null, deaths: 0 };
+  const _p = { x: 0, y: 0, z: 0, tx: 0, tz: 0 }, _hv = new THREE.Vector3(), _hd = new THREE.Vector3();
   function load() {
     let d = null; try { d = JSON.parse(localStorage.getItem(HERO_SAVE)); } catch (e) { d = null; }
     if (!d || typeof d !== 'object') d = {};
@@ -77,13 +81,15 @@ const HERO = (() => {
   const costOf = lv => lv + 1;
   function spend(key, i) { const lv = H.save.lv[key][i]; if (lv >= 3 || H.save.pts < costOf(lv)) return false; H.save.pts -= costOf(lv); H.save.lv[key][i] = lv + 1; store(); return true; }
   function refund() { for (const k of HERO_KEYS) H.save.lv[k].forEach((lv, i) => { const base = i === 0 ? 1 : 0; for (let l = base; l < lv; l++) H.save.pts += costOf(l); H.save.lv[k][i] = base; }); store(); }
-  function pick(key) { if (!HEROES[key] || H.save.pick === key) return; H.save.pick = key; store(); if (G.phase === 'play') deploy(true); }
+  function pick(key) { if (!HEROES[key] || H.save.pick === key) return; H.save.pick = key; store(); if (G.phase === 'play' && !H.down) deploy(true); }
 
   const zoneMin = () => G.B.L * .34, homeS = () => G.B.L * .74;
   const scaleDmg = () => 1 + .15 * G.level;
   function deploy(swap) {
     const B = G.B, d = HEROES[H.save.pick], s = homeS();
-    const u = H.u = { key: H.save.pick, d, s, lat: .55, x: 0, y: 0, z: 0, yaw: 0, ph: 0, mv: 0, atk: -1, struck: false, cd: .6, flash: 0, flinch: 0, scale: d.mount ? 1.12 : 1.18, tgt: null, think: 0, draw: 0, pitch: 0, cds: [0, 0, 0], say: null, sayT: 0, charge: null, hasteT: 0, appear: 0, def: { bard: false }, riderKit: KIT.foot, vx: 0, vz: 0, shots: 0 };
+    const u = H.u = { key: H.save.pick, d, s, lat: .55, x: 0, y: 0, z: 0, yaw: 0, ph: 0, mv: 0, atk: -1, struck: false, cd: .6, flash: 0, flinch: 0, scale: d.mount ? 1.12 : 1.18, tgt: null, think: 0, draw: 0, pitch: 0, cds: [0, 0, 0], say: null, sayT: 0, charge: null, hasteT: 0, appear: 0, def: { bard: false }, riderKit: KIT.foot, vx: 0, vz: 0, shots: 0,
+      isHero: true, hp: 0, maxHp: 0, rad: d.mount ? .42 : .3, dead: false, gone: false, alive: true, torch: false, foes: 0, hurtT: 99, lastHp: 0, mode: 'auto', order: null, rest: false };
+    u.maxHp = u.hp = u.lastHp = Math.round(d.hp * (1 + .2 * G.level));
     d.skills.forEach((sk, i) => { if (sk.cd) u.cds[i] = sk.cd[0] * (swap ? 1 : .4); });
     place(u); const p = pathAt(B, u.s, _p); u.yaw = Math.atan2(-p.tx, -p.tz);
     fxDust(u.x, u.y + .2, u.z, 8, 1, { speed: 1.8 });
@@ -140,7 +146,18 @@ const HERO = (() => {
   }
 
   function think(u) {
-    const B = G.B, lo = zoneMin(); let best = null;
+    const B = G.B, lo = zoneMin(), o = u.mode === 'hold' ? u.order : null; let best = null;
+    // 军师调度时，伤重先退到城门下休整，缓过来再上
+    if (!o) { const f = u.hp / u.maxHp; if (f < HERO_DOWN.flee) u.rest = true; else if (f > HERO_DOWN.back) u.rest = false; } else u.rest = false;
+    if (u.rest) { u.goS = B.L - 1.1; u.goLat = .9; u.tgt = null; let bd = 1e9; for (const m of (u.d.ranged ? inRange(u) : G.mons)) { if (!u.d.ranged && !groundFoe(m)) continue; const d2 = dist2(m.x, m.z, u.x, u.z); if (d2 < bd && (u.d.ranged || d2 < 4)) { bd = d2; u.tgt = m; } } return; }
+    // 听令驻守：守在玩家指定的位置，只打走到跟前的敌人
+    if (o) {
+      u.goS = o.s; u.goLat = o.lat;
+      if (u.d.ranged) { let bp = -1; for (const m of inRange(u)) if (m.prog > bp) { bp = m.prog; best = m; } u.tgt = best; return; }
+      let bd = 1e9; for (const m of G.mons) if (groundFoe(m) && Math.abs(m.s - o.s) < 2.4) { const d2 = dist2(m.x, m.z, u.x, u.z); if (d2 < bd) { bd = d2; best = m; } }
+      u.tgt = best; if (best) { const side = u.s >= best.s ? 1 : -1; u.goS = clamp(best.s + side * (best.rad + .55), o.s - 2, Math.min(o.s + 2, B.L - .5)); u.goLat = clamp(best.lat, -.95, .95); }
+      return;
+    }
     if (u.d.ranged) { let bp = -1; for (const m of inRange(u)) if (m.prog > bp) { bp = m.prog; best = m; } u.tgt = best; let front = null; for (const m of G.mons) if (groundFoe(m) && m.s > lo && (!front || m.s > front.s)) front = m; u.goS = best ? u.s : front ? clamp(front.s + 4.5, lo, B.L - 1.2) : homeS(); u.goLat = .9; return; }
     for (const m of G.mons) if (groundFoe(m) && m.s > lo && (!best || m.s > best.s)) best = m;
     u.tgt = best;
@@ -150,7 +167,25 @@ const HERO = (() => {
   function updateUnit(dt) {
     const u = H.u, B = G.B, d = u.d, play = G.phase === 'play';
     u.appear = Math.min(1, u.appear + dt * 2); u.flash = Math.max(0, u.flash - dt * 6); u.sayT -= dt; u.hasteT -= dt; u.cd -= dt * (u.hasteT > 0 ? 2 : 1);
-    H.recent = Math.max(0, H.recent - dt * 8);
+    H.recent = Math.max(0, H.recent - dt * 8); u.flinch = Math.max(0, u.flinch - dt * 4.5);
+    // 敌军会围攻名将：走到跟前的敌人停下来与他交手（至多三人，首领不限）。普通敌人的伤害由 strike() 直接扣在名将身上，首领的重击在这里结算。
+    if (play) {
+      u.foes = 0;
+      for (const m of G.mons) {
+        if (m.foe !== u) continue;
+        if (m.dead || m.wallSt || Math.hypot(m.x - u.x, m.z - u.z) > m.rad + u.rad + 1.2 || u.charge) { m.foe = null; continue; }
+        u.foes++;
+        if (m.def.boss) { if (m.atk < 0) m._hs = false; else if (m.atk >= .5 && !m._hs) { m._hs = true; u.hp -= m.def.dmg * G.dmgMul; u.flash = 1; u.flinch = 1; } }
+      }
+      if (!u.charge) for (const m of G.mons) {
+        if (m.foe || !groundFoe(m) || m.def.slip || m.def.ghost || m.def.explode || (u.foes >= 3 && !m.def.boss)) continue;
+        if (Math.hypot(m.x - u.x, m.z - u.z) < m.rad + u.rad + .3) { m.foe = u; u.foes++; }
+      }
+      if (u.hp < u.lastHp) u.hurtT = 0; else u.hurtT += dt;
+      if (u.hurtT > HERO_DOWN.calm && u.hp < u.maxHp) u.hp = Math.min(u.maxHp, u.hp + u.maxHp * HERO_DOWN.regen * dt);
+      u.lastHp = u.hp;
+      if (u.hp <= 0) return;
+    }
     // 常驻效果
     if (u.key === 'bai' && lvOf(2)) { const k = 1 - d.skills[2].v[lvOf(2) - 1] / 100; for (const m of G.mons) if (!m._cp) { m._cp = 1; if (!m.def.boss && !(m.pop > 0) && m.hp === m.maxHp) { m.maxHp *= k; m.hp *= k; } } }
     if (u.key === 'yue' && lvOf(2) && play) { const r = d.skills[2].v[lvOf(2) - 1] / 100 * dt; if (G.wall) for (const a of G.wall.men) if (a.hp < a.maxHp) a.hp = Math.min(a.maxHp, a.hp + a.maxHp * r); for (const f of G.men) if (!f.dead && f.hp < f.maxHp) f.hp = Math.min(f.maxHp, f.hp + f.maxHp * r); }
@@ -197,9 +232,56 @@ const HERO = (() => {
     else if (k === 'bai') { u.weapon = I.ge; u.wScale = 1.1; u.back = I.qinJia; u.hat = I.qinBun; u.tint = [.9, .9, 1.05]; rigHuman(KIT.foot, SPEC.foot, u); }
     else { u.bow = true; u.helm = true; u.plate = true; u.tint = [1.25, 1.1, .85]; rigHuman(KIT.foot, SPEC.foot, u); }
     u.scale = sc0;
-    // 脚下一圈金光，标出名将所在
-    u.ringT = (u.ringT || 0) - R.frameDt; if (u.ringT <= 0 && G.phase === 'play') { u.ringT = .45; fxTimed(4, u.x, u.y + .08, u.z, 2.1, 2.1, 1.5, 1.05, .35, .35, .7, { ground: true }); }
+    // 脚下一圈金光，标出名将所在；选中时更亮，并标出驻守的位置
+    u.ringT = (u.ringT || 0) - R.frameDt; if (u.ringT <= 0 && G.phase === 'play') {
+      u.ringT = H.sel ? .22 : .45; fxTimed(4, u.x, u.y + .08, u.z, H.sel ? 2.7 : 2.1, H.sel ? 2.7 : 2.1, H.sel ? 2.4 : 1.5, H.sel ? 2 : 1.05, H.sel ? 1.1 : .35, H.sel ? .6 : .35, .7, { ground: true });
+      if (u.mode === 'hold' && u.order) { const p = pathAt(G.B, u.order.s, _p); fxTimed(4, p.x - p.tz * u.order.lat, p.y + .08, p.z + p.tx * u.order.lat, 1.4, 1.4, .5, 1.6, .7, H.sel ? .6 : .3, .7, { ground: true }); }
+    }
   }
+
+  // ---- 阵亡与复活 ----
+  const reviveCost = () => HERO_DOWN.cost + HERO_DOWN.costLv * G.level;
+  function die() {
+    const u = H.u; if (!u.dead) { u.dead = u.gone = true; u.alive = false; shatter(e => rigHuman(KIT.foot, SPEC.foot, e), u, [0, .8, 0], { spread: .9, life: .8 }); sfx('footmanDie', u.x, u.z, .9); }
+    fxDust(u.x, u.y + .2, u.z, 10, 1.2, { speed: 2.2 }); sfx('beaconOut', u.x, u.z, .6);
+    H.down = { t: HERO_DOWN.wait }; H.sel = false; H.deaths++; endHorn();
+    UI.banner(u.d.name + ' 阵亡', 3.2, true, 'V 花 ' + reviveCost() + ' 金复活，或 ' + HERO_DOWN.wait + ' 秒后归队');
+  }
+  function revive(paid) {
+    if (!H.down || G.phase !== 'play') return false;
+    if (paid) { const c = reviveCost(); if (G.gold < c) return false; G.gold -= c; UI.goldShown = Math.min(UI.goldShown, G.gold); }
+    H.down = null; deploy(true); const u = H.u; u.s = G.B.L - 1.6; u.lat = .6; place(u); fxDust(u.x, u.y + .2, u.z, 10, 1.2, { speed: 2 }); sfx('horn', u.x, u.z, .6, .3);
+    UI.banner(u.d.name + ' 归队', 2, false); return true;
+  }
+  // ---- 集合号角 ----
+  function blowHorn() {
+    const u = H.u, h = H.horn; if (H.down || !u || G.phase !== 'play' || h.cd > 0 || h.t > 0) return false;
+    if (!G.men.some(f => !f.dead)) { say(u, '没有戍卒可召'); return false; }
+    h.t = HERO_HORN.last; h.cd = HERO_HORN.cd; say(u, HERO_HORN.name); sfx('hornBoss', u.x, u.z, .8, .5); sfx('horn', G.B.gate.x, G.B.gate.z, .7, .2);
+    fxTimed(4, u.x, u.y + .08, u.z, 7, 7, 1.6, 1.2, .5, .6, .9, { ground: true }); return true;
+  }
+  function endHorn() { H.horn.t = 0; for (const f of G.men) f.muster = null; }
+  function updateHorn(dt) {
+    const h = H.horn, W = G.wall, B = G.B; h.cd = Math.max(0, h.cd - dt);
+    if (h.t > 0) {
+      h.t -= dt; if (h.t <= 0) { endHorn(); return; }
+      for (const f of G.men) if (f.muster == null && !f.dead) f.muster = B.L - 1.5 - (G.towers.indexOf(f.tower) % 4) * .75;
+    } else if (!UI.playerActive() && W && (W.siegeN >= 4 || W.open || W.stormN >= 2)) blowHorn();
+  }
+  // 玩家下令：点大路上一处，名将去那里驻守
+  function orderAt(mx, my) {
+    const B = G.B, u = H.u, cam = R.cam; let best = -1, y = u.y, x = 0, z = 0;
+    for (let pass = 0; pass < 2; pass++) {
+      _hv.set(mx / R.dw * 2 - 1, 1 - my / R.dh * 2, -1).unproject(cam); cam.getWorldDirection(_hd); const t = (y - _hv.y) / _hd.y; x = _hv.x + _hd.x * t; z = _hv.z + _hd.z * t;
+      let bd = 1e9; for (let i = 0; i < B.n; i++) { const d2 = dist2(x, z, B.px[i], B.pz[i]); if (d2 < bd) { bd = d2; best = i; } }
+      y = B.py[best];
+    }
+    const lat = (x - B.px[best]) * -B.tz[best] + (z - B.pz[best]) * B.tx[best], s0 = best * PATH_STEP;
+    if (Math.abs(lat) > ROAD_HALF + .35 || s0 < B.cave.s + 2.5) return false;
+    UI.setManual(true); u.mode = 'hold'; u.order = { s: Math.min(s0, B.L - .6), lat: clamp(lat, -.95, .95) }; u.think = 0; u.rest = false; say(u, '得令'); sfx('uiClick', x, z, .8);
+    fxTimed(4, x, y + .08, z, 2.2, 2.2, .6, 2, .9, .8, .5, { ground: true }); return true;
+  }
+  function setAuto() { const u = H.u; if (!u || H.down) return; u.mode = 'auto'; u.order = null; u.think = 0; H.sel = false; say(u, '军师调度'); }
 
   // ---- 战后策勋 ----
   function judge() {
@@ -219,10 +301,18 @@ const HERO = (() => {
 
   function update(dt) {
     if (!H.save) H.save = load();
-    if (G.wall !== H.wallRef) { H.wallRef = G.wall; H.stats = { slain0: G.slain }; H.kills = 0; H.dealt = 0; deploy(false); }
+    if (G.wall !== H.wallRef) { H.wallRef = G.wall; H.stats = { slain0: G.slain }; H.kills = 0; H.dealt = 0; H.down = null; H.sel = false; H.horn.t = 0; H.horn.cd = 12; deploy(false); } // 新的一关：阵亡的名将自动归队
     if (G.phase !== H.phase) { if (G.phase === 'clear') judge(); H.phase = G.phase; }
     if (!H.u) return;
-    updateUnit(dt); drawUnit();
+    const play = G.phase === 'play';
+    if (H.down) {
+      if (play) { H.down.t -= dt; if (H.down.t <= 0 || (!UI.playerActive() && G.gold >= reviveCost() + 160)) revive(H.down.t > 0); }
+      return;
+    }
+    updateUnit(dt);
+    if (H.u.dead || H.u.hp <= 0) { die(); return; }
+    if (play) updateHorn(dt);
+    drawUnit();
   }
 
   // ---- 界面：战场上的名将牌（画在 HUD 画布上）与名将榜（DOM 面板）----
@@ -298,6 +388,8 @@ const HERO = (() => {
         '<div class="src">史料：' + esc(sk.src) + '</div></div>' +
         '<button data-a="up" data-i="' + i + '"' + (max || S.pts < c ? ' disabled' : '') + '>' + (max ? '已满级' : '加点 · ' + c + ' 转') + '</button></div>';
     });
+    h += '<div class="sk"><div><div class="n">' + HERO_HORN.name + '<em>人人皆有 · 按 B</em></div><div>名将在场时吹角，各戍卒营的士卒沿大路赶到城墙下，与攻城之敌厮杀 ' + HERO_HORN.last + ' 秒，然后各归本营。冷却 ' + HERO_HORN.cd + ' 秒。军师代守时，敌军攻城即自动吹角。</div><div class="src">史料：' + esc(HERO_HORN.src) + '</div></div><span></span></div>';
+    h += '<div class="note">操控：按 Q 或点名将选中，再点大路上一处，名将就去那里驻守；按 E 交还军师调度。名将会被敌军围攻，生命耗尽即阵亡：按 V 花 ' + reviveCost() + ' 金立刻复活，或等 ' + HERO_DOWN.wait + ' 秒自动归队，过关后下一关照常出战。</div>';
     h += '<div class="ft"><button data-a="refund">重新分配（退还全部勋转）</button><button data-a="close" class="go">' + (e ? '继续，转战下一关' : '关闭') + '</button></div>';
     H.panel.innerHTML = h;
   }
@@ -316,39 +408,65 @@ const HERO = (() => {
     if (H.pending && !H.open && G.phase === 'clear' && G.phaseT > 1.3) { openPanel(true); H.holdT0 = performance.now(); }
     if (H.open && !H.evalMode && G.phase !== 'play' && G.phase !== 'clear') closePanel();
     const live = G.phase === 'play' || G.phase === 'clear' || G.phase === 'defeat';
-    if (live) {
-      const p = UI.proj(u.x, u.y + (d.mount ? 2.75 : 2.05) * u.scale, u.z), talk = u.sayT > 0 && u.say;
-      PX.text(c, talk ? u.say : d.name, Math.round(p.x), Math.round(p.y - LH), s, talk ? '#ffd9a8' : '#e8b04a', { align: 'c', outline: '#0b0d14' });
-    }
-    if (!live) { H.rect = null; return; }
+    const dn = H.down;
+    if (live && !dn) {
+      const p = UI.proj(u.x, u.y + (d.mount ? 2.75 : 2.05) * u.scale, u.z), talk = u.sayT > 0 && u.say, px = Math.round(p.x), py = Math.round(p.y);
+      PX.text(c, talk ? u.say : d.name, px, py - LH, s, talk ? '#ffd9a8' : H.sel ? '#ffffff' : '#e8b04a', { align: 'c', outline: '#0b0d14' });
+      const bw = 22 * s, f = sat(u.hp / u.maxHp); c.fillStyle = '#0b0d14'; c.fillRect(px - bw / 2 - s, py - s, bw + 2 * s, 4 * s); c.fillStyle = f > .5 ? '#9fd08a' : f > .25 ? '#e0762c' : '#e04a32'; c.fillRect(px - bw / 2, py, Math.max(s, Math.round(bw * f)), 2 * s);
+      H.unitPos = { x: px, y: py + 14 * s };
+    } else H.unitPos = null;
+    if (!live) { H.rect = null; H.reviveRect = null; return; }
     const cr = UI.cmdRect; if (!cr) return;
     const t1 = d.name + ' · ' + d.title, chips = d.skills.map((sk, i) => { const lv = lvOf(i); return { t: sk.name, lv, cd: sk.cd && lv ? u.cds[i] : 0, max: sk.cd && lv ? sk.cd[lv - 1] : 1 }; });
+    chips.push({ t: HERO_HORN.name + ' B', lv: 1, cd: H.horn.t > 0 ? 0 : H.horn.cd, max: HERO_HORN.cd, horn: true });
     const t3 = H.save.pts > 0 ? 'H 名将 · 勋 ' + H.save.pts + ' 转可加点' : 'H 名将与技能';
-    const cw = Math.max(...chips.map(k => tw(k.t))) + 4 * s, w = Math.max(tw(t1), tw(t3), cw + tw('00 秒') + 4 * s) + pad * 2, h = LH * 5 + pad * 2 + 4 * s;
+    const t4 = dn ? '阵亡 · ' + Math.ceil(dn.t) + ' 秒后归队' : u.mode === 'hold' ? '听令驻守 · E 交还军师' : H.sel ? '已选中 · 点大路下令' : 'Q 选中下令 · 军师调度';
+    const t5 = dn ? 'V 复活 · ' + reviveCost() + ' 金' : '';
+    const cw = Math.max(...chips.map(k => tw(k.t))) + 4 * s, w = Math.max(tw(t1), tw(t3), tw(t4), tw(t5) + 8 * s, cw + tw('00 秒') + 4 * s) + pad * 2, h = LH * (dn ? 8 : 7) + pad * 2 + (dn ? 10 : 6) * s;
     const x = W - w - 5 * s, y = cr.y + cr.h + 3 * s, hot = UI.inside && UI.mx >= x && UI.mx <= x + w && UI.my >= y && UI.my <= y + h;
     H.rect = { x, y, w, h };
-    plate(c, x, y, w, h, s, hot || H.save.pts > 0 ? '#e8b04a' : '#5d4c35', hot ? 'rgba(24,27,38,0.94)' : 'rgba(9,11,17,0.86)');
-    PX.text(c, t1, x + pad, y + pad - s, s, '#e8b04a');
+    plate(c, x, y, w, h, s, dn ? '#e5553c' : hot || H.sel || H.save.pts > 0 ? '#e8b04a' : '#5d4c35', hot ? 'rgba(24,27,38,0.94)' : 'rgba(9,11,17,0.86)');
+    PX.text(c, t1, x + pad, y + pad - s, s, dn ? '#a79e8a' : '#e8b04a');
+    { const f = dn ? 0 : sat(u.hp / u.maxHp), yy = y + pad + LH; c.fillStyle = '#2a2620'; c.fillRect(x + pad, yy, w - pad * 2, 2 * s); c.fillStyle = f > .5 ? '#9fd08a' : f > .25 ? '#e0762c' : '#e04a32'; c.fillRect(x + pad, yy, Math.round((w - pad * 2) * f), 2 * s); }
     chips.forEach((k, i) => {
-      const yy = y + pad + LH * (i + 1) + s, ready = k.lv && k.cd <= 0;
+      const yy = y + pad + LH * (i + 1) + 5 * s, ready = k.lv && k.cd <= 0 && !dn; if (dn) k.lv = k.lv && -1;
       PX.text(c, k.t, x + pad, yy, s, !k.lv ? '#6f685b' : ready ? '#efe4cd' : '#a79e8a');
-      const r = !k.lv ? '未习得' : k.max === 1 && !d.skills[i].cd ? '常驻' : k.cd > 0 ? Math.ceil(k.cd) + ' 秒' : '待发';
+      const r = !k.lv ? '未习得' : dn ? '' : k.horn && H.horn.t > 0 ? '集结 ' + Math.ceil(H.horn.t) : !k.horn && !d.skills[i].cd ? '常驻' : k.cd > 0 ? Math.ceil(k.cd) + ' 秒' : '待发';
       PX.text(c, r, x + w - pad, yy, s, !k.lv ? '#6f685b' : r === '待发' ? '#9fd08a' : '#a79e8a', { align: 'r' });
-      if (k.lv && k.cd > 0) { c.fillStyle = '#2a2620'; c.fillRect(x + pad, yy + LH - s, w - pad * 2, s); c.fillStyle = '#e8b04a'; c.fillRect(x + pad, yy + LH - s, Math.round((w - pad * 2) * (1 - k.cd / k.max)), s); }
+      if (k.lv > 0 && k.cd > 0) { c.fillStyle = '#2a2620'; c.fillRect(x + pad, yy + LH - s, w - pad * 2, s); c.fillStyle = '#e8b04a'; c.fillRect(x + pad, yy + LH - s, Math.round((w - pad * 2) * (1 - k.cd / k.max)), s); }
     });
-    PX.text(c, t3, x + pad, y + pad + LH * 4 + 3 * s, s, H.save.pts > 0 ? '#9fd08a' : '#a79e8a');
+    PX.text(c, t4, x + pad, y + pad + LH * 5 + 6 * s, s, dn ? '#e5553c' : u.mode === 'hold' || H.sel ? '#8fc7ff' : '#a79e8a');
+    PX.text(c, t3, x + pad, y + pad + LH * 6 + 6 * s, s, H.save.pts > 0 ? '#9fd08a' : '#a79e8a');
+    if (dn) {
+      const by = y + pad + LH * 7 + 8 * s, bh = LH + 3 * s, can = G.gold >= reviveCost(), over = UI.inside && UI.mx >= x + pad && UI.mx <= x + w - pad && UI.my >= by && UI.my <= by + bh;
+      plate(c, x + pad, by, w - pad * 2, bh, s, over && can ? '#e8b04a' : can ? '#5d4c35' : '#3a342c', over ? 'rgba(34,38,54,0.96)' : 'rgba(16,18,27,0.96)');
+      PX.text(c, t5, x + w / 2, by + s, s, can ? '#efe4cd' : '#e5553c', { align: 'c' }); H.reviveRect = { x: x + pad, y: by, w: w - pad * 2, h: bh };
+    } else H.reviveRect = null;
   }
   function init() {
     window.addEventListener('pointerdown', e => {
-      const r = H.rect, D = R.dpr || 1, mx = e.clientX * D, my = e.clientY * D;
-      if (r && !H.open && mx >= r.x && mx <= r.x + r.w && my >= r.y && my <= r.y + r.h) { e.stopPropagation(); e.preventDefault(); toggle(); }
+      const r = H.rect, D = R.dpr || 1, mx = e.clientX * D, my = e.clientY * D, inR = q => q && mx >= q.x && mx <= q.x + q.w && my >= q.y && my <= q.y + q.h, eat = () => { e.stopPropagation(); e.preventDefault(); };
+      if (H.open || e.button) return;
+      if (inR(H.reviveRect)) { eat(); if (!revive(true)) sfx('uiDeny', CAM.x, CAM.z, .6); return; }
+      if (inR(r)) { eat(); toggle(); return; }
+      if (G.phase !== 'play' || H.down || !H.u || CHEAT.owns(e.target)) return;
+      const up = H.unitPos; if (up && Math.hypot(mx - up.x, my - up.y) < 15 * UI.s) { eat(); H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); return; }
+      if (!H.sel || UI.hotBtn || [UI.statsRect, UI.cmdRect, UI.speedRect, UI.soundRect, UI.wallBox, UI.loreRect].some(inR)) return;
+      if (orderAt(mx, my)) eat(); else H.sel = false;
     }, { capture: true, passive: false });
     window.addEventListener('keydown', e => {
       if (e.repeat || CHEAT.owns(e.target)) return;
-      if (e.key === 'h' || e.key === 'H') toggle();
+      const k = e.key.toLowerCase();
+      if (k === 'h') toggle();
+      else if (H.open) { if (e.key === 'Escape') { closePanel(); e.stopPropagation(); } }
+      else if (k === 'q') { if (!H.down && G.phase === 'play') { H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); } }
+      else if (k === 'e') setAuto();
+      else if (k === 'b') { UI.setManual(true); if (!blowHorn()) sfx('uiDeny', CAM.x, CAM.z, .5); }
+      else if (k === 'v') { if (H.down && !revive(true)) sfx('uiDeny', CAM.x, CAM.z, .6); }
+      else if (e.key === 'Escape' && H.sel) H.sel = false;
       else if (e.key === 'Escape' && H.open) { closePanel(); e.stopPropagation(); }
     }, true);
   }
-  Object.assign(H, { update, draw, hold, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
+  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, hold, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
   return H;
 })();
