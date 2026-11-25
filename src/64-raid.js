@@ -19,7 +19,7 @@ const RAID = {
   shots: [], ruined: 0, rebuilt: 0,
 };
 function raidWarn(type) { const r = RAID.by[type]; return r ? r.warn : undefined; }
-function towerMaxHp(t) { return RAID.hp[t.kind][t.lvl]; }
+function towerMaxHp(t) { return Math.round(RAID.hp[t.kind][t.lvl] * crewHp(t)); }
 function rebuildCost(t) { return Math.round(t.spent * RAID.rebuild); }
 function towerRefund(t) { return Math.round(t.spent * (t.ruin ? RAID.ruinRefund : .6)); }
 

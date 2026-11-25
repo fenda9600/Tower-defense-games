@@ -253,7 +253,7 @@ class Tower {
     if (mt.flame2) { const p = this.w(mt.flame2, {}); this.flame2 = addFlame({ x: p.x, y: p.y, z: p.z, size: mt.flameSize, on: 0 }); }
     if (mt.lightAt) { const p = this.w(mt.lightAt, {}); this.em.x = p.x; this.em.y = p.y; this.em.z = p.z; this.em.r = .45; this.em.g = .72; this.em.b = 1; }
     this.em.I = d.light[lvl]; this.em.range = this.kind === 'archer' ? 12 : 10.5;
-    if (this.kind === 'archer') mt.archers.forEach((a, i) => this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + i * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, xbow: lvl !== 1, helm: lvl === 3, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }));
+    if (this.kind === 'archer') for (const a of mt.archers.concat(crewArchers(this))) this.addArcher(a);
     if (this.kind === 'bombard') this.makeGun();
     if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
@@ -263,6 +263,7 @@ class Tower {
     sfx('buildDone', this.x, this.z, 1);
     if (this.flame) fxEmbers(this.flame.x, this.flame.y, this.flame.z, 10, .2);
   }
+  addArcher(a) { const lvl = this.lvl; this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + this.archers.length * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, xbow: lvl !== 1, helm: lvl === 3, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }); }
   makeGun() {
     // A traction trebuchet on a turning base: one pole for the Han stone thrower, a bigger frame for the Tang throwing cart, bundled poles and a fire ball for the Song thunderbolt trebuchet.
     const mt = this.mounts, lvl = this.vl, S = new Soup(), wd = COL.woodD, w = COL.wood, fh = [1.05, 1.25, 1.4][lvl], fw = [.34, .4, .46][lvl];
@@ -305,7 +306,7 @@ class Tower {
   get maxLvl() { return this.def.tiers.length - 1; }
   // the buildings have three visual stages; four-tier lines share the first stage between their first two tiers
   get vl() { return Math.max(0, this.lvl - (this.def.tiers.length - 3)); }
-  upgrade() { if (this.lvl >= this.maxLvl || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
+  upgrade() { if (this.lvl >= this.maxLvl || this.state !== 'active') return false; this.spent += upgradeCost(this); this.lvl++; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
   sell() {
     this.alive = false; this.em.alive = false; this.em.on = 0; LT.emitters[this.idx] = null; this.pad.tower = null;
     for (let i = 0; i < 14; i++) { _tm.compose(_tv.set(this.x + rr(-.7, .7), this.y + rr(.3, 2.4), this.z + rr(-.7, .7)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(1, 1, 1)); addDebris(this.kind === 'archer' || this.kind === 'guard' ? KIT.plank : KIT.rubble, _tm, null, rr(-2, 2), rr(1, 4), rr(-2, 2), rr(3, 9), rr(2, 3.5)); }
@@ -340,6 +341,7 @@ class Tower {
     else if (this.kind === 'bombard') this.updBombard(dt, d, lvl);
     else if (this.kind === 'spire') this.updSpire(dt, d, lvl);
     else this.updGuard(dt, d, lvl);
+    crewDraw(this, dt); // the extra hands of the lesser upgrade (66-crew.js)
     TOWER_STUN = false;
   }
   updArcher(dt, d, lvl) {
@@ -373,7 +375,7 @@ class Tower {
         this.cool = d.rate[lvl] * rr(.95, 1.08); this.recoil = 1;
         this.barrel.rotation.x = .5; this.carriage.updateMatrixWorld(true); const mz = _tv.set(0, this.armL, 0).applyMatrix4(this.barrel.matrixWorld);
         const gy = G.B.heightAt(q.x, q.z), fire = lvl === this.maxLvl;
-        G.shells.push({ x0: mz.x, y0: mz.y, z0: mz.z, tx: q.x, ty: Math.max(gy, q.y - tgt.hitH) + .05, tz: q.z, t: 0, T, dmg: d.dmg[lvl], splash: d.splash[lvl], tower: this, x: mz.x, y: mz.y, z: mz.z, sm: 0, arc: 2.2 + dist * .25, fire });
+        G.shells.push({ x0: mz.x, y0: mz.y, z0: mz.z, tx: q.x, ty: Math.max(gy, q.y - tgt.hitH) + .05, tz: q.z, t: 0, T, dmg: d.dmg[lvl] * crewDmg(this), splash: d.splash[lvl], tower: this, x: mz.x, y: mz.y, z: mz.z, sm: 0, arc: 2.2 + dist * .25, fire });
         fxDust(this.x, this.y + .3, this.z, 3, .7, { speed: 1.4, a: .35 });
         sfx('bossStep', this.x, this.z, .7, .2); sfx('zap', this.x, this.z, .4, 1);
       }
@@ -385,7 +387,7 @@ class Tower {
   updSpire(dt, d, lvl) {
     const tgt = findTarget(this.x, this.z, d.range[lvl], true, true);
     const was = this.charge;
-    this.charge = tgt ? Math.min(1, this.charge + dt / d.rate[lvl]) : Math.max(0, this.charge - dt * .25);
+    this.charge = tgt ? Math.min(1, this.charge + dt / (d.rate[lvl] * crewRate(this))) : Math.max(0, this.charge - dt * .25);
     if (was < .1 && this.charge >= .1 && tgt) sfx('charge', this.x, this.z, .5);
     if (tgt) { const want = Math.atan2(tgt.x - this.x, tgt.z - this.z); this.gunYaw = angDamp(this.gunYaw, want, 6, dt); }
     else this.gunYaw = angDamp(this.gunYaw, this.yaw + Math.sin(G.t * .3 + this.idx) * .6, 1.2, dt);
@@ -408,7 +410,7 @@ class Tower {
   }
   updGuard(dt, d, lvl) {
     for (let i = this.men.length - 1; i >= 0; i--) if (this.men[i].gone) this.men.splice(i, 1);
-    if (this.men.length < d.n[lvl]) { this.respawn -= dt; if (this.respawn <= 0) { this.respawn = this.men.length === 0 && G.t < 4 ? .5 : d.rate[lvl]; spawnFootman(this); } }
+    if (this.men.length < crewMen(this)) { this.respawn -= dt; if (this.respawn <= 0) { this.respawn = this.men.length === 0 && G.t < 4 ? .5 : d.rate[lvl]; spawnFootman(this); } }
   }
   dispose() { this.alive = false; this.em.alive = false; LT.emitters[this.idx] = null; this.clearModel(false); R.scene.remove(this.group); this.pad.tower = null; }
 }

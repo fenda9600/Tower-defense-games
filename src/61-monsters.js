@@ -193,8 +193,10 @@ function killFootman(f, dx, dz) {
   fxDust(f.x, f.y + .1, f.z, 3, .5, { a: .35 }); sfx('footmanDie', f.x, f.z, .8);
 }
 function slotPos(f, out) {
-  const B = G.B, n = f.tower.def.n[f.tower.lvl], lat = (n === 2 ? [-.48, .48] : [-.66, 0, .66])[f.slot % n] || 0;
-  const p = pathAt(B, f.muster != null ? f.muster : f.tower.pad.s, out); p.x += -p.tz * lat; p.z += p.tx * lat; return p;
+  // two or three men stand abreast; a fourth and fifth (66-crew.js) form a second rank behind them
+  const B = G.B, n = crewMen(f.tower), k = f.slot % n, nf = n <= 3 ? n : n === 4 ? 2 : 3, back = k >= nf, w = back ? n - nf : nf, j = back ? k - nf : k;
+  const lat = (w === 1 ? [0] : w === 2 ? [-.48, .48] : [-.66, 0, .66])[j] || 0;
+  const p = pathAt(B, Math.min(B.L - .2, (f.muster != null ? f.muster : f.tower.pad.s) + (back ? .7 : 0)), out); p.x += -p.tz * lat; p.z += p.tx * lat; return p;
 }
 const _fp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
 function footmanThink(f, dt) {

@@ -86,6 +86,7 @@ const UI = (() => {
       else if (k === ' ' || k === 'Enter') { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); else sfx('uiDeny', CAM.x, CAM.z, .5); e.preventDefault(); }
       else if (k === 'Escape') { if (CHEAT.open) CHEAT.hide(); else if (U.menu || U.armed) U.closeMenu(); else if (U.lore) U.lore.dur = Math.min(U.lore.dur, U.lore.t + .4); }
       else if (k === 'u' || k === 'U') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doUpgrade(t); } }
+      else if (k === 't' || k === 'T') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doCrew(t); } }
       else if (k === 'x' || k === 'X' || k === 'Delete' || k === 'Backspace') { const t = U.menu && U.menu.tower; if (t) { touchInput(); doSell(t); } }
       else if (k === 'm' || k === 'M') { AU.setMuted(!AU.muted); }
       else if (k === 'c' || k === 'C') { toggleCommand(); }
@@ -106,6 +107,7 @@ const UI = (() => {
   function deny() { U.deny = 1; sfx('uiDeny', CAM.x, CAM.z, .6); }
   function doBuild(pad, kind) { touchInput(); if (buildTower(pad, kind, true)) { sfx('uiClick', pad.x, pad.z, .8); U.menu = null; U.armed = null; return true; } deny(); return false; }
   function doUpgrade(t) { if (t.ruin ? rebuildTower(t, true) : upgradeTower(t, true)) { sfx('uiClick', t.x, t.z, .8); U.menu = null; return true; } deny(); return false; }
+  function doCrew(t) { if (crewTower(t, true)) { sfx('uiClick', t.x, t.z, .8); return true; } deny(); return false; }
   function doReinforce() { touchInput(); if (wallReinforce(true)) { sfx('uiClick', CAM.x, CAM.z, .8); return true; } deny(); return false; }
   function doWallUp() { touchInput(); if (wallUpgrade(true)) { sfx('uiClick', CAM.x, CAM.z, .8); return true; } deny(); return false; }
   function doSell(t) { if (sellTower(t)) { U.menu = null; return true; } return false; }
@@ -253,7 +255,7 @@ const UI = (() => {
       plate(pxp, ys, pw, h, hotP ? { bd: COLR.bdHi, bg: COLR.bg2 } : G.paused ? { bd: COLR.ember } : {}); text(G.paused ? '继续' : '暂停', pxp + pw / 2, ys + pad - s, G.paused ? COLR.amber : COLR.dim, { align: 'c' });
       U.pauseRect = { x: pxp, y: ys, w: pw, h, hot: hotP };
       if (G.paused) { const t = '已暂停', ts = s + 2, pw2 = PX.measure(t, ts) * ts + pad * 4, ph = PX.LINE * ts + pad * 2, px2 = Math.round(W / 2 - pw2 / 2), py2 = Math.round(H * .42); plate(px2, py2, pw2, ph, { bd: COLR.ember }); PX.text(c, t, W / 2, py2 + pad, ts, COLR.amber, { align: 'c' }); } }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · U 升级 · T 添兵 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
     // the wall: its garrison, the reinforce skill and the garrison upgrade
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {
@@ -313,21 +315,28 @@ const UI = (() => {
         const ls = lines(lit || fk), ty = by + bh + 4 * s;
         text(ls[0], px + mp, ty, lit || fk ? COLR.tx : COLR.dim); text(ls[1], px + mp, ty + LH + s, COLR.dim); if (ls[2]) text(ls[2], px + mp, ty + LH * 2 + s, COLR.dim);
       } else {
-        const t = m.tower, d = t.def, ruin = !!t.ruin, maxed = t.lvl >= t.maxLvl, locked = !ruin && !maxed && t.lvl >= tierCap(), nT = t.maxLvl + 1, upc = ruin ? rebuildCost(t) : maxed ? 0 : d.cost[t.lvl + 1], can = ruin ? G.gold >= upc : !maxed && !locked && G.gold >= upc && t.state === 'active', refund = towerRefund(t);
-        const ul = ruin ? '重建 ' + upc : maxed ? '已满级' : locked ? '未解锁' : '升级 ' + upc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
-        const st = ruin ? '已被首领摧毁，停止作战' : (t.kind === 'guard' ? '戍卒 ' + d.n[t.lvl] + ' · 生命 ' + d.hp[t.lvl] : '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + d.dmg[t.lvl]) + ' · 耐久 ' + Math.ceil(t.hp === undefined ? towerMaxHp(t) : t.hp);
-        // the era of this level, and what the next level brings
-        const cur = d.tiers[t.lvl][0], nx = maxed || ruin ? null : d.tiers[t.lvl + 1], l1 = ruin ? '重建后保留原有等级' : nx ? (locked ? '下一级 ' : '升级为 ') + nx[0] : d.tiers[t.lvl][1], l2 = nx ? (locked ? lockHint(tierNeeds(t.lvl + 1)) + '。' : nx[1]) : '';
-        const wP = Math.max(bw3 * 2 + 3 * s, tw(d.name) + 26 * s, tw(st), tw(cur), tw(l1), tw(l2)) + mp * 2, hP = mp * 2 + LH * 5 + 9 * s + bh, [px, py] = place(wP, hP);
+        const t = m.tower, d = t.def, ruin = !!t.ruin, maxed = t.lvl >= t.maxLvl, locked = !ruin && !maxed && t.lvl >= tierCap(), nT = t.maxLvl + 1, upc = ruin ? rebuildCost(t) : maxed ? 0 : upgradeCost(t), can = ruin ? G.gold >= upc : !maxed && !locked && G.gold >= upc && t.state === 'active', refund = towerRefund(t);
+        // the lesser upgrade: more men for this work (66-crew.js)
+        const C = CREW.by[t.kind], cn = crewOf(t), cfull = cn >= CREW.max, cc = crewCost(t), ccan = !ruin && !cfull && G.gold >= cc && t.state === 'active';
+        const ul = ruin ? '重建 ' + upc : maxed ? '已满级' : locked ? '未解锁' : '升级 ' + upc, cl = cfull ? '兵满' : '添兵 ' + cc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(cl), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
+        const st = ruin ? '已被首领摧毁，停止作战' : (t.kind === 'guard' ? '戍卒 ' + crewMen(t) + ' · 生命 ' + d.hp[t.lvl] : (t.kind === 'archer' ? '弓手 ' + t.archers.length + ' · ' : '') + '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + Math.round(d.dmg[t.lvl] * crewDmg(t))) + ' · 耐久 ' + Math.ceil(t.hp === undefined ? towerMaxHp(t) : t.hp);
+        // the era of this level, and what the next level brings; over the lesser upgrade's button, what more men bring
+        const onCrew = !ruin && (U.gp.active ? m.focus === 1 : !!(U.hotBtn && U.hotBtn.id === 'crew'));
+        const cur = d.tiers[t.lvl][0] + ' · 添兵 ' + cn + '/' + CREW.max, nx = maxed || ruin ? null : d.tiers[t.lvl + 1];
+        const l1 = ruin ? '重建后保留原有等级与驻军' : onCrew ? (cfull ? '驻军已满' : C.gain) : nx ? (locked ? '下一级 ' : '升级为 ') + nx[0] : d.tiers[t.lvl][1], l2 = ruin ? '' : onCrew ? C.note : nx ? (locked ? lockHint(tierNeeds(t.lvl + 1)) + '。' : nx[1]) : '';
+        let wT = Math.max(tw(d.name) + 26 * s, tw(st), tw(cur), tw(l1), tw(l2), tw(C.gain), tw(C.note)); if (nx) wT = Math.max(wT, tw('升级为 ' + nx[0]), tw(nx[1]));
+        const wP = Math.max(bw3 * 3 + 6 * s, wT) + mp * 2, hP = mp * 2 + LH * 5 + 9 * s + bh, [px, py] = place(wP, hP);
         plate(px, py, wP, hP); text(d.name, px + mp, py + mp - s, COLR.amber);
         for (let i = 0; i < nT; i++) PX.icon(c, i <= t.lvl ? 'star' : 'starEmpty', px + wP - mp - (nT - i) * 6 * s, py + mp, s);
         text(cur, px + mp, py + mp + LH + s, COLR.tx); text(st, px + mp, py + mp + LH * 2 + s, COLR.dim);
-        text(l1, px + mp, py + mp + LH * 3 + 4 * s, nx || ruin ? COLR.amber : COLR.dim); if (l2) text(l2, px + mp, py + mp + LH * 4 + 4 * s, COLR.dim);
-        const by = py + mp + LH * 5 + 9 * s, bwf = Math.floor((wP - mp * 2 - 3 * s) / 2);
+        text(l1, px + mp, py + mp + LH * 3 + 4 * s, nx || ruin || onCrew ? COLR.amber : COLR.dim); if (l2) text(l2, px + mp, py + mp + LH * 4 + 4 * s, COLR.dim);
+        const by = py + mp + LH * 5 + 9 * s, bwf = Math.floor((wP - mp * 2 - 6 * s) / 3);
         let r = button(px + mp, by, bwf, bh, 'up', can, () => doUpgrade(t), null);
         PX.icon(c, 'upgrade', px + mp + 4 * s, by + 3 * s + r.dy, s, can ? 1 : .4); text(ul, px + mp + 4 * s + iw9 + 3 * s, by + 3 * s + r.dy, can ? COLR.tx : ((maxed && !ruin) || locked ? COLR.dim : COLR.red));
-        r = button(px + mp + bwf + 3 * s, by, bwf, bh, 'sell', true, () => doSell(t), null);
-        PX.icon(c, 'sell', px + mp + bwf + 7 * s, by + 3 * s + r.dy, s); text(sl, px + mp + bwf + 7 * s + iw9 + 3 * s, by + 3 * s + r.dy, COLR.tx);
+        r = button(px + mp + bwf + 3 * s, by, bwf, bh, 'crew', ccan, () => doCrew(t), null);
+        PX.icon(c, 'helm', px + mp + bwf + 7 * s, by + 3 * s + r.dy, s, ccan ? 1 : .4); text(cl, px + mp + bwf + 7 * s + iw9 + 3 * s, by + 3 * s + r.dy, ccan ? COLR.tx : (cfull || ruin ? COLR.dim : COLR.red));
+        r = button(px + mp + (bwf + 3 * s) * 2, by, bwf, bh, 'sell', true, () => doSell(t), null);
+        PX.icon(c, 'sell', px + mp + (bwf + 3 * s) * 2 + 4 * s, by + 3 * s + r.dy, s); text(sl, px + mp + (bwf + 3 * s) * 2 + 4 * s + iw9 + 3 * s, by + 3 * s + r.dy, COLR.tx);
       }
       c.globalAlpha = 1;
     }
