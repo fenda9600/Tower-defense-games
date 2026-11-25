@@ -1477,7 +1477,7 @@ function finalizeBoard(B) {
     for (const ex of extras || []) {
       if (mir) ex.soup.mirrorXZ();
       const E = ex.soup.P; for (let i = 0; i < E.length; i += 3) { E[i] -= cx; E[i + 1] -= cy; E[i + 2] -= cz; }
-      const em = new THREE.Mesh(ex.soup.build(), ex.mat); em.renderOrder = ex.order || 0; mesh.add(em);
+      const em = new THREE.Mesh(ex.soup.build(), ex.mat); em.renderOrder = ex.order || 0; em.receiveShadow = ex.mat === MAT.world; em.visible = !ex.hide; mesh.add(em);
     }
     B.group.add(mesh);
     const piece = { mesh, cx, cy, cz, kind, t: 0, delay: 0, spin: new THREE.Vector3(rr(-1, 1), rr(-1, 1), rr(-1, 1)) };
@@ -1791,32 +1791,53 @@ function buildKeep(B) {
   // The pass: a brick wall with a gate tower under a double roof, a square beacon tower and a hall in the yard.
   const rng = B.rng, kx = B.kx, ky = B.keepY, oz = -12.35;
   const TG = new Soup(), TT = new Soup();
+  // Swapped at run time (63-wall.js): the leaves shut / stove in, and the east curtain whole / breached once the pass has fallen.
+  const DC = new Soup(), DB = new Soup(), WE = new Soup(), WF = new Soup();
+  const r2 = (() => { let q = 7919; const f = () => (q = q * 16807 % 2147483647) / 2147483647; f.range = (a, b) => a + f() * (b - a); return f; })();
   const st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL, red = COL.lacq, redD = COL.lacqD;
-  const mc = () => mixC(sdk, sl, rng() * .8 + .1);
+  const mc = (R = rng) => mixC(sdk, sl, R() * .8 + .1);
   const mas = (S, w, h, d, x, y, z, c, o = {}) => S.box(w, h, d, x, y, z, c || mc(), Object.assign({ l: L_MASON }, o));
   mas(TG, 10.6, .5, 6.0, 0, -.2, -2.9, sdk);
   for (let k = 0; k < 9; k++) mas(TG, 1.1, .16, .55, -4.4 + k * 1.1, .1, .25, mc());
-  const wz = -.95, wall = (x0, x1, h, broken) => {
+  const wz = -.95, wall = (x0, x1, h, broken, S = TG, R = rng) => {
     const n = Math.max(1, Math.round(Math.abs(x1 - x0) / 1.1)), dx = (x1 - x0) / n;
     for (let k = 0; k < n; k++) {
-      const x = x0 + (k + .5) * dx, hh = broken ? Math.max(.5, h - k * rng.range(.5, .95)) : h, whole = hh > h - .2;
-      mas(TG, Math.abs(dx) + .02, hh, 1.05, x, hh / 2, wz, k & 1 ? st : mc(), { jit: .03 }); mas(TG, Math.abs(dx) + .02, .5, 1.25, x, .25, wz, sdk);
-      if (whole) { mas(TG, Math.abs(dx) + .04, .14, 1.2, x, hh + .07, wz, sl); cnMerlons(TG, x - Math.abs(dx) / 2, wz + .5, x + Math.abs(dx) / 2, wz + .5, hh + .14, { rng, h: .36, w: .3, pitch: .55 }); cnMerlons(TG, x - Math.abs(dx) / 2, wz - .5, x + Math.abs(dx) / 2, wz - .5, hh + .14, { rng, h: .3, w: .3, pitch: .55 }); }
-      else { for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), hh + .15, wz); if (hh < 1.8) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.6, .6), .12, wz + rng.range(.3, 1.3), mc()); }
+      const x = x0 + (k + .5) * dx, hh = broken ? Math.max(.5, h - k * R.range(.5, .95)) : h, whole = hh > h - .2;
+      mas(S, Math.abs(dx) + .02, hh, 1.05, x, hh / 2, wz, k & 1 ? st : mc(R), { jit: .03 }); mas(S, Math.abs(dx) + .02, .5, 1.25, x, .25, wz, sdk);
+      if (whole) { mas(S, Math.abs(dx) + .04, .14, 1.2, x, hh + .07, wz, sl); cnMerlons(S, x - Math.abs(dx) / 2, wz + .5, x + Math.abs(dx) / 2, wz + .5, hh + .14, { rng: R, h: .36, w: .3, pitch: .55 }); cnMerlons(S, x - Math.abs(dx) / 2, wz - .5, x + Math.abs(dx) / 2, wz - .5, hh + .14, { rng: R, h: .3, w: .3, pitch: .55 }); }
+      else { for (let j = 0; j < 3; j++) if (R() < .7) mas(S, R.range(.3, .55), R.range(.2, .6), .9, x + R.range(-.4, .4), hh + .15, wz, mc(R)); if (hh < 1.8) for (let j = 0; j < 3; j++) S.rock(R.range(.2, .42), x + R.range(-.6, .6), .12, wz + R.range(.3, 1.3), mc(R)); }
     }
   };
-  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, false);
+  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, false, WE);
+  // the fallen curtain: a stub by the gate, then a breach torn down to the footing with its rubble spilled both ways
+  wall(1.7, 2.8, 3.0, false, WF, r2);
+  { const prof = [2.45, 1.6, .75, .5, .62, 1.25, 2.0, 2.6], w = 2.5 / prof.length;
+    prof.forEach((hh, k) => {
+      const x = 2.8 + (k + .5) * w; mas(WF, w + .02, hh, 1.05, x, hh / 2, wz, mulC(k & 1 ? st : mc(r2), hh < 1.3 ? .62 : .82), { jit: .04 }); mas(WF, w + .02, .5, 1.25, x, .25, wz, sdk);
+      for (let j = 0; j < 2; j++) if (r2() < .75) mas(WF, r2.range(.2, .34), r2.range(.16, .4), r2.range(.5, .9), x + r2.range(-.1, .1), hh + .1, wz + r2.range(-.12, .12), mulC(mc(r2), .75), { r: [r2.range(-.3, .3), r2.range(-.5, .5), r2.range(-.3, .3)] });
+    });
+    for (let j = 0; j < 22; j++) { const x = r2.range(3.2, 5.0), f = r2() < .62 ? 1 : -1, d = r2.range(.45, 1.9); WF.rock(r2.range(.16, .4) * (1.25 - d * .3), x, .1 + (1.9 - d) * .16, wz + f * d, mulC(mc(r2), r2.range(.6, .95))); }
+    for (let j = 0; j < 9; j++) mas(WF, r2.range(.3, .5), r2.range(.16, .26), r2.range(.2, .32), r2.range(3.1, 5.1), .12, wz + r2.range(.7, 2.1), mc(r2), { r: [r2.range(-.4, .4), r2.range(0, 3), r2.range(-.4, .4)] });
+    WF.seg([3.3, .5, wz + .9], [5.0, .95, wz + 1.7], .035, .03, COL.woodD, { l: L_WOOD, n: 5 }); WF.box(.5, .03, .9, 4.7, .82, wz + 1.3, mulC(COL.clothR, .5), { r: [.2, .5, .25], jit: 0 }); }
   // gate platform
   const gh = 3.7, gw = 1.75, gz = -.8, gd = 1.7;
   for (const s of [-1, 1]) { mas(TG, gw - 1.05, gh, gd, s * (1.05 + (gw - 1.05) / 2), gh / 2, gz, st, { jit: .03 }); mas(TG, gw - .95, .6, gd + .2, s * (1.05 + (gw - 1.05) / 2 + .05), .3, gz, sdk); mas(TG, .26, 1.5, gd + .04, s * 1.12, .75, gz, sl); }
   mas(TG, gw * 2, gh - 2.55, gd, 0, 2.55 + (gh - 2.55) / 2, gz, st);
   for (let k = 0; k <= 8; k++) { const th = PI * k / 8; mas(TG, .38, .28, gd + .1, Math.cos(th) * 1.12, 1.5 + Math.sin(th) * 1.12, gz, sl, { r: [0, 0, th - HPI] }); }
   TG.box(2.1, 2.6, .2, 0, 1.3, gz - gd / 2 + .15, COL.black, { jit: 0 }); TG.box(2.1, .2, gd - .3, 0, 2.7, gz, COL.black, { jit: 0 });
-  for (const s of [-1, 1]) {
-    const T = new Soup(), phi = 1.15, th = Math.atan2(-Math.sin(phi), -s * Math.cos(phi));
-    T.box(.95, 2.35, .1, .475, 1.175, 0, red, { l: L_WOOD }); T.box(.95, .08, .13, .475, 2.3, 0, redD, { l: L_WOOD }); T.box(.95, .08, .13, .475, .1, 0, redD, { l: L_WOOD });
-    for (let i = 0; i < 3; i++) for (let q = 0; q < 4; q++) T.box(.07, .07, .14, .2 + i * .28, .5 + q * .5, 0, COL.gold, { l: L_METAL, rough: .4, emis: .04, jit: 0 });
-    TG.merge(T, { p: [s * 1.02, .05, gz + gd / 2 - .1], ry: th, ao: null });
+  { const dz = gz + gd / 2 - .12, lw = 1.0, char = mulC(red, .5), charD = mulC(redD, .45);
+    const leaf = (T, c, cd, studs) => {
+      T.box(lw, 2.5, .1, lw / 2, 1.25, 0, c, { l: L_WOOD }); for (const y of [.1, 1.25, 2.42]) T.box(lw, .09, .14, lw / 2, y, 0, cd, { l: L_WOOD });
+      if (studs) { for (let i = 0; i < 3; i++) for (let q = 0; q < 4; q++) T.box(.07, .07, .16, .2 + i * .28, .42 + q * .5, 0, COL.gold, { l: L_METAL, rough: .4, emis: .04, jit: 0 }); T.box(.16, .16, .2, lw - .14, 1.25, 0, COL.bronze, { l: L_METAL, rough: .5, jit: 0 }); }
+    };
+    // shut: both leaves flush across the passage, barred from within
+    for (const s of [-1, 1]) { const T = new Soup(); leaf(T, red, redD, true); DC.merge(T, { p: [s * 1.02, .05, dz], ry: s < 0 ? 0 : PI, ao: null }); }
+    DC.box(.05, 2.5, .15, 0, 1.3, dz, redD, { l: L_WOOD, jit: 0 });
+    // stove in: one leaf thrown flat across the threshold, the other hanging charred from its upper hinge, splinters on the road
+    { const T = new Soup(); leaf(T, char, charD, true); DB.merge(T, { p: [-.95, .26, dz + .25], r: [1.6, .14, 0], ao: null }); }
+    { const T = new Soup(); for (let i = 0; i < 4; i++) { const h = [2.5, 1.7, 2.2, 1.1][i]; T.box(.24, h, .1, .125 + i * .25, 2.5 - h / 2, 0, i & 1 ? char : mulC(red, .65), { l: L_WOOD }); } T.box(lw, .09, .14, lw / 2, 2.42, 0, charD, { l: L_WOOD }); DB.merge(T, { p: [1.02, .05, dz], r: [0, PI - 1.05, .1], ao: null }); }
+    for (let j = 0; j < 11; j++) DB.box(r2.range(.08, .2), .06, r2.range(.4, .95), r2.range(-1.3, 1.3), .24 + r2() * .05, dz + r2.range(.3, 2.0), r2() < .5 ? char : mulC(red, .7), { l: L_WOOD, r: [r2.range(-.15, .15), r2.range(0, 3), r2.range(-.15, .15)] });
+    DB.seg([-.5, .3, dz + 1.9], [.75, .42, dz + .5], .12, .11, COL.woodD, { l: L_WOOD, n: 6 });
   }
   mas(TG, gw * 2 + .3, .18, gd + .3, 0, gh + .09, gz, sl);
   cnMerlons(TG, -gw, gz + gd / 2 + .06, gw, gz + gd / 2 + .06, gh + .18, { rng, h: .34, w: .3, pitch: .5 }); for (const s of [-1, 1]) cnMerlons(TG, s * (gw + .06), gz - gd / 2, s * (gw + .06), gz + gd / 2, gh + .18, { rng, h: .34, w: .3, pitch: .5 });
@@ -1834,8 +1855,10 @@ function buildKeep(B) {
   cnBrackets(TG, 0, hy + 2.03, gz, ha - .34, hb - .14, { h: .09 });
   cnRoof(TG, { y: hy + 2.12, z: gz, a: ha + .26, b: hb + .5, h: .72, ridge: ha - .42, n: 4, m: 5, lift: .3, rr: .055 });
   for (const s of [-1, 1]) { TG.seg([s * 1.32, 1.9, gz + gd / 2 - .02], [s * 1.32, 2.1, gz + gd / 2 + .4], .035, .03, COL.iron, { l: L_METAL, n: 4 }); TG.cyl(.09, .14, s * 1.32, 2.14, gz + gd / 2 + .42, COL.bronze, { n: 6, l: L_METAL, rt: 1.4 }); B.fires.push({ x: kx + s * 1.32, y: ky + 2.3, z: oz + gz + gd / 2 + .42, size: .42, type: 'sconce' }); }
-  for (const s of [-1, 1]) cnBanner(TG, s * (gw + .1), gh + .1, gh + 2.5, gz + gd / 2 + .1, s < 0 ? COL.clothR : COL.clothD, rng, { w: .44, len: 1.3, sway: .8, col2: s < 0 ? undefined : COL.lacqL });
-  cnBanner(TG, 2.9, 3.1, 5.3, wz + .1, COL.clothR, rng, { w: .5, len: 1.4, sway: .8 });
+  for (const s of [-1, 1]) cnBanner(WE, s * (gw + .1), gh + .1, gh + 2.5, gz + gd / 2 + .1, s < 0 ? COL.clothR : COL.clothD, rng, { w: .44, len: 1.3, sway: .8, col2: s < 0 ? undefined : COL.lacqL });
+  cnBanner(WE, 2.9, 3.1, 5.3, wz + .1, COL.clothR, rng, { w: .5, len: 1.4, sway: .8 });
+  // the victors' black standards fly from the gate tower once it is taken
+  for (const s of [-1, 1]) cnBanner(WF, s * (gw + .1), gh + .1, gh + 2.7, gz + gd / 2 + .1, C(0x17161c), r2, { w: .5, len: 1.5, sway: .9, col2: C(0x8a8478) });
   // yard: back wall, side wall, a hall and stores
   for (let k = 0; k < 8; k++) { const x = -4.7 + k * 1.3, h = 2.5; mas(TG, 1.32, h, .7, x, h / 2, -5.3); }
   cnMerlons(TG, -5.3, -5.05, 5.1, -5.05, 2.5, { rng, h: .3, w: .3, pitch: .55, skip: .12 });
@@ -1866,7 +1889,8 @@ function buildKeep(B) {
   clothPanel(TT, { x0: bx - .5, x1: bx + .5, yTop: 5.6, len: 2.5, z: bz + lerp(r0, r1, .6) * .7071 + .08, col: COL.clothR, col2: mulC(COL.gold, .7), rng, sway: .4, rag: .2 });
   TT.box(1.16, .08, .08, bx, 5.64, bz + lerp(r0, r1, .75) * .7071 + .08, COL.woodD, { l: L_WOOD });
   cnBanner(TT, bx - hw - .2, bh + .3, bh + 2.6, bz + hw + .2, COL.clothR, rng, { w: .46, len: 1.3 });
-  B.structs.push({ soup: new Soup().merge(TG, { p: [kx, ky, oz], ao: [0, .9, .7] }), cx: kx, cy: ky, cz: oz - 2.5, kind: 'keep' });
+  const ext = (S, hide) => ({ soup: new Soup().merge(S, { p: [kx, ky, oz], ao: [0, .9, .7] }), mat: MAT.world, hide });
+  B.structs.push({ soup: new Soup().merge(TG, { p: [kx, ky, oz], ao: [0, .9, .7] }), cx: kx, cy: ky, cz: oz - 2.5, kind: 'keep', extras: [ext(DC, false), ext(DB, true), ext(WE, false), ext(WF, true)] });
   B.structs.push({ soup: new Soup().merge(TT, { p: [kx, ky, oz], ao: [0, 1.4, .65] }), cx: kx + bx, cy: ky, cz: oz + bz, kind: 'beaconTower' });
   B.beacon = { x: kx + bx, y: ky + bh + 1.45, z: oz + bz };
   B.gate = { x: kx, y: ky, z: -11.4 };
@@ -4517,7 +4541,7 @@ function startCrumble() {
     let best = null, bd = 1e9; for (const p of B.pieces) if (p.kind === 'chunk') { const d = dist2(p.cx, p.cz, t.x, t.z); if (d < bd) { bd = d; best = p; } }
     if (best) best.mesh.attach(t.group);
   }
-  for (const f of B.flames) removeFlame(f); B.flames.length = 0;
+  for (const f of B.flames) removeFlame(f); B.flames.length = 0; wallDouse();
   for (const p of B.pieces) { p.t = 0; p.delay = .25 + rnd() * .9 + sat((36 - (p.cx + p.cz)) / 72) * 1.3 + (p.kind !== 'chunk' ? .2 : 0); p.vy = 0; }
   FX.groundAt = () => -500; clearFX(); setBoardCasting(B, true);
   sfx('crumble', 0, 0, 1.3); FX.shake = 1.2;
@@ -4610,11 +4634,28 @@ function gateWeight(m) { const w = GATE.weight[m.type]; return w === undefined ?
 const SIEGE = { depth: 3.2, ladderFrom: 3, melee: 1.2, climb: { skel: 1.7, knight: 2.2, rat: 1.3, slimelet: 1.7, scarab: 1.5, spider: 1.3, ghoul: .9, toad: 1.1, wraith: 1.6, brute: 2.6, ladder: 1.7 } };
 
 function resetWall() {
-  const B = G.B;
-  G.wall = { lvl: 0, n: 0, men: [], gate: GATE.hp[0], open: false, calm: 0, dealt: 0, recent: 0, kills: 0, siegeN: 0, stormN: 0, ladderN: 0, lost: 0, raised: 0, topped: 0, breaks: 0, hurtT: 9, cried: false, upI: 0 };
+  const B = G.B; wallDouse();
+  G.wall = { lvl: 0, n: 0, men: [], gate: GATE.hp[0], open: false, calm: 0, dealt: 0, recent: 0, kills: 0, siegeN: 0, stormN: 0, ladderN: 0, lost: 0, raised: 0, topped: 0, breaks: 0, hurtT: 9, cried: false, upI: 0, fallen: false, fires: [], B };
   for (const l of B.ladders) { l.bearer = null; l.user = null; l.cd = 0; l.up = 0; }
   const l0 = B.ladders[0], dx = l0.foot.x - l0.top.x, dz = l0.foot.z - l0.top.z, d = Math.hypot(dx, dz); G.wall.fx = dx / d; G.wall.fz = dz / d;
   for (let i = 0; i < WALL.start; i++) addWallMan(false);
+}
+// The keep carries four swappable skins (buildKeep): gate shut / stove in, east curtain whole / breached.
+function wallLook() {
+  const W = G.wall, B = G.B; if (!W || W.B !== B) return;
+  const k = B.keepSkin || (B.keepSkin = (B.pieces.find(p => p.kind === 'keep') || { mesh: { children: [] } }).mesh.children); if (k.length < 4) return;
+  k[0].visible = !W.open && !W.fallen; k[1].visible = !k[0].visible; k[2].visible = !W.fallen; k[3].visible = W.fallen;
+}
+function wallDouse() { const W = G.wall; if (!W || !W.fires) return; for (const f of W.fires) removeFlame(f); W.fires.length = 0; }
+// The pass is lost: the gate goes in, the east curtain comes down and the last of the garrison with it.
+function wallFall() {
+  const W = G.wall, B = G.B, g = B.gate, q = B.wallSlots; W.fallen = true; W.open = true; W.gate = 0;
+  for (let i = W.men.length - 1; i >= 0; i--) killWallMan(W.men[i], -W.fx, -W.fz);
+  const a = q[3], b = q[7], gy = a.y - 3.14; FX.shake = Math.min(1.4, FX.shake + .9); sfx('crumble', a.x, a.z, 1, .2);
+  for (let i = 0; i < 7; i++) { const u = i / 6, x = lerp(a.x, b.x, u), z = lerp(a.z, b.z, u); fxDust(x + W.fx * .6, gy + rr(.4, 2.2), z + W.fz * .6, 7, 1.7, { speed: 3.2 }); }
+  fxDust(g.x, g.y + .8, g.z, 16, 1.6, { speed: 3 });
+  for (const [u, h, size] of [[.3, 1.0, .8], [.62, .8, 1.05], [.9, 1.9, .65]]) W.fires.push(addFlame({ x: lerp(a.x, b.x, u) + W.fx * .25, y: gy + h, z: lerp(a.z, b.z, u) + W.fz * .25, size, layers: 2, embers: 1.6, glow: .9, smoke: 4 }));
+  W.fires.push(addFlame({ x: g.x - W.fx * .5, y: g.y + .7, z: g.z - W.fz * .5, size: .9, layers: 2, embers: 1.4, glow: .9, smoke: 3 }));
 }
 function gateMax() { return GATE.hp[G.wall.lvl]; }
 function addWallMan(fx) {
@@ -4727,6 +4768,8 @@ const _wc = [], _wp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 }, _wq = new THREE.Quater
 const STORM_SC = { wall: 9, climb: 8, hold: 7, raise: 7, toLadder: 6.5, toFoot: 6, toDoor: 5 };
 function updateWall(dt) {
   const W = G.wall, B = G.B; if (!W) return;
+  if (G.phase === 'defeat' && !W.fallen && W.B === B) wallFall();
+  wallLook();
   const lvl = W.lvl, r2 = WALL.range[lvl] * WALL.range[lvl], gx = B.gate.x, gz = B.gate.z, play = G.phase === 'play', gateS = B.L - .35;
   W.recent = Math.max(0, W.recent - dt * .25); W.hurtT += dt;
   // ladders stand while their bearers live; each sends up one man at a time
