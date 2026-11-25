@@ -158,18 +158,18 @@ Object.assign(PROP, {
 });
 
 const BIOME_DRESS = {
-  ashen(X) { for (let k = 0; k < 3; k++) X.drop(T => PROP.log(T, X.rng), .9, { far: 1.2 }); for (let k = 0; k < 2; k++) X.drop(T => PROP.wardrum(T, X.rng), .8, { near: 4.5, far: 1.4 }); },
+  ashen(X) { for (let k = 0; k < Math.round(3 * AREA); k++) X.drop(T => PROP.log(T, X.rng), .9, { far: 1.2 }); for (let k = 0; k < Math.round(2 * AREA); k++) X.drop(T => PROP.wardrum(T, X.rng), .8, { near: 4.5, far: 1.4 }); },
   frost(X) {
     const { B, rng, drop } = X, snow = B.bio.coverCol;
-    for (let k = 0; k < 30; k++) { const r = rng.range(.5, 1.25); drop(T => PROP.drift(T, rng, r, snow), r * .35, { roadMin: .5, ao: null, steep: true }); }
+    for (let k = 0; k < Math.round(30 * AREA); k++) { const r = rng.range(.5, 1.25); drop(T => PROP.drift(T, rng, r, snow), r * .35, { roadMin: .5, ao: null, steep: true }); }
     for (const q of B.ponds) for (let k = 0; k < 2; k++) { const a = rng() * TAU, d = q.r + rng.range(.9, 1.3); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.crystal(T, rng, COL.ice, .03), .5); }
-    for (let k = 0; k < 5; k++) drop(T => PROP.crystal(T, rng, COL.ice, .03), .5, { water: 3.2 });
-    for (let k = 0; k < 2; k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
+    for (let k = 0; k < Math.round(5 * AREA); k++) drop(T => PROP.crystal(T, rng, COL.ice, .03), .5, { water: 3.2 });
+    for (let k = 0; k < Math.round(2 * AREA); k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
     if (B.ponds[0]) B.env.push({ x: B.ponds[0].x, y: B.ponds[0].y + .9, z: B.ponds[0].z, c: 0x7fc8ff, I: 6, d: 7 });
   },
   fen(X) {
     const { B, rng, drop } = X;
-    for (let k = 0; k < 52; k++) {
+    for (let k = 0; k < Math.round(52 * AREA); k++) {
       const u = rng.int(2, B.SP.length - 2), a = B.SP[u - 1], b = B.SP[u + 1], dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1, off = rng.sign() * rng.range(.95, 1.9), x = B.SP[u][0] - dz / l * off, z = B.SP[u][1] + dx / l * off;
       if (Math.abs(x) > BH - .8 || Math.abs(z) > BH - .8 || B.dRoadAt(x, z) < ROAD_HALF + .9) continue;
       X.at(x, z, T => PROP.reeds(T, rng), 0);
@@ -179,25 +179,25 @@ const BIOME_DRESS = {
       for (let k = 0; k < 4; k++) { const a = rng() * TAU, d = q.r * rng.range(0, .55), T = new Soup(); PROP.lily(T, rng); B.put(T, q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, { y: q.y + .012, ao: null }); }
     }
     const sh = [];
-    for (let k = 0; k < 16; k++) { const p = drop(T => PROP.shroom(T, rng), .35, { ao: null }); if (p) sh.push(p); }
+    for (let k = 0; k < Math.round(16 * AREA); k++) { const p = drop(T => PROP.shroom(T, rng), .35, { ao: null }); if (p) sh.push(p); }
     for (let k = 0; k < Math.min(2, sh.length); k++) B.env.push({ x: sh[k][0], y: X.H(sh[k][0], sh[k][1]) + .7, z: sh[k][1], c: 0x45e0b8, I: 5, d: 6 });
-    for (let k = 0; k < 5; k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
-    for (let k = 0; k < 9; k++) { const hh = rng.range(2.6, 4.2); drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0 }); }
+    for (let k = 0; k < Math.round(5 * AREA); k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
+    for (let k = 0; k < Math.round(9 * AREA); k++) { const hh = rng.range(2.6, 4.2); drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0 }); }
   },
   ember(X) {
     const { B, rng, drop } = X, cols = [COL.stoneD, COL.stone, C(0x5a2a22), COL.stoneD];
-    for (let k = 0; k < 9; k++) drop(T => PROP.basalt(T, rng), 1.0, { far: 1.4 });
-    for (let k = 0; k < 6; k++) { const hh = rng.range(2.0, 4.2); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
-    for (let k = 0; k < 3; k++) drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 4.5 });
-    for (let k = 0; k < 4; k++) { const p = drop(T => PROP.vent(T, rng), .8, { far: 2.2 }); if (p) B.fires.push({ x: p[0], y: X.H(p[0], p[1]) + .12, z: p[1], size: .5, fx: { layers: 0, smoke: 1.3, embers: 1.1, glow: .55 } }); }
+    for (let k = 0; k < Math.round(9 * AREA); k++) drop(T => PROP.basalt(T, rng), 1.0, { far: 1.4 });
+    for (let k = 0; k < Math.round(6 * AREA); k++) { const hh = rng.range(2.0, 4.2); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
+    for (let k = 0; k < Math.round(3 * AREA); k++) drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 4.5 });
+    for (let k = 0; k < Math.round(4 * AREA); k++) { const p = drop(T => PROP.vent(T, rng), .8, { far: 2.2 }); if (p) B.fires.push({ x: p[0], y: X.H(p[0], p[1]) + .12, z: p[1], size: .5, fx: { layers: 0, smoke: 1.3, embers: 1.1, glow: .55 } }); }
     B.env.push({ x: B.bridge.x, y: B.wlc + .55, z: B.bridge.z, c: 0xff5a1e, I: 44, d: 9, flick: 1 });
     if (B.ponds[0]) { const q = B.ponds[0]; B.env.push({ x: q.x, y: q.y + .7, z: q.z, c: 0xff5a1e, I: 40, d: 9, flick: 1 }); }
     if (B.fallAt) B.env.push({ x: B.fallAt.x - B.fallAt.ox * 1.2, y: B.fallAt.y + .6, z: B.fallAt.z - B.fallAt.oz * 1.2, c: 0xff5a1e, I: 36, d: 8, flick: 1 });
   },
   dunes(X) {
     const { B, rng, drop } = X, cols = B.bio.strata.map(h => C(h));
-    for (let k = 0; k < 11; k++) drop(T => PROP.cactus(T, rng), .4, { far: .9 });
-    for (let k = 0; k < 6; k++) { const hh = rng.range(2.2, 4.6); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
+    for (let k = 0; k < Math.round(11 * AREA); k++) drop(T => PROP.cactus(T, rng), .4, { far: .9 });
+    for (let k = 0; k < Math.round(6 * AREA); k++) { const hh = rng.range(2.2, 4.6); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
     for (const q of B.ponds) {
       for (let k = 0; k < 4; k++) { const a = rng() * TAU, d = q.r + rng.range(1.1, 1.9), h = rng.range(3, 4.4); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.huyang(T, rng, h), .5); }
       for (let k = 0; k < 7; k++) { const a = rng() * TAU, d = q.r * rng.range(.8, 1.2); X.at(q.x + Math.cos(a) * d, q.z + Math.sin(a) * d, T => PROP.reeds(T, rng), 0); }

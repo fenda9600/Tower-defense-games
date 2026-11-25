@@ -75,7 +75,7 @@ const UI = (() => {
     window.addEventListener('pointermove', e => { U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.moved = 0; U.gp.active = false; });
     window.addEventListener('pointerleave', () => { U.inside = false; });
     document.addEventListener('mouseleave', () => { U.inside = false; });
-    window.addEventListener('pointerdown', e => { if (CHEAT.owns(e.target)) return; U.downT = e.timeStamp; U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.gp.active = false; audioGesture(); onDown(); e.preventDefault(); }, { passive: false });
+    window.addEventListener('pointerdown', e => { if (CHEAT.owns(e.target)) return; if (e.button === 1 || e.button === 2) return; /* right and middle drag move the camera */ U.downT = e.timeStamp; U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.gp.active = false; audioGesture(); onDown(); e.preventDefault(); }, { passive: false });
     window.addEventListener('pointerup', () => { U.press = null; });
     window.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => {
@@ -245,7 +245,7 @@ const UI = (() => {
       const fast = G.speed > 1, sl = '快进 ' + G.speed + '倍', sw = tw('快进 4倍') + pad * 2, sxp = xs + w + 3 * s, hotF = U.inside && U.mx >= sxp && U.mx <= sxp + sw && U.my >= ys && U.my <= ys + h;
       plate(sxp, ys, sw, h, hotF ? { bd: COLR.bdHi, bg: COLR.bg2 } : fast ? { bd: COLR.ember } : {}); text(sl, sxp + sw / 2, ys + pad - s, fast ? COLR.amber : COLR.dim, { align: 'c' });
       U.speedRect = { x: sxp, y: ys, w: sw, h, hot: hotF }; }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · F 快进 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · F 快进 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
     // the wall: its garrison, the reinforce skill and the garrison upgrade
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {

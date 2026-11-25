@@ -169,6 +169,10 @@ function updateWall(dt) {
       let best = null, bs = 1e9;
       for (const m of G.mons) { if (m.dead || m.hp <= 0 || !m.siege || m.wallSt || m.foe || !SIEGE.climb[m.type]) continue; const sc = dist2(m.x, m.z, l.foot.x, l.foot.z) - (m.type === 'ghoul' ? 30 : 0); if (sc < bs) { bs = sc; best = m; } }
       if (best) { best.wallSt = 'toFoot'; best.ladder = l; l.user = best; }
+      // Nobody is left to send up: once every enemy still alive is only holding a ladder, the bearers climb their own.
+      // Without this a wave whose last men were ladder bearers out of the garrison's reach (or with the garrison dead) never ended.
+      l.idle = !best && G.mons.every(m => m.dead || m.hp <= 0 || m.wallSt === 'hold' || m.wallSt === 'raise') ? (l.idle || 0) + dt : 0;
+      if (l.idle > 6) { l.idle = 0; const b = l.bearer; b.wallSt = 'toFoot'; l.user = b; }
     }
     // the ladder itself, swinging up against the wall as it is raised
     if (l.bearer.wallSt === 'toLadder') continue;
