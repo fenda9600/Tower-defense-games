@@ -85,6 +85,7 @@ function step(rdt, quiet) {
     updateWaves(dt); aiThink(dt);
     for (const t of G.towers) if (t.alive) t.update(dt);
     updateWall(dt);
+    HERO.update(dt);
     updateUnits(dt);
     for (let i = G.mons.length - 1; i >= 0; i--) if (G.mons[i].dead) swapRemove(G.mons, i);
     updateProjectiles(dt); updateRaid(dt);
@@ -128,7 +129,7 @@ function frame(now) {
   const n = G.speed > 1 ? G.speed : 1; for (let i = 1; i < n; i++) step(rdt, true);
   step(rdt);
   R.fade = Math.min(1, R.fade + rdt * 1.6);
-  applyCamera(); renderFrame(); UI.draw();
+  applyCamera(); renderFrame(); UI.draw(); HERO.draw();
   if (document.hidden || raw > .25) { _acc = 0; _frames = 0; return; }
   _acc += raw; _frames++;
   if (_acc >= 2) {
@@ -145,7 +146,7 @@ function frame(now) {
 }
 
 function boot() {
-  initRenderer(); initMaterials(); resizeRenderer(); initLights(); initFX(); initWeather(); initKits(); UI.init(); initCamControl();
+  initRenderer(); initMaterials(); resizeRenderer(); initLights(); initFX(); initWeather(); initKits(); UI.init(); initCamControl(); HERO.init();
   // the flag on an empty tower base: a tall pole with an apricot-yellow pennant, bright against every battlefield
   KIT.marker = new PartBatch(S => { S.box(.07, 1.6, .07, 0, .8, 0, COL.wood, { l: L_WOOD }); S.cone(.07, .14, 0, 1.67, 0, COL.brass, { n: 4, l: L_METAL, emis: .05 }); const y = C(0xf0b83a); for (let k = 0; k < 4; k++) S.box(.17, .46 - k * .09, .025, .12 + k * .17, 1.33, 0, k === 1 ? COL.lacqL : y, { l: L_CLOTH, emis: .1, jit: 0, sway: .1 + k * .12 }); }, PADS_MAX + 4, { rad: .1 });
   G.boardSeed = HASH.seed ? +HASH.seed : 1 + Math.floor(Math.random() * 9000);
@@ -157,7 +158,7 @@ function boot() {
   R.scene.add(B.group); activateBoard(B, true);
   beginBattle(true);
   window.addEventListener('resize', resizeRenderer);
-  window.__cw = { CAMPAIGN, G, R, CAM, UI, LT, FX, AI, PX, MON, LOOK, KIT, buildTower, upgradeTower, wallReinforce, wallUpgrade, WALL, RAID, rebuildTower, damageTower, SIEGE, GATE, ROSTER, TOWER, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
+  window.__cw = { HERO, HEROES, CAMPAIGN, G, R, CAM, UI, LT, FX, AI, PX, MON, LOOK, KIT, buildTower, upgradeTower, wallReinforce, wallUpgrade, WALL, RAID, rebuildTower, damageTower, SIEGE, GATE, ROSTER, TOWER, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); HERO.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
   if (HASH.k) G.k = +HASH.k;
   if (HASH.ff) { const n = Math.round(+HASH.ff * 30); for (let i = 0; i < n; i++) step(1 / 30); CAM.sx = CAM.fx; CAM.sz = CAM.fz; R.fade = 1; }
   if (HASH.phase) setPhase(HASH.phase);

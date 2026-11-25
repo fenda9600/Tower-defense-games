@@ -18,7 +18,7 @@ const { chromium } = require('playwright');
           step(1 / 30);
           if (G.phase === 'play') S.minLives = Math.min(S.minLives, G.lives);
           if (G.phase !== S.phase) {
-            if (G.phase === 'clear') S.log.push({ lv: G.level, res: 'clear', lives: G.lives, min: S.minLives, leaks: G.leaks, press: +G.press.toFixed(2), t: Math.round(G.t - S.t0), gold: Math.round(G.gold), tw: G.towers.map(t => t.kind[0] + t.lvl).join(''), wall: G.wall ? G.wall.n + '/' + G.wall.lvl + ' r' + G.wall.raised + 't' + G.wall.topped + 'd' + G.wall.lost + 'b' + G.wall.breaks + ' ru' + __cw.RAID.ruined + '/' + __cw.RAID.rebuilt : '' });
+            if (G.phase === 'clear') S.log.push({ lv: G.level, res: 'clear', lives: G.lives, min: S.minLives, leaks: G.leaks, press: +G.press.toFixed(2), t: Math.round(G.t - S.t0), gold: Math.round(G.gold), tw: G.towers.map(t => t.kind[0] + t.lvl).join(''), wall: (G.wall ? G.wall.n + '/' + G.wall.lvl + ' r' + G.wall.raised + 't' + G.wall.topped + 'd' + G.wall.lost + 'b' + G.wall.breaks : '') + (__cw.HERO && __cw.HERO.eval ? ' 勋' + __cw.HERO.eval.zhuan + '(' + Math.round(__cw.HERO.eval.held * 100) + '%,k' + __cw.HERO.kills + ')' : '') });
             if (G.phase === 'defeat') { S.log.push({ lv: G.level, res: 'DEFEAT', k: G.k, leaks: G.leaks, press: +G.press.toFixed(2), t: Math.round(G.t - S.t0), tw: G.towers.map(t => t.kind[0] + t.lvl).join(''), wall: G.wall ? G.wall.n + '/' + G.wall.lvl + ' r' + G.wall.raised + 't' + G.wall.topped + 'd' + G.wall.lost + 'b' + G.wall.breaks + ' ru' + __cw.RAID.ruined + '/' + __cw.RAID.rebuilt : '' }); S.done = true; }
             if (G.phase === 'play') { S.t0 = G.t; S.minLives = G.maxLives; if (G.level >= ML) S.done = true; }
             S.phase = G.phase;
