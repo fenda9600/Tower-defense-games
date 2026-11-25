@@ -7,8 +7,8 @@
 // Everything here is rules and numbers; the other files only carry one-line hooks (foeWave, foeSpawn, foeThink, updateRover, foeKill, foeUpdate, foeReset).
 const FOE = {
   // the vanguard. lead: how long it goes ahead of the column. cost and paid: how much of the wave's budget it takes the place of.
-  // picked: [base, per two waves, per two battlefields (at most 2)]. riders likewise, from the second wave on.
-  van: { lead: 6, cost: { picked: 6, lanzi: 7 }, paid: .7, perWork: 2 },
+  // perWork: how many men may be at one work at a time. A picked man fires one work and no more; the riders come from the third wave on.
+  van: { lead: 6, cost: { picked: 6, lanzi: 7 }, paid: .7, perWork: 1 },
   // a flank raid. from: first wave it may happen on; chance grows with the battlefield. span: where along the road it comes out, as a share of its length.
   // len: how long the side track may be. warn: seconds between the alarm and the first man over the edge. pace: speed off the road.
   sneak: { from: 2, chance: .3, perLevel: .04, max: .5, span: [.4, .72], len: [6, 22], warn: 3.5, pace: .9, gap: .5 },
@@ -26,8 +26,8 @@ const FOE = {
 
 Object.assign(MON, {
   // README.md gives the source for each
-  picked: { name: '选锋', en: 'Picked vanguard', hp: 46, spd: 1.75, rad: .27, mass: 1, bounty: 7, lives: 1, hitH: .75, top: 1.5, dmg: 9, atkT: .8, scale: 1, death: 'man', blade: true, sap: { dmg: 5, reach: 4.8, blows: 8 } },
-  lanzi: { name: '拦子马', en: 'Liao outrider', hp: 42, spd: 2.3, rad: .32, mass: .9, bounty: 8, lives: 1, hitH: 1.0, top: 2.0, dmg: 9, atkT: .75, scale: .9, death: 'horse', gait: 3.2, cat: 'swarm', blade: true, harass: { range: 5.2, dmg: 4.5, every: 2.3, slow: .85 } },
+  picked: { name: '选锋', en: 'Picked vanguard', hp: 46, spd: 1.75, rad: .27, mass: 1, bounty: 7, lives: 1, hitH: .75, top: 1.5, dmg: 9, atkT: .8, scale: 1, death: 'man', blade: true, sap: { dmg: 5, reach: 4.8, blows: 4 } },
+  lanzi: { name: '拦子马', en: 'Liao outrider', hp: 42, spd: 2.3, rad: .32, mass: .9, bounty: 8, lives: 1, hitH: 1.0, top: 2.0, dmg: 9, atkT: .75, scale: .9, death: 'horse', gait: 3.2, cat: 'swarm', blade: true, harass: { range: 5.2, dmg: 4.5, every: 4.6, slow: .85 } },
 });
 RIGS.picked = m => { m.weapon = KIT.item.dao; m.hat = KIT.item.ironCap; return rigHuman(KIT.foe, SPEC.foot, m); };
 RIGS.lanzi = m => { m.weapon = KIT.item.saber; m.hat = KIT.item.furHat; m.riderKit = KIT.hu; return rigHorse(m); };
@@ -38,7 +38,7 @@ function foeReset() { const st = FOE.st; st.muster = false; st.musterAt = st.rel
 // Who goes ahead of wave k on this battlefield. No dice here: buildWave charges the column for them before it is drawn up.
 function foeVan(k, level) {
   const ez = campaignEase(level)[0], out = [];
-  const nL = k >= 2 ? Math.max(1, Math.round(((k >> 1) + Math.min(1, level >> 2)) * ez)) : 0, nP = Math.max(1, Math.round((1 + (k >> 1) + Math.min(2, level >> 1)) * ez));
+  const nL = k >= 3 ? Math.max(1, Math.round((1 + Math.min(1, level >> 2)) * ez)) : 0, nP = Math.max(1, Math.round((1 + (k >> 2) + Math.min(1, level >> 1)) * ez));
   for (let i = 0; i < nL; i++) out.push('lanzi'); for (let i = 0; i < nP; i++) out.push('picked');
   return out;
 }
@@ -66,7 +66,7 @@ function foeWave() {
     if (routes.length) {
       const route = routes[Math.floor(rnd() * routes.length)], menu = waveMenu(k, lv).map(e => e[0]), light = ['rat', 'spider', 'ghoul', 'wolf'].filter(t => menu.indexOf(t) >= 0), list = ['picked'];
       const n = Math.max(2, Math.round((2 + (k >> 1) + (lv >> 1)) * campaignEase(lv)[0]));
-      for (let i = 1; i < n; i++) list.push(i === 3 ? 'picked' : light.length ? light[Math.floor(rnd() * light.length)] : 'skel');
+      for (let i = 1; i < n; i++) list.push(light.length ? light[Math.floor(rnd() * light.length)] : 'skel');
       st.sneak = { t: (boss ? V.lead : V.lead + rr(3, 9)) + S.warn, warned: false, route, list, hpMul, gap: 0 };
     }
   }
@@ -170,7 +170,7 @@ function foeThink(m, dt) {
     }
     return k * h.slow;
   }
-  if (def.sap) {
+  if (def.sap && !m.sapped) {
     m.sapCd = (m.sapCd || 0) - dt; if (m.sapCd > 0) return k; m.sapCd = .25;
     const r2 = def.sap.reach * def.sap.reach; let best = null, bd = r2;
     for (const t of G.towers) {
