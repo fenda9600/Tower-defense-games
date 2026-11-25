@@ -1,7 +1,7 @@
 
 const WX = { mesh: null, u: null, fade: 1 };
 function initWeather() {
-  const N = 2600, g = new THREE.InstancedBufferGeometry(), rng = makeRng(4242), seed = new Float32Array(N * 4);
+  const N = Math.round(2600 * AREA), g = new THREE.InstancedBufferGeometry(), rng = makeRng(4242), seed = new Float32Array(N * 4);
   for (let i = 0; i < N; i++) { seed[i * 4] = rng(); seed[i * 4 + 1] = rng(); seed[i * 4 + 2] = rng(); seed[i * 4 + 3] = (i + .5) / N; }
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0]), 3)); g.setIndex([0, 1, 2, 0, 2, 3]);
   g.setAttribute('iSeed', new THREE.InstancedBufferAttribute(seed, 4)); g.instanceCount = N;
@@ -19,9 +19,9 @@ void main(){
   float isB = step(iSeed.w, uN.y), show = step(iSeed.w, uN.x + uN.y);
   vec3 vel = mix(uVelA, uVelB, isB), al = mix(uAlA, uAlB, isB); vec2 sway = mix(uSwayA, uSwayB, isB), sz = mix(uSizeA, uSizeB, isB), yr = mix(uYA, uYB, isB); vec4 cp = mix(uColA, uColB, isB);
   float r1 = fract(iSeed.w * 91.7 + iSeed.x * 3.1), r2 = fract(iSeed.w * 357.3 + iSeed.z * 5.7), span = max(yr.y - yr.x, 0.01);
-  vec3 p = vec3(iSeed.x * 48.0, iSeed.y * span, iSeed.z * 48.0) + vel * uTime * (0.65 + 0.7 * r1);
+  vec3 p = vec3(iSeed.x * 64.0, iSeed.y * span, iSeed.z * 64.0) + vel * uTime * (0.65 + 0.7 * r1);
   p.x += sin(uTime * sway.y * (0.6 + r2) + iSeed.y * 40.0) * sway.x; p.z += cos(uTime * sway.y * (0.5 + r1) + iSeed.x * 40.0) * sway.x; p.y += sin(uTime * sway.y * 0.7 + r1 * 30.0) * sway.x * 0.3;
-  p.x = mod(p.x, 48.0) - 24.0; p.z = mod(p.z, 48.0) - 24.0; p.y = mod(p.y, span) + yr.x;
+  p.x = mod(p.x, 64.0) - 32.0; p.z = mod(p.z, 64.0) - 32.0; p.y = mod(p.y, span) + yr.x;
   float size = mix(sz.x, sz.y, r2);
   vec4 mv = viewMatrix * vec4(p, 1.0);
   vec3 vv = (viewMatrix * vec4(vel, 0.0)).xyz; float vl = length(vv.xy); vec2 dir = vl > 0.0001 ? vv.xy / vl : vec2(0.0, 1.0);
@@ -29,7 +29,7 @@ void main(){
   gl_Position = show > 0.5 ? projectionMatrix * mv : vec4(2.0, 2.0, 2.0, 1.0);
   vec3 L = uAmb; for (int i = 0; i < 12; i++) { vec3 d = uLightPos[i] - p; L += uLightCol[i] / (dot(d, d) + 3.0); }
   float tw = al.y > 0.0 ? pow(max(0.0, sin(uTime * al.y * (0.5 + r1) + r2 * 60.0)), 4.0) : 1.0;
-  float ef = smoothstep(24.0, 21.0, max(abs(p.x), abs(p.z))) * smoothstep(yr.x, yr.x + 0.5, p.y) * smoothstep(yr.y, yr.y - 1.2, p.y);
+  float ef = smoothstep(32.0, 29.0, max(abs(p.x), abs(p.z))) * smoothstep(yr.x, yr.x + 0.5, p.y) * smoothstep(yr.y, yr.y - 1.2, p.y);
   vCol = vec4(cp.rgb * mix(vec3(1.0), L, cp.a), al.x * tw * ef * uFade); vAdd = 1.0 - cp.a; vUv = position.xy;
 }`,
     fragmentShader: `precision highp float; varying vec4 vCol; varying vec2 vUv; varying float vAdd;

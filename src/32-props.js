@@ -254,46 +254,57 @@ function buildBridge(B) {
   B.bridge = { x, z, y: y0 };
 }
 
-function buildPads(B) {
-  for (const p of B.pads) {
-    const T = new Soup(), rng = B.rng;
-    T.cyl(1.36, .34, 0, .12, 0, mulC(COL.stoneD, .8), { n: 8, l: L_MASON, r: [0, PI / 8, 0] });
-    T.cyl(1.16, .05, 0, .3, 0, mulC(COL.stoneD, 1.05), { n: 8, l: L_MASON, r: [0, PI / 8, 0] });
-    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; T.box(.46, .2, .28, Math.cos(a) * 1.34, .1 + rng() * .06, Math.sin(a) * 1.34, mixC(COL.stoneD, COL.stone, rng() * .6), { l: L_ROCK, r: [rng.range(-.1, .1), -a + HPI, 0] }); }
-    B.put(T, p.x, p.z, { y: p.y0, ry: rng() * TAU, ao: [0, .3, .7] });
-  }
-}
-
 function buildKeep(B) {
   // The pass: a brick wall with a gate tower under a double roof, a square beacon tower and a hall in the yard.
-  const rng = B.rng, kx = B.kx, ky = B.keepY, oz = -12.35;
+  const rng = B.rng, kx = B.kx, ky = B.keepY, oz = BN + 5.65;
   const TG = new Soup(), TT = new Soup();
+  // Swapped at run time (63-wall.js): the leaves shut / stove in, and the east curtain whole / breached once the pass has fallen.
+  const DC = new Soup(), DB = new Soup(), WE = new Soup(), WF = new Soup();
+  const r2 = (() => { let q = 7919; const f = () => (q = q * 16807 % 2147483647) / 2147483647; f.range = (a, b) => a + f() * (b - a); return f; })();
   const st = COL.stone, sdk = COL.stoneD, sl = COL.stoneL, red = COL.lacq, redD = COL.lacqD;
-  const mc = () => mixC(sdk, sl, rng() * .8 + .1);
+  const mc = (R = rng) => mixC(sdk, sl, R() * .8 + .1);
   const mas = (S, w, h, d, x, y, z, c, o = {}) => S.box(w, h, d, x, y, z, c || mc(), Object.assign({ l: L_MASON }, o));
   mas(TG, 10.6, .5, 6.0, 0, -.2, -2.9, sdk);
   for (let k = 0; k < 9; k++) mas(TG, 1.1, .16, .55, -4.4 + k * 1.1, .1, .25, mc());
-  const wz = -.95, wall = (x0, x1, h, broken) => {
+  const wz = -.95, wall = (x0, x1, h, broken, S = TG, R = rng) => {
     const n = Math.max(1, Math.round(Math.abs(x1 - x0) / 1.1)), dx = (x1 - x0) / n;
     for (let k = 0; k < n; k++) {
-      const x = x0 + (k + .5) * dx, hh = broken ? Math.max(.5, h - k * rng.range(.5, .95)) : h, whole = hh > h - .2;
-      mas(TG, Math.abs(dx) + .02, hh, 1.05, x, hh / 2, wz, k & 1 ? st : mc(), { jit: .03 }); mas(TG, Math.abs(dx) + .02, .5, 1.25, x, .25, wz, sdk);
-      if (whole) { mas(TG, Math.abs(dx) + .04, .14, 1.2, x, hh + .07, wz, sl); cnMerlons(TG, x - Math.abs(dx) / 2, wz + .5, x + Math.abs(dx) / 2, wz + .5, hh + .14, { rng, h: .36, w: .3, pitch: .55 }); cnMerlons(TG, x - Math.abs(dx) / 2, wz - .5, x + Math.abs(dx) / 2, wz - .5, hh + .14, { rng, h: .3, w: .3, pitch: .55 }); }
-      else { for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), hh + .15, wz); if (hh < 1.8) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.6, .6), .12, wz + rng.range(.3, 1.3), mc()); }
+      const x = x0 + (k + .5) * dx, hh = broken ? Math.max(.5, h - k * R.range(.5, .95)) : h, whole = hh > h - .2;
+      mas(S, Math.abs(dx) + .02, hh, 1.05, x, hh / 2, wz, k & 1 ? st : mc(R), { jit: .03 }); mas(S, Math.abs(dx) + .02, .5, 1.25, x, .25, wz, sdk);
+      if (whole) { mas(S, Math.abs(dx) + .04, .14, 1.2, x, hh + .07, wz, sl); cnMerlons(S, x - Math.abs(dx) / 2, wz + .5, x + Math.abs(dx) / 2, wz + .5, hh + .14, { rng: R, h: .36, w: .3, pitch: .55 }); cnMerlons(S, x - Math.abs(dx) / 2, wz - .5, x + Math.abs(dx) / 2, wz - .5, hh + .14, { rng: R, h: .3, w: .3, pitch: .55 }); }
+      else { for (let j = 0; j < 3; j++) if (R() < .7) mas(S, R.range(.3, .55), R.range(.2, .6), .9, x + R.range(-.4, .4), hh + .15, wz, mc(R)); if (hh < 1.8) for (let j = 0; j < 3; j++) S.rock(R.range(.2, .42), x + R.range(-.6, .6), .12, wz + R.range(.3, 1.3), mc(R)); }
     }
   };
-  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, true);
+  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, false, WE);
+  // the fallen curtain: a stub by the gate, then a breach torn down to the footing with its rubble spilled both ways
+  wall(1.7, 2.8, 3.0, false, WF, r2);
+  { const prof = [2.45, 1.6, .75, .5, .62, 1.25, 2.0, 2.6], w = 2.5 / prof.length;
+    prof.forEach((hh, k) => {
+      const x = 2.8 + (k + .5) * w; mas(WF, w + .02, hh, 1.05, x, hh / 2, wz, mulC(k & 1 ? st : mc(r2), hh < 1.3 ? .62 : .82), { jit: .04 }); mas(WF, w + .02, .5, 1.25, x, .25, wz, sdk);
+      for (let j = 0; j < 2; j++) if (r2() < .75) mas(WF, r2.range(.2, .34), r2.range(.16, .4), r2.range(.5, .9), x + r2.range(-.1, .1), hh + .1, wz + r2.range(-.12, .12), mulC(mc(r2), .75), { r: [r2.range(-.3, .3), r2.range(-.5, .5), r2.range(-.3, .3)] });
+    });
+    for (let j = 0; j < 22; j++) { const x = r2.range(3.2, 5.0), f = r2() < .62 ? 1 : -1, d = r2.range(.45, 1.9); WF.rock(r2.range(.16, .4) * (1.25 - d * .3), x, .1 + (1.9 - d) * .16, wz + f * d, mulC(mc(r2), r2.range(.6, .95))); }
+    for (let j = 0; j < 9; j++) mas(WF, r2.range(.3, .5), r2.range(.16, .26), r2.range(.2, .32), r2.range(3.1, 5.1), .12, wz + r2.range(.7, 2.1), mc(r2), { r: [r2.range(-.4, .4), r2.range(0, 3), r2.range(-.4, .4)] });
+    WF.seg([3.3, .5, wz + .9], [5.0, .95, wz + 1.7], .035, .03, COL.woodD, { l: L_WOOD, n: 5 }); WF.box(.5, .03, .9, 4.7, .82, wz + 1.3, mulC(COL.clothR, .5), { r: [.2, .5, .25], jit: 0 }); }
   // gate platform
   const gh = 3.7, gw = 1.75, gz = -.8, gd = 1.7;
   for (const s of [-1, 1]) { mas(TG, gw - 1.05, gh, gd, s * (1.05 + (gw - 1.05) / 2), gh / 2, gz, st, { jit: .03 }); mas(TG, gw - .95, .6, gd + .2, s * (1.05 + (gw - 1.05) / 2 + .05), .3, gz, sdk); mas(TG, .26, 1.5, gd + .04, s * 1.12, .75, gz, sl); }
   mas(TG, gw * 2, gh - 2.55, gd, 0, 2.55 + (gh - 2.55) / 2, gz, st);
   for (let k = 0; k <= 8; k++) { const th = PI * k / 8; mas(TG, .38, .28, gd + .1, Math.cos(th) * 1.12, 1.5 + Math.sin(th) * 1.12, gz, sl, { r: [0, 0, th - HPI] }); }
   TG.box(2.1, 2.6, .2, 0, 1.3, gz - gd / 2 + .15, COL.black, { jit: 0 }); TG.box(2.1, .2, gd - .3, 0, 2.7, gz, COL.black, { jit: 0 });
-  for (const s of [-1, 1]) {
-    const T = new Soup(), phi = 1.15, th = Math.atan2(-Math.sin(phi), -s * Math.cos(phi));
-    T.box(.95, 2.35, .1, .475, 1.175, 0, red, { l: L_WOOD }); T.box(.95, .08, .13, .475, 2.3, 0, redD, { l: L_WOOD }); T.box(.95, .08, .13, .475, .1, 0, redD, { l: L_WOOD });
-    for (let i = 0; i < 3; i++) for (let q = 0; q < 4; q++) T.box(.07, .07, .14, .2 + i * .28, .5 + q * .5, 0, COL.gold, { l: L_METAL, rough: .4, emis: .04, jit: 0 });
-    TG.merge(T, { p: [s * 1.02, .05, gz + gd / 2 - .1], ry: th, ao: null });
+  { const dz = gz + gd / 2 - .12, lw = 1.0, char = mulC(red, .5), charD = mulC(redD, .45);
+    const leaf = (T, c, cd, studs) => {
+      T.box(lw, 2.5, .1, lw / 2, 1.25, 0, c, { l: L_WOOD }); for (const y of [.1, 1.25, 2.42]) T.box(lw, .09, .14, lw / 2, y, 0, cd, { l: L_WOOD });
+      if (studs) { for (let i = 0; i < 3; i++) for (let q = 0; q < 4; q++) T.box(.07, .07, .16, .2 + i * .28, .42 + q * .5, 0, COL.gold, { l: L_METAL, rough: .4, emis: .04, jit: 0 }); T.box(.16, .16, .2, lw - .14, 1.25, 0, COL.bronze, { l: L_METAL, rough: .5, jit: 0 }); }
+    };
+    // shut: both leaves flush across the passage, barred from within
+    for (const s of [-1, 1]) { const T = new Soup(); leaf(T, red, redD, true); DC.merge(T, { p: [s * 1.02, .05, dz], ry: s < 0 ? 0 : PI, ao: null }); }
+    DC.box(.05, 2.5, .15, 0, 1.3, dz, redD, { l: L_WOOD, jit: 0 });
+    // stove in: one leaf thrown flat across the threshold, the other hanging charred from its upper hinge, splinters on the road
+    { const T = new Soup(); leaf(T, char, charD, true); DB.merge(T, { p: [-.95, .26, dz + .25], r: [1.6, .14, 0], ao: null }); }
+    { const T = new Soup(); for (let i = 0; i < 4; i++) { const h = [2.5, 1.7, 2.2, 1.1][i]; T.box(.24, h, .1, .125 + i * .25, 2.5 - h / 2, 0, i & 1 ? char : mulC(red, .65), { l: L_WOOD }); } T.box(lw, .09, .14, lw / 2, 2.42, 0, charD, { l: L_WOOD }); DB.merge(T, { p: [1.02, .05, dz], r: [0, PI - 1.05, .1], ao: null }); }
+    for (let j = 0; j < 11; j++) DB.box(r2.range(.08, .2), .06, r2.range(.4, .95), r2.range(-1.3, 1.3), .24 + r2() * .05, dz + r2.range(.3, 2.0), r2() < .5 ? char : mulC(red, .7), { l: L_WOOD, r: [r2.range(-.15, .15), r2.range(0, 3), r2.range(-.15, .15)] });
+    DB.seg([-.5, .3, dz + 1.9], [.75, .42, dz + .5], .12, .11, COL.woodD, { l: L_WOOD, n: 6 });
   }
   mas(TG, gw * 2 + .3, .18, gd + .3, 0, gh + .09, gz, sl);
   cnMerlons(TG, -gw, gz + gd / 2 + .06, gw, gz + gd / 2 + .06, gh + .18, { rng, h: .34, w: .3, pitch: .5 }); for (const s of [-1, 1]) cnMerlons(TG, s * (gw + .06), gz - gd / 2, s * (gw + .06), gz + gd / 2, gh + .18, { rng, h: .34, w: .3, pitch: .5 });
@@ -311,8 +322,10 @@ function buildKeep(B) {
   cnBrackets(TG, 0, hy + 2.03, gz, ha - .34, hb - .14, { h: .09 });
   cnRoof(TG, { y: hy + 2.12, z: gz, a: ha + .26, b: hb + .5, h: .72, ridge: ha - .42, n: 4, m: 5, lift: .3, rr: .055 });
   for (const s of [-1, 1]) { TG.seg([s * 1.32, 1.9, gz + gd / 2 - .02], [s * 1.32, 2.1, gz + gd / 2 + .4], .035, .03, COL.iron, { l: L_METAL, n: 4 }); TG.cyl(.09, .14, s * 1.32, 2.14, gz + gd / 2 + .42, COL.bronze, { n: 6, l: L_METAL, rt: 1.4 }); B.fires.push({ x: kx + s * 1.32, y: ky + 2.3, z: oz + gz + gd / 2 + .42, size: .42, type: 'sconce' }); }
-  for (const s of [-1, 1]) cnBanner(TG, s * (gw + .1), gh + .1, gh + 2.5, gz + gd / 2 + .1, s < 0 ? COL.clothR : COL.clothD, rng, { w: .44, len: 1.3, sway: .8, col2: s < 0 ? undefined : COL.lacqL });
-  cnBanner(TG, 2.9, 3.1, 5.3, wz + .1, COL.clothR, rng, { w: .5, len: 1.4, sway: .8 });
+  for (const s of [-1, 1]) cnBanner(WE, s * (gw + .1), gh + .1, gh + 2.5, gz + gd / 2 + .1, s < 0 ? COL.clothR : COL.clothD, rng, { w: .44, len: 1.3, sway: .8, col2: s < 0 ? undefined : COL.lacqL });
+  cnBanner(WE, 2.9, 3.1, 5.3, wz + .1, COL.clothR, rng, { w: .5, len: 1.4, sway: .8 });
+  // the victors' black standards fly from the gate tower once it is taken
+  for (const s of [-1, 1]) cnBanner(WF, s * (gw + .1), gh + .1, gh + 2.7, gz + gd / 2 + .1, C(0x17161c), r2, { w: .5, len: 1.5, sway: .9, col2: C(0x8a8478) });
   // yard: back wall, side wall, a hall and stores
   for (let k = 0; k < 8; k++) { const x = -4.7 + k * 1.3, h = 2.5; mas(TG, 1.32, h, .7, x, h / 2, -5.3); }
   cnMerlons(TG, -5.3, -5.05, 5.1, -5.05, 2.5, { rng, h: .3, w: .3, pitch: .55, skip: .12 });
@@ -343,16 +356,22 @@ function buildKeep(B) {
   clothPanel(TT, { x0: bx - .5, x1: bx + .5, yTop: 5.6, len: 2.5, z: bz + lerp(r0, r1, .6) * .7071 + .08, col: COL.clothR, col2: mulC(COL.gold, .7), rng, sway: .4, rag: .2 });
   TT.box(1.16, .08, .08, bx, 5.64, bz + lerp(r0, r1, .75) * .7071 + .08, COL.woodD, { l: L_WOOD });
   cnBanner(TT, bx - hw - .2, bh + .3, bh + 2.6, bz + hw + .2, COL.clothR, rng, { w: .46, len: 1.3 });
-  B.structs.push({ soup: new Soup().merge(TG, { p: [kx, ky, oz], ao: [0, .9, .7] }), cx: kx, cy: ky, cz: oz - 2.5, kind: 'keep' });
+  const ext = (S, hide) => ({ soup: new Soup().merge(S, { p: [kx, ky, oz], ao: [0, .9, .7] }), mat: MAT.world, hide });
+  B.structs.push({ soup: new Soup().merge(TG, { p: [kx, ky, oz], ao: [0, .9, .7] }), cx: kx, cy: ky, cz: oz - 2.5, kind: 'keep', extras: [ext(DC, false), ext(DB, true), ext(WE, false), ext(WF, true)] });
   B.structs.push({ soup: new Soup().merge(TT, { p: [kx, ky, oz], ao: [0, 1.4, .65] }), cx: kx + bx, cy: ky, cz: oz + bz, kind: 'beaconTower' });
   B.beacon = { x: kx + bx, y: ky + bh + 1.45, z: oz + bz };
-  B.gate = { x: kx, y: ky, z: -11.4 };
+  B.gate = { x: kx, y: ky, z: BN + 6.6 };
+  // where the wall garrison stands: the two men flanking the gate first, then outward along the east wall walk
+  B.wallSlots = [2.1, -2.0, 2.62, 3.14, 3.66, 4.18, 4.7, 5.22].map(x => ({ x: kx + x, y: ky + 3.14, z: oz + wz - .1 }));
+  // where scaling ladders go up against the east wall, the gate doorway, and where men who came in by the gate reach the wall walk
+  B.ladders = [2.36, 3.92, 4.96].map(x => ({ foot: { x: kx + x, z: oz + wz + 1.5 }, top: { x: kx + x, y: ky + 3.14, z: oz + wz + .36 } }));
+  B.wallIn = { door: { x: kx, z: oz + gz + gd / 2 - .25 }, up: [{ x: kx + 1.95, y: ky + 3.14, z: oz + wz + .3 }, { x: kx - 2.0, y: ky + 3.14, z: oz + wz + .3 }] };
 }
 
 function buildCave(B) {
   const rng = B.rng, zc = B.zc, T = new Soup(), D = new Soup();
-  let i0 = 0; for (let i = 0; i < B.n; i++) if (B.px[i] >= -14.6) { i0 = i; break; }
-  const y0 = B.py[i0], ox = -14.5;
+  let i0 = 0; for (let i = 0; i < B.n; i++) if (B.px[i] >= BW + 3.4) { i0 = i; break; }
+  const y0 = B.py[i0], ox = BW + 3.5;
   const rk = (r, x, y, z, o = {}) => T.rock(r, x, y, z, mixC(COL.stoneD, COL.stone, rng() * .7), o);
   for (const s of [-1, 1]) { rk(1.3, .1, .65, s * 2.45); rk(1.1, .2, 1.9, s * 2.3); rk(.95, .2, 2.95, s * 1.95); rk(.62, 1.0, .3, s * 2.15); rk(.45, 1.5, .2, s * 1.95); }
   rk(1.35, .15, 3.65, 0, { sq: .55 }); rk(1.05, .25, 3.55, -1.05, { sq: .6 }); rk(1.05, .25, 3.55, 1.05, { sq: .6 });
@@ -375,8 +394,8 @@ function scatterProps(B) {
     if (B.dRoadAt(x, z) < ROAD_HALF + roadMin + r) return false;
     if (B.dStrAt(x, z) < 1.5 + r) return false;
     for (const p of B.pads) if (dist2(x, z, p.x, p.z) < (2.15 + r) * (2.15 + r)) return false;
-    if (Math.abs(x - B.kx) < 5.7 + r && z < -11.2 + r) return false;
-    if (x < -12.4 && Math.abs(z - B.zc) < 3.4 + r) return false;
+    if (Math.abs(x - B.kx) < 5.7 + r && z < BN + 6.8 + r) return false;
+    if (x < BW + 5.6 && Math.abs(z - B.zc) < 3.4 + r) return false;
     for (const q of B.ponds) if (dist2(x, z, q.x, q.z) < (q.r * 1.25 + .9 + r) * (q.r * 1.25 + .9 + r)) return false;
     for (const q of placed) if (dist2(x, z, q[0], q[1]) < (q[2] + r) * (q[2] + r)) return false;
     return true;
@@ -405,11 +424,12 @@ function scatterProps(B) {
   };
   const bio = B.bio;
   const at = (x, z, build, r, T0) => { if (Math.abs(x) > BH - .8 || Math.abs(z) > BH - .8) return; const T = T0 || new Soup(); if (!T0) build(T); B.put(T, x, z, { ry: rng() * TAU }); if (r) placed.push([x, z, r]); };
-  drop(T => PROP.towerRuin(T, rng), 2.9, { far: 3.6 });
+  const nA = k => Math.round(k * AREA), nL = k => Math.round(k * LIN); // by-area and by-road-length counts for the larger board
+  for (let k = 0; k < 2; k++) drop(T => PROP.towerRuin(T, rng), 2.9, { far: 3.6 });
   drop(T => PROP.well(T, rng), 1.3, { near: 5.5, far: 2.6 });
   drop(T => PROP.statue(T, rng), 1.2, { near: 6, far: 2.4 });
   drop(T => PROP.ribcage(T, rng), 2.4, { far: 2.8 });
-  for (let k = 0; k < 3; k++) { const len = rng.range(4, 7); drop(T => PROP.wallRun(T, rng, len, rng.range(1.8, 3.2)), len * .5, { far: 1.6 }); }
+  for (let k = 0; k < nA(3); k++) { const len = rng.range(4, 7); drop(T => PROP.wallRun(T, rng, len, rng.range(1.8, 3.2)), len * .5, { far: 1.6 }); }
   { const g = find(3.2, { far: 3.4 }); if (g) {
       const ry = rng() * TAU, cs = Math.cos(ry), sn = Math.sin(ry);
       for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) { if (rng() < .2) continue; const lx = (c - 1.5) * 1.15 + rng.range(-.15, .15), lz = (r - 1) * 1.5 + rng.range(-.15, .15), T = new Soup(); PROP.grave(T, rng); B.put(T, g[0] + lx * cs + lz * sn, g[1] - lx * sn + lz * cs, { ry: ry + rng.range(-.2, .2) }); }
@@ -418,13 +438,13 @@ function scatterProps(B) {
       placed.push([g[0], g[1], 3.2]);
     } }
   for (let k = 0; k < 2; k++) { const p = beside(10, B.L - 8, 1.25, 1.1); if (p) drop(T => PROP.cart(T, rng, k === 1), 1.1, { at: p, ry: -p[2] + rng.range(-.3, .3), r: k === 1 ? [0, -p[2] + .4, .22] : undefined }); }
-  for (let k = 0; k < 4; k++) { const p = beside(8, B.L - 6, .75, .3); if (p) { const len = rng.range(2.6, 4.2); drop(T => PROP.palisade(T, rng, len), 1.0, { at: p, ry: -p[2] }); } }
-  for (let k = 0; k < 5; k++) { const p = beside(8, B.L - 6, 1.0, .4); if (p) { const len = rng.range(2.2, 3.6); drop(T => PROP.juma(T, rng, len), 1.2, { at: p, ry: -p[2] + rng.range(-.15, .15) }); } }
-  for (let k = 0; k < 6; k++) { const p = beside(8, B.L - 5, .8, .25); if (p) drop(T => PROP.banner(T, rng, [COL.clothR, COL.clothD, COL.clothR, COL.clothB][k & 3]), .3, { at: p, ry: -p[2] + HPI * p[3] }); }
+  for (let k = 0; k < nL(4); k++) { const p = beside(8, B.L - 6, .75, .3); if (p) { const len = rng.range(2.6, 4.2); drop(T => PROP.palisade(T, rng, len), 1.0, { at: p, ry: -p[2] }); } }
+  for (let k = 0; k < nL(5); k++) { const p = beside(8, B.L - 6, 1.0, .4); if (p) { const len = rng.range(2.2, 3.6); drop(T => PROP.juma(T, rng, len), 1.2, { at: p, ry: -p[2] + rng.range(-.15, .15) }); } }
+  for (let k = 0; k < nL(6); k++) { const p = beside(8, B.L - 5, .8, .25); if (p) drop(T => PROP.banner(T, rng, [COL.clothR, COL.clothD, COL.clothR, COL.clothB][k & 3]), .3, { at: p, ry: -p[2] + HPI * p[3] }); }
   { const p = beside(B.L * .3, B.L * .7, .8, .3); if (p) drop(T => PROP.signpost(T, rng), .3, { at: p, ry: -p[2] }); }
   { const p = beside(12, B.L * .6, 1.4, .7); if (p) drop(T => PROP.wardrum(T, rng), .7, { at: p, ry: -p[2] + HPI * p[3] }); }
-  for (let k = 0; k < 3; k++) { const p = beside(8, B.L - 6, .9, .35); if (p) { const q = drop(T => PROP.stoneLamp(T, rng), .35, { at: p, ry: -p[2] }); if (q) B.fires.push({ x: q[0], y: H(q[0], q[1]) + 1.02, z: q[1], size: .2, fx: { smoke: 0, embers: 0, glow: .7 } }); } }
-  for (let k = 0; k < 3; k++) drop(T => PROP.rack(T, rng), .8, { near: 5, far: 1.2 });
+  for (let k = 0; k < nL(3); k++) { const p = beside(8, B.L - 6, .9, .35); if (p) { const q = drop(T => PROP.stoneLamp(T, rng), .35, { at: p, ry: -p[2] }); if (q) B.fires.push({ x: q[0], y: H(q[0], q[1]) + 1.02, z: q[1], size: .2, fx: { smoke: 0, embers: 0, glow: .7 } }); } }
+  for (let k = 0; k < nL(3); k++) drop(T => PROP.rack(T, rng), .8, { near: 5, far: 1.2 });
   for (const pad of B.pads) {
     if (rng() < .35) continue;
     const a = rng() * TAU, x = pad.x + Math.cos(a) * 2.25, z = pad.z + Math.sin(a) * 2.25;
@@ -433,25 +453,25 @@ function scatterProps(B) {
     B.put(T, x, z, { ry: rng() * TAU }); placed.push([x, z, .8]);
   }
   for (let k = 0; k < 6; k++) { const x = B.lay.cave.x + rng.range(1.8, 7), z = B.zc + rng.sign() * rng.range(1.9, 5); if (free(x, z, .4, .2)) drop(T => PROP.bones(T, rng, rng.int(4, 7)), .5, { at: [x, z], ao: null }); }
-  for (let k = 0; k < 5; k++) drop(T => PROP.bones(T, rng, rng.int(3, 5)), .45, { ao: null });
-  for (let k = 0; k < 3; k++) drop(T => PROP.cairn(T, rng), .5, {});
+  for (let k = 0; k < nA(5); k++) drop(T => PROP.bones(T, rng, rng.int(3, 5)), .45, { ao: null });
+  for (let k = 0; k < nA(3); k++) drop(T => PROP.cairn(T, rng), .5, {});
   BIOME_DRESS[bio.key]({ B, rng, drop, find, beside, free, at, H, placed, slope });
   const trees = [];
-  for (const [kind, cnt, h0, h1] of bio.trees) for (let k = 0; k < cnt; k++) { const h = rng.range(h0, h1), p = drop(T => PROP[kind](T, rng, h), kind === 'tree' || kind === 'charred' ? .55 : .8, { far: 1.0, water: kind === 'huyang' && k < 6 ? 5.5 : 0 }); if (p && kind === 'tree') trees.push([p, h]); }
+  for (const [kind, cnt, h0, h1] of bio.trees) for (let k = 0; k < nA(cnt); k++) { const h = rng.range(h0, h1), p = drop(T => PROP[kind](T, rng, h), kind === 'tree' || kind === 'charred' ? .55 : .8, { far: 1.0, water: kind === 'huyang' && k < 6 ? 5.5 : 0 }); if (p && kind === 'tree') trees.push([p, h]); }
   for (let k = 0; k < bio.webs && k < trees.length; k++) {
     const [p, h] = trees[k], y = H(p[0], p[1]), a = rng() * TAU, T = new Soup();
     PROP.web(T, [0, h * .42, 0], [Math.cos(a) * .9, h * .55, Math.sin(a) * .9], [Math.cos(a) * .7, h * .18, Math.sin(a) * .7]);
     B.put(T, p[0], p[1], { y, ao: null });
   }
-  for (let k = 0; k < bio.stumps; k++) drop(T => PROP.stump(T, rng), .4, {});
-  for (let k = 0; k < bio.rocks; k++) { const r = rng() < .2 ? rng.range(.6, 1.25) : rng.range(.16, .5); drop(T => T.rock(r, 0, r * .28, 0, mixC(COL.stoneD, COL.stone, rng())), r * .8, { steep: true, roadMin: .25, ao: [0, r * .6, .6] }); }
-  for (let k = 0; k < bio.tufts; k++) {
+  for (let k = 0; k < nA(bio.stumps); k++) drop(T => PROP.stump(T, rng), .4, {});
+  for (let k = 0; k < nA(bio.rocks); k++) { const r = rng() < .2 ? rng.range(.6, 1.25) : rng.range(.16, .5); drop(T => T.rock(r, 0, r * .28, 0, mixC(COL.stoneD, COL.stone, rng())), r * .8, { steep: true, roadMin: .25, ao: [0, r * .6, .6] }); }
+  for (let k = 0; k < nA(bio.tufts); k++) {
     const x = rng.range(-BH + .8, BH - .8), z = rng.range(-BH + .8, BH - .8);
     if (B.dRoadAt(x, z) < ROAD_HALF + .35 || waterD(x, z) < 1.1 || slope(x, z) > .5) continue;
-    if (Math.abs(x - B.kx) < 5.4 && z < -11.6) continue;
+    if (Math.abs(x - B.kx) < 5.4 && z < BN + 6.4) continue;
     const T = new Soup(); PROP.tuft(T, rng); B.put(T, x, z, { ao: null, s: rng.range(.8, 1.5) });
   }
-  for (let k = 0; k < 60; k++) {
+  for (let k = 0; k < nL(60); k++) {
     const i = rng.int(16, B.n - 12), side = rng.sign(), d = ROAD_HALF + rng.range(.1, .45), x = B.px[i] - B.tz[i] * side * d, z = B.pz[i] + B.tx[i] * side * d;
     if (B.dStrAt(x, z) < 2.4) continue;
     const r = rng.range(.08, .17), T = new Soup(); T.rock(r, 0, r * .3, 0, mixC(COL.roadD, COL.stone, rng())); B.put(T, x, z, { ao: null });

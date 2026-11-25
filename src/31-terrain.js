@@ -52,7 +52,7 @@ function buildBoard(seed, index) {
   for (let i = 0; i < n; i++) { const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1); const dx = px[b] - px[a], dz = pz[b] - pz[a], l = Math.hypot(dx, dz) || 1; tx[i] = dx / l; tz[i] = dz / l; }
 
   const hBase = (x, z) => {
-    let h = (fbm(x * .055 + sd, z * .055 + 3.1, sd, 3) - .5) * RL[0] + (fbm(x * .17 + 3, z * .17 + 7, sd + 5, 2) - .5) * RL[1] + .9 * smooth(7, -13, z);
+    let h = (fbm(x * .055 + sd, z * .055 + 3.1, sd, 3) - .5) * RL[0] + (fbm(x * .17 + 3, z * .17 + 7, sd + 5, 2) - .5) * RL[1] + .9 * smooth(7 * LIN, BN + 5, z);
     if (RL[3]) { const w = x * .42 + z * .2 + (fbm(x * .09, z * .09, sd + 70, 2) - .5) * 5, r = 1 - Math.abs(Math.sin(w)); h += RL[3] * r * r * (.4 + .9 * fbm(x * .07 + 9, z * .07, sd + 71, 2)); }
     return h;
   };
@@ -70,7 +70,7 @@ function buildBoard(seed, index) {
   { const need = Math.max(.4, wlc + 1.0 - py[ci0]); for (let i = 0; i < n; i++) py[i] += need * smooth(3.6, .7, Math.abs(i - ci0) * PATH_STEP); }
   const keepY = py[n - 1];
 
-  const DN = 145, DS = .25, dRoad = new Float32Array(DN * DN), iRoad = new Uint16Array(DN * DN), dStr = new Float32Array(DN * DN), iStr = new Uint16Array(DN * DN);
+  const DS = .25, DN = Math.round(2 * BH / DS) + 1, dRoad = new Float32Array(DN * DN), iRoad = new Uint16Array(DN * DN), dStr = new Float32Array(DN * DN), iStr = new Uint16Array(DN * DN);
   for (let j = 0; j < DN; j++) for (let i = 0; i < DN; i++) {
     const x = -BH + i * DS, z = -BH + j * DS; let b = 1e9, bi = 0;
     for (let k = 0; k < n; k++) { const dx = px[k] - x, dz = pz[k] - z, d = dx * dx + dz * dz; if (d < b) { b = d; bi = k; } }
@@ -88,10 +88,10 @@ function buildBoard(seed, index) {
   for (const p of pads) p.y0 = py[clamp(Math.round(p.s / PATH_STEP), 0, n - 1)] + .05;
 
   const ponds = [];
-  for (let t = 0; t < 700 && ponds.length < bio.ponds; t++) {
+  for (let t = 0; t < 900 && ponds.length < Math.round(bio.ponds * AREA); t++) {
     const r = rng.range(1.2, 2.3), x = rng.range(-BH + 3.4 + r, BH - 3.4 - r), z = rng.range(-BH + 3.4 + r, BH - 3.4 - r);
     if (dfAt(dRoad, x, z) < ROAD_HALF + 2.6 + r || dfAt(dStr, x, z) < 3.9 + r) continue;
-    if (x < -12 + r || z < -12 + r || (Math.abs(x - kx) < 6.5 + r && z < -8.5 + r)) continue;
+    if (x < BW + 6 + r || z < BN + 6 + r || (Math.abs(x - kx) < 6.5 + r && z < BN + 9.5 + r)) continue;
     if (pads.some(p => Math.hypot(x - p.x, z - p.z) < 3.1 + r) || ponds.some(q => Math.hypot(x - q.x, z - q.z) < r + q.r + 3.2)) continue;
     let y = 1e9; for (let k = 0; k < 24; k++) { const a = k / 12 * TAU, d = r + (k < 12 ? 1.3 : 2.1); y = Math.min(y, hBase(x + Math.cos(a) * d, z + Math.sin(a) * d)); }
     ponds.push({ x, z, r, y: Math.min(y, hBase(x, z)) - .22 });
@@ -111,15 +111,15 @@ function buildBoard(seed, index) {
     }
     for (const p of pads) { const d = Math.hypot(x - p.x, z - p.z); if (d < 2.7) h = lerp(h, p.y0, smooth(2.7, 1.5, d)); }
     for (const q of ponds) { const d = pondD(q, x, z); if (d < q.r + 1.5) h = lerp(h, q.y - .45, smooth(q.r + 1.5, q.r * .4, d)); }
-    const dkx = Math.max(0, Math.abs(x - kx) - 5.2), dkz = Math.max(0, z + 11.7), dk = Math.hypot(dkx, dkz);
+    const dkx = Math.max(0, Math.abs(x - kx) - 5.2), dkz = Math.max(0, z - BN - 6.3), dk = Math.hypot(dkx, dkz);
     if (dk < 1.8) h = lerp(h, keepY, smooth(1.8, .2, dk));
     const dcl = x + BH + (fbm(z * .23 + 1.7, x * .11, sd + 9, 2) - .5) * 2.6;
-    let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, -15, z)) * RL[2];
+    let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, BN + 3, z)) * RL[2];
     const dbr = z + BH + (fbm(x * .23 + 5.1, z * .11, sd + 13, 2) - .5) * 2.4;
     const c2 = smooth(4.4, 1.0, dbr) * (1.8 + 2.2 * fbm(x * .2 + 9, z * .2, sd + 15, 2)) * smooth(5.4, 7.6, Math.abs(x - kx)) * RL[2];
     c = Math.max(c, c2) + 1.5 * smooth(11, 1, Math.hypot(x + BH, z + BH)) * smooth(7, 2.5, Math.min(x + BH, z + BH));
     if (c > .02) { const v = c / 1.2, f = Math.floor(v); c = (f + smooth(.45, .9, v - f)) * 1.2; }
-    if (x < -12.2) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(-12.2, -13.2, x);
+    if (x < BW + 5.8) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(BW + 5.8, BW + 4.8, x);
     _cl = c; return h + c;
   };
 
@@ -235,7 +235,7 @@ function buildBoard(seed, index) {
     const S = chunkAt((a[0] + c[0]) / 2, (a[2] + c[2]) / 2).soup;
     for (const v of [a, b, c, a, c, d]) S.v(v[0], v[1], v[2], 0, 1, 0, v[3][0], v[3][1], v[3][2], v[0] * .25, v[2] * .25, L_COBBLE, v[4]);
   }
-  for (let q = 0; q < 16; q++) {
+  for (let q = 0; q < 22; q++) {
     const i = rng.int(20, n - 20); if (Math.abs(i - ci0) * PATH_STEP < 4) continue;
     let x = px[i] - tz[i] * rng.range(-.9, .9), z = pz[i] + tx[i] * rng.range(-.9, .9), a = rng.range(0, TAU); const y = py[i] + .045, S = chunkAt(x, z).soup;
     for (let sgm = 0; sgm < rng.int(3, 6); sgm++) {
@@ -247,7 +247,7 @@ function buildBoard(seed, index) {
     }
   }
   const waterV = (S, x, y, z, u, w, flow, rough) => S.v(x, y, z, 0, 1, 0, 1, 1, 1, u, w, 0, rough, flow, 0);
-  for (let q = 0, made = 0; q < 60 && made < bio.puddles; q++) {
+  for (let q = 0, made = 0; q < 60 && made < Math.round(bio.puddles * LIN); q++) {
     const i = rng.int(18, n - 14); if (Math.abs(i - ci0) * PATH_STEP < 4.5) continue;
     const off = rng.sign() * rng.range(.25, .78), cx = px[i] - tz[i] * off, cz = pz[i] + tx[i] * off, r = rng.range(.36, .78), y = py[i] + .042, ph = rng() * 9, el = rng.range(.6, 1), ang = Math.atan2(tz[i], tx[i]);
     const ring = []; for (let k = 0; k < 11; k++) { const a = k / 11 * TAU, rr2 = r * (.72 + .5 * vnoise(Math.cos(a) * 1.4 + ph, Math.sin(a) * 1.4, sd)); const lx = Math.cos(a) * rr2, lz = Math.sin(a) * rr2 * el; ring.push([cx + lx * Math.cos(ang) - lz * Math.sin(ang), cz + lx * Math.sin(ang) + lz * Math.cos(ang)]); }
@@ -269,7 +269,7 @@ function buildBoard(seed, index) {
     }
   }
   if (bio.key === 'ember') {
-    for (let q = 0; q < 46; q++) {
+    for (let q = 0; q < Math.round(46 * AREA); q++) {
       let x = rng.range(-BH + 1.5, BH - 1.5), z = rng.range(-BH + 1.5, BH - 1.5), a = rng.range(0, TAU);
       if (dfAt(dRoad, x, z) < ROAD_HALF + .6 || dfAt(dStr, x, z) < 1.4 || dfAt(dStr, x, z) > 9 || Math.abs(hAt(x + .6, z) - hAt(x - .6, z)) > .3) continue;
       for (let sgm = 0, m = rng.int(4, 8); sgm < m; sgm++) {
@@ -320,7 +320,7 @@ function buildBoard(seed, index) {
     put(T, x, z, o = {}) { const y = o.y === undefined ? heightAt(x, z) + (o.dy || 0) : o.y; chunkAt(x, z).soup.merge(T, { p: [x, y, z], ry: o.ry || 0, r: o.r, s: o.s, tint: o.tint, ao: o.ao === undefined ? [0, .55, .6] : o.ao }); },
   };
   buildBridge(B); buildPads(B); buildKeep(B); buildCave(B); scatterProps(B);
-  finalizeBoard(B);
+  finalizeBoard(B); addPadRings(B);
   return B;
 }
 
@@ -356,7 +356,7 @@ function finalizeBoard(B) {
     for (const ex of extras || []) {
       if (mir) ex.soup.mirrorXZ();
       const E = ex.soup.P; for (let i = 0; i < E.length; i += 3) { E[i] -= cx; E[i + 1] -= cy; E[i + 2] -= cz; }
-      const em = new THREE.Mesh(ex.soup.build(), ex.mat); em.renderOrder = ex.order || 0; mesh.add(em);
+      const em = new THREE.Mesh(ex.soup.build(), ex.mat); em.renderOrder = ex.order || 0; em.receiveShadow = ex.mat === MAT.world; em.visible = !ex.hide; mesh.add(em);
     }
     B.group.add(mesh);
     const piece = { mesh, cx, cy, cz, kind, t: 0, delay: 0, spin: new THREE.Vector3(rr(-1, 1), rr(-1, 1), rr(-1, 1)) };
@@ -372,7 +372,7 @@ function finalizeBoard(B) {
     const sa = (a, b) => { for (let i = 0; i < a.length; i++) { const t = a[i]; a[i] = b[i]; b[i] = t; } };
     sa(B.px, B.pz); sa(B.tx, B.tz);
     for (const p of B.pads) sw(p); for (const f of B.fires) sw(f); for (const g of B.glows) sw(g); for (const q of B.ponds) sw(q); for (const e of B.env) sw(e);
-    sw(B.beacon); sw(B.gate); sw(B.cave); if (B.fallAt) { sw(B.fallAt); const t = B.fallAt.ox; B.fallAt.ox = B.fallAt.oz; B.fallAt.oz = t; }
+    sw(B.beacon); sw(B.gate); sw(B.cave); for (const q of B.wallSlots) sw(q); for (const l of B.ladders) { sw(l.foot); sw(l.top); } sw(B.wallIn.door); for (const q of B.wallIn.up) sw(q); if (B.fallAt) { sw(B.fallAt); const t = B.fallAt.ox; B.fallAt.ox = B.fallAt.oz; B.fallAt.oz = t; }
     const h0 = B.heightAt; B.heightAt = (x, z) => h0(z, x);
     const d0 = B.dRoadAt; B.dRoadAt = (x, z) => d0(z, x);
     for (const sp of B.SP) { const t = sp[0]; sp[0] = sp[1]; sp[1] = t; }

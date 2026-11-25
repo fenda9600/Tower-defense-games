@@ -2,7 +2,7 @@
 const UI = (() => {
   const U = {
     ctx: null, s: 3, insetTop: 0, goldShown: 0, hurt: 0, coins: [], msg: null, hover: null, menu: null, armed: null, idle: 99, mx: -1, my: -1, inside: false,
-    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
+    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, speedRect: null, pauseRect: null, statsRect: null, statsTap: -1e9, downT: 0, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0, lore: null, loreRect: null,
   };
   const COLR = { bg: 'rgba(9,11,17,0.86)', bg2: 'rgba(24,27,38,0.94)', bd: '#5d4c35', bdHi: '#e8b04a', tx: '#efe4cd', dim: '#a79e8a', amber: '#e8b04a', ember: '#ff8a3c', cold: '#8fc7ff', red: '#e5553c', dark: '#0b0d14', ok: '#9fd08a' };
   const _pv = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3();
@@ -10,7 +10,8 @@ const UI = (() => {
   U.proj = proj;
   U.playerActive = () => U.manual;
   U.setManual = on => { U.manual = !!on; if (!on) { U.menu = null; U.armed = null; } };
-  U.banner = (text, dur, big) => { U.msg = { text, t: 0, dur, big }; };
+  U.showLore = bio => { U.lore = LORE[bio.key] ? { bio, d: LORE[bio.key], t: 0, dur: 22 } : null; };
+  U.banner = (text, dur, big, sub) => { U.msg = { text, t: 0, dur, big, sub }; };
   U.ping = (x, y, z, byPlayer) => { fxTimed(4, x, y + .12, z, 5, 5, byPlayer ? 1.0 : 1.5, byPlayer ? 1.4 : 1.1, byPlayer ? 1.8 : .5, .7, .55, { ground: true }); };
   U.closeMenu = () => { U.menu = null; U.armed = null; };
   U.coinFrom = (x, y, z, value) => {
@@ -26,6 +27,40 @@ const UI = (() => {
   }
   function text(str, x, y, col, o) { return PX.text(U.ctx, str, x, y, U.s, col || COLR.tx, o); }
   const tw = str => PX.measure(str, U.s) * U.s;
+  const NOHEAD = '，。、；：！？」』）·';
+  function wrap(str, maxW) {
+    const out = []; let line = '';
+    for (const ch of str) {
+      if (line && tw(line + ch) > maxW && NOHEAD.indexOf(ch) < 0) { out.push(line); line = ch === ' ' ? '' : ch; }
+      else line += ch;
+    }
+    if (line) out.push(line); return out;
+  }
+  function drawLore(yTop) {
+    const L = U.lore, c = U.ctx, s = U.s, W = R.dw, H = R.dh, LH = PX.LINE * s, mp = 6 * s, gap = 3 * s;
+    L.t += R.frameDt; if (L.t >= L.dur) { U.lore = null; U.loreRect = null; return; }
+    const a = sat(Math.min((L.t - .4) * 2, (L.dur - L.t) * 2.5)); if (a <= 0) { U.loreRect = null; return; }
+    const d = L.d, sc = s + 1, title = stageLabel(G.level) + ' · ' + L.bio.name, lw = Math.max(tw('战事'), tw('地利')) + 4 * s, cw = tw('国');
+    let n = clamp(Math.floor(W * .3 / cw), 12, 21); const wMax = W - 10 * s;
+    const bodyW = () => lw + n * cw + mp * 2;
+    while (n > 8 && bodyW() > wMax) n--;
+    const war = wrap(d.war, n * cw), land = wrap(d.land, n * cw), rank = wrap(CAMPAIGN.note[L.bio.key] || '', n * cw), foot = '点击收起';
+    const w = Math.max(bodyW(), PX.measure(title, sc) * sc + mp * 2), lh = LH + s;
+    const h = mp * 2 + PX.LINE * sc + gap + (d.place ? lh : 0) + gap + (war.length + land.length + rank.length) * lh + gap * (rank.length ? 3 : 2) + lh;
+    const x = 5 * s, y = clamp(yTop, 5 * s, Math.max(5 * s, H - h - 30 * s));
+    c.globalAlpha = a * (U.menu ? .35 : 1);
+    plate(x, y, w, h, { bd: COLR.bdHi });
+    let yy = y + mp - s;
+    PX.text(c, title, x + mp, yy, sc, '#ffd9a8'); yy += PX.LINE * sc + gap;
+    if (d.place) { text(d.place, x + mp, yy, COLR.dim); yy += lh; }
+    c.fillStyle = COLR.bd; c.fillRect(x + mp, yy, w - mp * 2, s); yy += gap;
+    text('战事', x + mp, yy, COLR.ember); war.forEach((l, i) => text(l, x + mp + lw, yy + i * lh, COLR.tx)); yy += war.length * lh + gap;
+    text('地利', x + mp, yy, COLR.cold); land.forEach((l, i) => text(l, x + mp + lw, yy + i * lh, COLR.tx)); yy += land.length * lh + gap;
+    if (rank.length) { text('守难', x + mp, yy, COLR.amber); rank.forEach((l, i) => text(l, x + mp + lw, yy + i * lh, COLR.tx)); yy += rank.length * lh + gap; }
+    text(foot, x + w - mp, yy, COLR.dim, { align: 'r' });
+    c.globalAlpha = 1;
+    U.loreRect = { x, y, w, h };
+  }
 
   function initUI() {
     const cv = document.getElementById('hud'); U.ctx = cv.getContext('2d'); U.ctx.imageSmoothingEnabled = false;
@@ -40,27 +75,41 @@ const UI = (() => {
     window.addEventListener('pointermove', e => { U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.moved = 0; U.gp.active = false; });
     window.addEventListener('pointerleave', () => { U.inside = false; });
     document.addEventListener('mouseleave', () => { U.inside = false; });
-    window.addEventListener('pointerdown', e => { U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.gp.active = false; audioGesture(); onDown(); e.preventDefault(); }, { passive: false });
+    window.addEventListener('pointerdown', e => { if (CHEAT.owns(e.target)) return; if (e.button === 1 || e.button === 2) return; /* right and middle drag move the camera */ U.downT = e.timeStamp; U.mx = e.clientX * D(); U.my = e.clientY * D(); U.inside = true; U.gp.active = false; audioGesture(); onDown(); e.preventDefault(); }, { passive: false });
     window.addEventListener('pointerup', () => { U.press = null; });
     window.addEventListener('contextmenu', e => e.preventDefault());
     window.addEventListener('keydown', e => {
+      if (CHEAT.owns(e.target)) return;
       if (e.repeat) return; audioGesture();
       const k = e.key;
       if (k >= '1' && k <= '4') { pickKind(TOWER_KINDS[+k - 1]); e.preventDefault(); }
       else if (k === ' ' || k === 'Enter') { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); else sfx('uiDeny', CAM.x, CAM.z, .5); e.preventDefault(); }
-      else if (k === 'Escape') { U.closeMenu(); }
+      else if (k === 'Escape') { if (CHEAT.open) CHEAT.hide(); else if (U.menu || U.armed) U.closeMenu(); else if (U.lore) U.lore.dur = Math.min(U.lore.dur, U.lore.t + .4); }
       else if (k === 'u' || k === 'U') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doUpgrade(t); } }
+      else if (k === 't' || k === 'T') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doCrew(t); } }
       else if (k === 'x' || k === 'X' || k === 'Delete' || k === 'Backspace') { const t = U.menu && U.menu.tower; if (t) { touchInput(); doSell(t); } }
       else if (k === 'm' || k === 'M') { AU.setMuted(!AU.muted); }
       else if (k === 'c' || k === 'C') { toggleCommand(); }
+      else if (k === 'r' || k === 'R') { doReinforce(); }
+      else if (k === 'g' || k === 'G') { doWallUp(); }
+      else if (k === 'f' || k === 'F') { cycleSpeed(); }
+      else if (k === 'p' || k === 'P') { togglePause(); }
     });
   }
   function audioGesture() { if (!AU.ready) AU.unlock(); }
   function touchInput() { U.idle = 0; U.manual = true; }
   function toggleCommand() { U.setManual(!U.manual); U.idle = 0; sfx('uiClick', CAM.x, CAM.z, .8); }
+  const SPEEDS = [1, 2, 4];
+  function togglePause() { G.paused = !G.paused; sfx('uiClick', CAM.x, CAM.z, .8); }
+  U.togglePause = togglePause;
+  function cycleSpeed() { G.paused = false; G.speed = SPEEDS[(SPEEDS.indexOf(G.speed) + 1) % SPEEDS.length]; sfx('uiClick', CAM.x, CAM.z, .8); }
+  U.cycleSpeed = cycleSpeed;
   function deny() { U.deny = 1; sfx('uiDeny', CAM.x, CAM.z, .6); }
   function doBuild(pad, kind) { touchInput(); if (buildTower(pad, kind, true)) { sfx('uiClick', pad.x, pad.z, .8); U.menu = null; U.armed = null; return true; } deny(); return false; }
-  function doUpgrade(t) { if (upgradeTower(t, true)) { sfx('uiClick', t.x, t.z, .8); U.menu = null; return true; } deny(); return false; }
+  function doUpgrade(t) { if (t.ruin ? rebuildTower(t, true) : upgradeTower(t, true)) { sfx('uiClick', t.x, t.z, .8); U.menu = null; return true; } deny(); return false; }
+  function doCrew(t) { if (crewTower(t, true)) { sfx('uiClick', t.x, t.z, .8); return true; } deny(); return false; }
+  function doReinforce() { touchInput(); if (wallReinforce(true)) { sfx('uiClick', CAM.x, CAM.z, .8); return true; } deny(); return false; }
+  function doWallUp() { touchInput(); if (wallUpgrade(true)) { sfx('uiClick', CAM.x, CAM.z, .8); return true; } deny(); return false; }
   function doSell(t) { if (sellTower(t)) { U.menu = null; return true; } return false; }
   function pickKind(kind) {
     touchInput();
@@ -84,8 +133,15 @@ const UI = (() => {
   }
   function onDown() {
     const sr = U.soundRect; if (sr && U.mx >= sr.x && U.mx <= sr.x + sr.w && U.my >= sr.y && U.my <= sr.y + sr.h) { if (AU.ready && sr.armed) AU.setMuted(!AU.muted); sr.armed = true; return; }
+    const lr = U.loreRect; if (lr && U.lore && U.mx >= lr.x && U.mx <= lr.x + lr.w && U.my >= lr.y && U.my <= lr.y + lr.h) { U.lore.dur = Math.min(U.lore.dur, U.lore.t + .4); return; }
+    const inR = r => r && U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h;
+    if (inR(U.pauseRect)) { togglePause(); return; }
+    if (inR(U.speedRect)) { cycleSpeed(); return; }
+    // double-tap the resource bar (top left) to open the hidden resource editor
+    if (inR(U.statsRect)) { const now = U.downT; if (now - U.statsTap < 400) { U.statsTap = 0; CHEAT.toggle(); } else U.statsTap = now; return; }
     const cr = U.cmdRect; if (cr && U.mx >= cr.x && U.mx <= cr.x + cr.w && U.my >= cr.y && U.my <= cr.y + cr.h) { toggleCommand(); return; }
     if (U.hotBtn) { touchInput(); U.press = U.hotBtn.id; U.hotBtn.fn(); return; }
+    for (const r of U.wallRects) if (U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h) { r.fn(); return; }
     const h = pickPad(U.mx, U.my);
     if (h) {
       touchInput();
@@ -118,6 +174,7 @@ const UI = (() => {
     if (hit(0)) { touchInput(); audioGesture(); st.active = true; if (st.sel < 0) st.sel = 0; if (U.menu) { const bt = U.btns[U.menu.focus]; if (bt) bt.fn(); } else { const pad = G.B.pads[st.sel]; U.menu = { pad, tower: pad.tower, t: 0, focus: 0 }; sfx('uiHover', pad.x, pad.z, .9); } }
     if (hit(1)) { U.closeMenu(); touchInput(); }
     if (hit(2)) { const pad = st.sel >= 0 ? G.B.pads[st.sel] : null; if (pad && pad.tower) { touchInput(); doUpgrade(pad.tower); } }
+    if (hit(4)) doReinforce(); if (hit(5)) doWallUp();
     if (hit(3) || hit(9)) { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); }
     for (let i = 0; i < 16; i++) st.prev[i] = b(i);
   }
@@ -127,6 +184,7 @@ const UI = (() => {
     if (G.slain !== U.lastSlain) { U.lastSlain = G.slain; U.slainBump = 1; }
     U.s = Math.max(2, Math.round(R.dh / 430));
     pollGamepad(dt);
+    if (CHEAT.open) CHEAT.sync();
     if (U.menu) { U.menu.t += dt; if ((U.menu.tower && !U.menu.tower.alive) || G.phase !== 'play') U.menu = null; else if (U.menu.pad.tower !== U.menu.tower) U.menu.tower = U.menu.pad.tower; }
     if (G.phase !== 'play') { U.armed = null; U.hover = null; }
     else U.hover = (U.inside && !U.hotBtn) ? pickPad(U.mx, U.my) : null;
@@ -139,7 +197,7 @@ const UI = (() => {
       let range = 0; if (tgt.tower) range = tgt.tower.range; else { const kind = (U.menu && U.hotBtn && U.hotBtn.kind) || U.armed || (U.menu && U.btns[U.menu.focus] && U.gp.active && U.btns[U.menu.focus].kind) || 'archer'; range = TOWER[kind].range[0]; }
       setRing(U.rangeMesh, pad.x, pad.z, range, .07); U.rangeMesh.material.opacity = .34;
     } else { U.padMesh.visible = false; U.rangeMesh.visible = false; }
-    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot)) ? 'pointer' : 'default';
+    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot) || (U.speedRect && U.speedRect.hot) || (U.pauseRect && U.pauseRect.hot) || U.wallRects.some(r => r.hot)) ? 'pointer' : 'default';
   }
 
   function draw() {
@@ -147,18 +205,18 @@ const UI = (() => {
     c.clearRect(0, 0, W, H); U.btns.length = 0; let hot = null;
     const pix = Math.max(1, Math.round(R.dh / R.ih));
     for (const b of G.hbars) {
-      const p = proj(b.x, b.y, b.z), w = (b.boss ? 34 : b.man ? 8 : 9) * pix, h = (b.boss ? 2 : 1) * pix, x = Math.round(p.x - w / 2), y = Math.round(p.y);
+      const p = proj(b.x, b.y, b.z), w = (b.boss ? 34 : b.wide ? 16 : b.man ? 8 : 9) * pix, h = (b.boss ? 2 : 1) * pix, x = Math.round(p.x - w / 2), y = Math.round(p.y);
       if (x < -w || x > W || y < 0 || y > H) continue;
       c.globalAlpha = b.f >= .999 ? .4 : .95;
       c.fillStyle = COLR.dark; c.fillRect(x - pix, y - pix, w + 2 * pix, h + 2 * pix);
-      c.fillStyle = b.man ? '#7fb6ea' : (b.f > .5 ? '#d9a13c' : b.f > .25 ? '#e0762c' : '#e04a32'); c.fillRect(x, y, Math.max(pix, Math.round(w * b.f)), h);
+      c.fillStyle = b.wide ? (b.f > .5 ? '#9fd08a' : '#e0762c') : b.man ? '#7fb6ea' : (b.f > .5 ? '#d9a13c' : b.f > .25 ? '#e0762c' : '#e04a32'); c.fillRect(x, y, Math.max(pix, Math.round(w * b.f)), h);
       c.globalAlpha = 1;
       if (b.boss) text(b.name, p.x, y - LH - 2 * pix, COLR.tx, { align: 'c', outline: COLR.dark });
     }
     const stats = [['flame', '' + G.lives, U.hurt > 0 ? COLR.red : COLR.tx], ['coin', '' + Math.floor(U.goldShown), U.deny > 0 ? COLR.red : (U.goldBump > 0 ? '#ffe2a0' : COLR.tx)], ['skull', '' + G.slain, U.slainBump > .5 ? '#ffffff' : COLR.tx]];
     let wS = pad; for (const st of stats) wS += PX.iconSize(st[0])[0] * s + 2 * s + Math.max(tw(st[1]), tw('000')) + 6 * s; wS += pad - 6 * s;
     const hS = 10 * s + pad * 2 - 2 * s, x0 = 5 * s, y0 = 5 * s + U.insetTop;
-    plate(x0, y0, wS, hS, U.hurt > 0 ? { bd: COLR.red } : {});
+    plate(x0, y0, wS, hS, U.hurt > 0 ? { bd: COLR.red } : CHEAT.open ? { bd: COLR.bdHi } : {}); U.statsRect = { x: x0, y: y0, w: wS, h: hS };
     let x = x0 + pad; const goldPos = { x: 0, y: 0 };
     for (const st of stats) {
       const [iw, ih] = PX.iconSize(st[0]); const iy = y0 + Math.round((hS - ih * s) / 2);
@@ -168,7 +226,7 @@ const UI = (() => {
     const wn = '第 ' + Math.max(1, waveNumber()) + ' 波';
     let sub, frac = -1;
     if (G.phase === 'play') { if (!G.spawning && !G.bossWave && G.nextIn > 0) { sub = '下一波 ' + Math.ceil(G.nextIn) + ' 秒'; frac = 1 - G.nextIn / 6.5; } else { const n = G.mons.length + G.queue.length; sub = '来敌 ' + n; } }
-    else sub = G.phase === 'defeat' ? '烽火已熄' : G.phase === 'clear' ? '首领已诛' : '转战下一关';
+    else sub = G.phase === 'defeat' ? '关城失守' : G.phase === 'clear' ? '首领已诛' : '转战下一关';
     const bw = PX.iconSize('banner')[0] * s, wW = Math.max(bw + 3 * s + tw(wn), tw(sub), tw('下一波 00 秒')) + pad * 2 + 4 * s, hW = LH * 2 + pad * 2 + s;
     const you = U.playerActive(), ct = you ? '亲自督战' : '军师代守', cs = you ? '点此交还军师' : '点击塔基即可接管';
     const ic = you ? 'hand' : 'helm', icw = PX.iconSize(ic)[0] * s, cW = Math.max(icw + 3 * s + tw(ct), tw(cs)) + pad * 2 + 2 * s, xc = W - cW - 5 * s, g3 = 3 * s;
@@ -189,17 +247,43 @@ const UI = (() => {
     { const on = AU.ready && !AU.muted, lbl = AU.ready ? (AU.muted ? '已静音' : '声音开') : '点击开启声音', icn = on ? 'sound' : 'mute', iw2 = PX.iconSize(icn)[0] * s, w = iw2 + 3 * s + tw(lbl) + pad * 2, h = LH + pad * 2 - s, xs = 5 * s, ys = H - h - 5 * s;
       const hotS = U.inside && U.mx >= xs && U.mx <= xs + w && U.my >= ys && U.my <= ys + h;
       plate(xs, ys, w, h, hotS ? { bd: COLR.bdHi, bg: COLR.bg2 } : {}); PX.icon(c, icn, xs + pad, ys + pad - s, s, AU.ready ? 1 : .8); text(lbl, xs + pad + iw2 + 3 * s, ys + pad - s, AU.ready ? COLR.dim : COLR.tx);
-      U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false }; }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+      U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false };
+      const fast = G.speed > 1, sl = '快进 ' + G.speed + '倍', sw = tw('快进 4倍') + pad * 2, pw = tw('暂停') + pad * 2, pxp = xs + w + 3 * s, sxp = pxp + pw + 3 * s, hotF = U.inside && U.mx >= sxp && U.mx <= sxp + sw && U.my >= ys && U.my <= ys + h;
+      plate(sxp, ys, sw, h, hotF ? { bd: COLR.bdHi, bg: COLR.bg2 } : fast ? { bd: COLR.ember } : {}); text(sl, sxp + sw / 2, ys + pad - s, fast ? COLR.amber : COLR.dim, { align: 'c' });
+      U.speedRect = { x: sxp, y: ys, w: sw, h, hot: hotF };
+      const hotP = U.inside && U.mx >= pxp && U.mx <= pxp + pw && U.my >= ys && U.my <= ys + h;
+      plate(pxp, ys, pw, h, hotP ? { bd: COLR.bdHi, bg: COLR.bg2 } : G.paused ? { bd: COLR.ember } : {}); text(G.paused ? '继续' : '暂停', pxp + pw / 2, ys + pad - s, G.paused ? COLR.amber : COLR.dim, { align: 'c' });
+      U.pauseRect = { x: pxp, y: ys, w: pw, h, hot: hotP };
+      if (G.paused) { const t = '已暂停', ts = s + 2, pw2 = PX.measure(t, ts) * ts + pad * 4, ph = PX.LINE * ts + pad * 2, px2 = Math.round(W / 2 - pw2 / 2), py2 = Math.round(H * .42); plate(px2, py2, pw2, ph, { bd: COLR.ember }); PX.text(c, t, W / 2, py2 + pad, ts, COLR.amber, { align: 'c' }); } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · U 升级 · T 添兵 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
+    // the wall: its garrison, the reinforce skill and the garrison upgrade
+    U.wallRects.length = 0; U.wallBox = null;
+    if (G.phase === 'play' && G.wall && U.titleT >= 7) {
+      const Wl = G.wall, lv = Wl.lvl, maxed = lv >= WALL.tiers.length - 1, locked = !maxed && lv >= tierCap(), full = Wl.n >= WALL.max, upc = maxed ? 0 : WALL.cost[lv + 1];
+      const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = (Wl.open ? '城门已破' : '城门 ' + Math.ceil(Wl.gate)) + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + WALL.dmg[lv];
+      const la = full ? '守军已满' : 'R 增兵 ' + WALL.addCost, lu = maxed ? '已满级' : locked ? '升级未解锁' : 'G 升级 ' + upc;
+      const bh = LH + 4 * s, w = Math.max(tw(t1), tw(t2), (Math.max(tw(la), tw(lu)) + 8 * s) * 2 + 3 * s) + pad * 2, h = LH * 2 + bh + pad * 2 + 3 * s;
+      const xp = Math.round(W / 2 - w / 2), sr = U.speedRect || U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
+      plate(xp, yp, w, h, Wl.siegeN ? { bd: COLR.ember } : {}); U.wallBox = { x: xp, y: yp, w, h };
+      text(t1, xp + pad, yp + pad - s, COLR.amber); text(t2, xp + pad, yp + pad + LH, Wl.open || Wl.stormN || !Wl.n ? COLR.red : Wl.siegeN ? COLR.ember : COLR.dim);
+      const by = yp + pad + LH * 2 + 2 * s, bw2 = Math.floor((w - pad * 2 - 3 * s) / 2);
+      [[la, !full && G.gold >= WALL.addCost, full, doReinforce], [lu, !maxed && !locked && G.gold >= upc, maxed || locked, doWallUp]].forEach(([l, can, done, fn], i) => {
+        const bx = xp + pad + i * (bw2 + 3 * s), over = U.inside && !U.gp.active && U.mx >= bx && U.mx <= bx + bw2 && U.my >= by && U.my <= by + bh;
+        plate(bx, by, bw2, bh, { bg: over ? COLR.bg2 : 'rgba(16,18,27,0.96)', bd: over ? COLR.bdHi : (can ? COLR.bd : '#3a342c'), hi: over ? 'rgba(232,176,74,0.18)' : null });
+        text(l, bx + Math.round(bw2 / 2), by + 2 * s, can ? COLR.tx : done ? COLR.dim : COLR.red, { align: 'c' });
+        U.wallRects.push({ x: bx, y: by, w: bw2, h: bh, fn, hot: over });
+      });
+    }
     for (let i = U.coins.length - 1; i >= 0; i--) {
       const q = U.coins[i]; q.t += R.frameDt; const u = sat(q.t / q.T), e = u * u * (3 - 2 * u), a = 1 - e;
       const px = a * a * q.sx + 2 * a * e * q.cx + e * e * goldPos.x, py = a * a * q.sy + 2 * a * e * q.cy + e * e * goldPos.y;
       PX.icon(c, 'coin', Math.round(px - 4 * s * .75), Math.round(py - 4 * s * .75), Math.max(2, s - 1), 1);
       if (u >= 1) { U.goldShown = Math.min(G.gold, U.goldShown + q.value); U.goldBump = 1; sfx('coin', CAM.x, CAM.z, .35, rnd()); U.coins.splice(i, 1); }
     }
+    if (U.lore) drawLore(y0 + topH + 4 * s); else U.loreRect = null;
     if (U.msg) {
       const m = U.msg; m.t += R.frameDt; const a = sat(Math.min(m.t * 3, (m.dur - m.t) * 2));
-      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = PX.measure(m.text, sc) * sc + pad * 4, h = PX.LINE * sc + pad * 2; c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); c.globalAlpha = 1; }
+      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
     }
     if (U.menu && G.phase === 'play') {
       const m = U.menu, p = proj(m.pad.x, m.pad.y + (m.tower ? Math.min(3.6, m.tower.mounts.top) : 1.2), m.pad.z), a = sat(m.t * 8), mp = 6 * s;
@@ -214,42 +298,52 @@ const UI = (() => {
       if (!m.tower) {
         const bwid = 31 * s, bh = 35 * s, gapb = 3 * s, rowW = 4 * bwid + 3 * gapb;
         let lit = null; const fk = U.gp.active ? TOWER_KINDS[m.focus % 4] : null;
-        const lines = k => k ? [TOWER[k].name].concat(TOWER[k].desc) : ['选择防御工事', '悬停或按 1 至 4，', '查看各自用途。'];
+        const lines = k => k ? (kindUnlocked(k) ? [TOWER[k].name].concat(TOWER[k].desc) : [TOWER[k].name + ' · 未解锁', lockHint(kindNeeds(k)) + '。', '']) : ['选择防御工事', '悬停或按 1 至 4，', '查看各自用途。'];
         let textW = 0; for (const k of [null].concat(TOWER_KINDS)) for (const l of lines(k)) textW = Math.max(textW, tw(l));
         const wP = Math.max(rowW, textW) + mp * 2, hP = mp * 2 + LH + 3 * s + bh + 4 * s + LH * 3 + 2 * s, [px, py] = place(wP, hP);
         plate(px, py, wP, hP); text('在此建造', px + mp, py + mp - s, COLR.amber);
         const bx0 = px + Math.round((wP - rowW) / 2), by = py + mp + LH + 3 * s;
         TOWER_KINDS.forEach((kind, i) => {
-          const d = TOWER[kind], can = G.gold >= d.cost[0], bx = bx0 + i * (bwid + gapb);
+          const d = TOWER[kind], open = kindUnlocked(kind), can = open && G.gold >= d.cost[0], bx = bx0 + i * (bwid + gapb);
           const r = button(bx, by, bwid, bh, 'b' + kind, can, () => doBuild(m.pad, kind), kind);
           const [iw, ih] = PX.iconSize(d.icon); PX.icon(c, d.icon, bx + Math.round((bwid - iw * s) / 2), by + 6 * s + r.dy, s, can ? 1 : .45);
           text('' + (i + 1), bx + 3 * s, by + 2 * s + r.dy, COLR.dim);
           const cw2 = 8 * s + 2 * s + tw('' + d.cost[0]), cx0 = bx + Math.round((bwid - cw2) / 2);
-          PX.icon(c, 'coin', cx0, by + bh - LH - 3 * s + r.dy, s, can ? 1 : .5); text('' + d.cost[0], cx0 + 10 * s, by + bh - LH - 3 * s + r.dy, can ? COLR.amber : COLR.red);
+          if (open) { PX.icon(c, 'coin', cx0, by + bh - LH - 3 * s + r.dy, s, can ? 1 : .5); text('' + d.cost[0], cx0 + 10 * s, by + bh - LH - 3 * s + r.dy, can ? COLR.amber : COLR.red); } else text('未解', bx + Math.round(bwid / 2), by + bh - LH - 3 * s + r.dy, COLR.dim, { align: 'c' });
           if (r.lit) lit = kind;
         });
         const ls = lines(lit || fk), ty = by + bh + 4 * s;
         text(ls[0], px + mp, ty, lit || fk ? COLR.tx : COLR.dim); text(ls[1], px + mp, ty + LH + s, COLR.dim); if (ls[2]) text(ls[2], px + mp, ty + LH * 2 + s, COLR.dim);
       } else {
-        const t = m.tower, d = t.def, maxed = t.lvl >= 2, upc = maxed ? 0 : d.cost[t.lvl + 1], can = !maxed && G.gold >= upc && t.state === 'active', refund = Math.round(t.spent * .6);
-        const ul = maxed ? '已满级' : '升级 ' + upc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
-        const st = t.kind === 'guard' ? '戍卒 ' + d.n[t.lvl] + ' · 生命 ' + d.hp[t.lvl] : '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + d.dmg[t.lvl];
-        const wP = Math.max(bw3 * 2 + 3 * s, tw(d.name) + 26 * s, tw(st)) + mp * 2, hP = mp * 2 + LH * 2 + 5 * s + bh, [px, py] = place(wP, hP);
+        const t = m.tower, d = t.def, ruin = !!t.ruin, maxed = t.lvl >= t.maxLvl, locked = !ruin && !maxed && t.lvl >= tierCap(), nT = t.maxLvl + 1, upc = ruin ? rebuildCost(t) : maxed ? 0 : upgradeCost(t), can = ruin ? G.gold >= upc : !maxed && !locked && G.gold >= upc && t.state === 'active', refund = towerRefund(t);
+        // the lesser upgrade: more men for this work (66-crew.js)
+        const C = CREW.by[t.kind], cn = crewOf(t), cfull = cn >= CREW.max, cc = crewCost(t), ccan = !ruin && !cfull && G.gold >= cc && t.state === 'active';
+        const ul = ruin ? '重建 ' + upc : maxed ? '已满级' : locked ? '未解锁' : '升级 ' + upc, cl = cfull ? '兵满' : '添兵 ' + cc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(cl), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
+        const st = ruin ? '已被首领摧毁，停止作战' : (t.kind === 'guard' ? '戍卒 ' + crewMen(t) + ' · 生命 ' + d.hp[t.lvl] : (t.kind === 'archer' ? '弓手 ' + t.archers.length + ' · ' : '') + '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + Math.round(d.dmg[t.lvl] * crewDmg(t))) + ' · 耐久 ' + Math.ceil(t.hp === undefined ? towerMaxHp(t) : t.hp);
+        // the era of this level, and what the next level brings; over the lesser upgrade's button, what more men bring
+        const onCrew = !ruin && (U.gp.active ? m.focus === 1 : !!(U.hotBtn && U.hotBtn.id === 'crew'));
+        const cur = d.tiers[t.lvl][0] + ' · 添兵 ' + cn + '/' + CREW.max, nx = maxed || ruin ? null : d.tiers[t.lvl + 1];
+        const l1 = ruin ? '重建后保留原有等级与驻军' : onCrew ? (cfull ? '驻军已满' : C.gain) : nx ? (locked ? '下一级 ' : '升级为 ') + nx[0] : d.tiers[t.lvl][1], l2 = ruin ? '' : onCrew ? C.note : nx ? (locked ? lockHint(tierNeeds(t.lvl + 1)) + '。' : nx[1]) : '';
+        let wT = Math.max(tw(d.name) + 26 * s, tw(st), tw(cur), tw(l1), tw(l2), tw(C.gain), tw(C.note)); if (nx) wT = Math.max(wT, tw('升级为 ' + nx[0]), tw(nx[1]));
+        const wP = Math.max(bw3 * 3 + 6 * s, wT) + mp * 2, hP = mp * 2 + LH * 5 + 9 * s + bh, [px, py] = place(wP, hP);
         plate(px, py, wP, hP); text(d.name, px + mp, py + mp - s, COLR.amber);
-        for (let i = 0; i < 3; i++) PX.icon(c, i <= t.lvl ? 'star' : 'starEmpty', px + wP - mp - (3 - i) * 6 * s, py + mp, s);
-        text(st, px + mp, py + mp + LH + s, COLR.dim);
-        const by = py + mp + LH * 2 + 5 * s, bwf = Math.floor((wP - mp * 2 - 3 * s) / 2);
+        for (let i = 0; i < nT; i++) PX.icon(c, i <= t.lvl ? 'star' : 'starEmpty', px + wP - mp - (nT - i) * 6 * s, py + mp, s);
+        text(cur, px + mp, py + mp + LH + s, COLR.tx); text(st, px + mp, py + mp + LH * 2 + s, COLR.dim);
+        text(l1, px + mp, py + mp + LH * 3 + 4 * s, nx || ruin || onCrew ? COLR.amber : COLR.dim); if (l2) text(l2, px + mp, py + mp + LH * 4 + 4 * s, COLR.dim);
+        const by = py + mp + LH * 5 + 9 * s, bwf = Math.floor((wP - mp * 2 - 6 * s) / 3);
         let r = button(px + mp, by, bwf, bh, 'up', can, () => doUpgrade(t), null);
-        PX.icon(c, 'upgrade', px + mp + 4 * s, by + 3 * s + r.dy, s, can ? 1 : .4); text(ul, px + mp + 4 * s + iw9 + 3 * s, by + 3 * s + r.dy, can ? COLR.tx : (maxed ? COLR.dim : COLR.red));
-        r = button(px + mp + bwf + 3 * s, by, bwf, bh, 'sell', true, () => doSell(t), null);
-        PX.icon(c, 'sell', px + mp + bwf + 7 * s, by + 3 * s + r.dy, s); text(sl, px + mp + bwf + 7 * s + iw9 + 3 * s, by + 3 * s + r.dy, COLR.tx);
+        PX.icon(c, 'upgrade', px + mp + 4 * s, by + 3 * s + r.dy, s, can ? 1 : .4); text(ul, px + mp + 4 * s + iw9 + 3 * s, by + 3 * s + r.dy, can ? COLR.tx : ((maxed && !ruin) || locked ? COLR.dim : COLR.red));
+        r = button(px + mp + bwf + 3 * s, by, bwf, bh, 'crew', ccan, () => doCrew(t), null);
+        PX.icon(c, 'helm', px + mp + bwf + 7 * s, by + 3 * s + r.dy, s, ccan ? 1 : .4); text(cl, px + mp + bwf + 7 * s + iw9 + 3 * s, by + 3 * s + r.dy, ccan ? COLR.tx : (cfull || ruin ? COLR.dim : COLR.red));
+        r = button(px + mp + (bwf + 3 * s) * 2, by, bwf, bh, 'sell', true, () => doSell(t), null);
+        PX.icon(c, 'sell', px + mp + (bwf + 3 * s) * 2 + 4 * s, by + 3 * s + r.dy, s); text(sl, px + mp + (bwf + 3 * s) * 2 + 4 * s + iw9 + 3 * s, by + 3 * s + r.dy, COLR.tx);
       }
       c.globalAlpha = 1;
     }
     if (hot !== U.hotBtn && hot) sfx('uiHover', CAM.x, CAM.z, .5);
     U.hotBtn = hot;
     if (U.armed && U.inside && G.phase === 'play') { const l = TOWER[U.armed].name + '：点击塔基', w = tw(l) + pad * 2; const xx = clamp(U.mx + 10 * s, 2 * s, W - w - 2 * s), yy = clamp(U.my + 10 * s, 2 * s, H - LH - pad * 2); plate(xx, yy, w, LH + pad * 2 - s, { bd: COLR.bdHi }); text(l, xx + pad, yy + pad - s, COLR.tx); }
-    if (U.titleT < 7 && !U.menu) { const a = sat(Math.min((U.titleT - .4) * 1.5, (6.6 - U.titleT) * 1.2)); if (a > 0) { const sc = s * 2, t1 = '烽燧', t2 = G.B.bio.name + ' · 军师代守，随时可接管', w = Math.max(PX.measure(t1, sc) * sc, tw(t2)) + pad * 4, h = PX.LINE * sc + LH + pad * 2 + 2 * s, yy = H - h - 22 * s; c.globalAlpha = a; plate(Math.round(W / 2 - w / 2), yy, w, h); PX.text(c, t1, W / 2, yy + pad, sc, '#ffd9a8', { align: 'c' }); text(t2, W / 2, yy + pad + PX.LINE * sc + s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; } }
+    if (U.titleT < 7 && !U.menu) { const a = sat(Math.min((U.titleT - .4) * 1.5, (6.6 - U.titleT) * 1.2)); if (a > 0) { const sc = s * 2, t1 = '烽燧', t2 = stageLabel(G.level) + ' ' + G.B.bio.name + ' · 军师代守，随时可接管', w = Math.max(PX.measure(t1, sc) * sc, tw(t2)) + pad * 4, h = PX.LINE * sc + LH + pad * 2 + 2 * s, yy = H - h - 22 * s; c.globalAlpha = a; plate(Math.round(W / 2 - w / 2), yy, w, h); PX.text(c, t1, W / 2, yy + pad, sc, '#ffd9a8', { align: 'c' }); text(t2, W / 2, yy + pad + PX.LINE * sc + s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; } }
     if (HASH.fps) { text(R.fpsText || '', 6 * s, H - 30 * s, COLR.ok, { outline: COLR.dark }); }
   }
   U.init = initUI; U.update = update; U.draw = draw;
