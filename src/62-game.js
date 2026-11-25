@@ -207,7 +207,7 @@ function updatePhase(dt) {
   LT.beaconLevel = damp(LT.beaconLevel, G.lives / G.maxLives, 3, dt);
   if (B.beaconFlame) { const f = B.beaconFlame, lv = LT.beaconLevel; f.on = LT.beaconOn; f.size = 2.35 * (.42 + .58 * lv) * (1 - .32 * LT.beaconGutter); f.embers = 1 + 2 * lv + 6 * LT.beaconGutter; }
   for (let i = 1; i < B.flames.length; i++) B.flames[i].on = LT.beaconOn;
-  if (G.phase === 'clear') { if (t > 2.6) setPhase('crumble'); }
+  if (G.phase === 'clear') { if (t > 2.6 && !HERO.hold()) setPhase('crumble'); } // the post-battle merit roll (64-hero.js) holds the stage until it is dismissed
   else if (G.phase === 'defeat') {
     for (const tw of G.towers) { tw.em.on = damp(tw.em.on, 0, 1.5 + tw.idx * .15, dt); if (tw.flame) tw.flame.on = tw.em.on; if (tw.flame2) tw.flame2.on = tw.em.on; }
     if (t > 4.4) { G.level = 0; G.press = Math.max(.8, G.press * .85); G.run++; setPhase('crumble'); }

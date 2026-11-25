@@ -58,6 +58,7 @@ function step(rdt, quiet) {
     updateWaves(dt); aiThink(dt);
     for (const t of G.towers) if (t.alive) t.update(dt);
     updateWall(dt);
+    HERO.update(dt);
     updateUnits(dt);
     for (let i = G.mons.length - 1; i >= 0; i--) if (G.mons[i].dead) swapRemove(G.mons, i);
     updateProjectiles(dt);
@@ -100,7 +101,7 @@ function frame(now) {
   const n = G.speed > 1 ? G.speed : 1; for (let i = 1; i < n; i++) step(rdt, true);
   step(rdt);
   R.fade = Math.min(1, R.fade + rdt * 1.6);
-  applyCamera(); renderFrame(); UI.draw();
+  applyCamera(); renderFrame(); UI.draw(); HERO.draw();
   if (document.hidden || raw > .25) { _acc = 0; _frames = 0; return; }
   _acc += raw; _frames++;
   if (_acc >= 2) {
@@ -117,7 +118,7 @@ function frame(now) {
 }
 
 function boot() {
-  initRenderer(); initMaterials(); resizeRenderer(); initLights(); initFX(); initWeather(); initKits(); UI.init();
+  initRenderer(); initMaterials(); resizeRenderer(); initLights(); initFX(); initWeather(); initKits(); UI.init(); HERO.init();
   KIT.marker = new PartBatch(S => { S.box(.07, .75, .07, 0, .37, 0, COL.woodD, { l: L_WOOD, r: [0, 0, .08] }); clothPanel(S, { x0: .03, x1: .36, yTop: .72, len: .26, z: 0, col: COL.clothT, rng: makeRng(9), nx: 2, ny: 2, rag: 0, sway: 0 }); S.rock(.12, -.2, .04, .15, COL.stone, {}); S.rock(.09, .22, .03, -.12, COL.stoneD, {}); }, 14, { rad: .1 });
   G.boardSeed = HASH.seed ? +HASH.seed : 1 + Math.floor(Math.random() * 9000);
   G.boardIndex = +(HASH.board || 0); G.level = +(HASH.level || 0);
@@ -126,7 +127,7 @@ function boot() {
   R.scene.add(B.group); activateBoard(B, true);
   beginBattle(true);
   window.addEventListener('resize', resizeRenderer);
-  window.__cw = { G, R, CAM, UI, LT, FX, AI, PX, MON, LOOK, KIT, buildTower, upgradeTower, wallReinforce, wallUpgrade, WALL, SIEGE, GATE, ROSTER, TOWER, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
+  window.__cw = { HERO, HEROES, G, R, CAM, UI, LT, FX, AI, PX, MON, LOOK, KIT, buildTower, upgradeTower, wallReinforce, wallUpgrade, WALL, SIEGE, GATE, ROSTER, TOWER, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); HERO.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
   if (HASH.k) G.k = +HASH.k;
   if (HASH.ff) { const n = Math.round(+HASH.ff * 30); for (let i = 0; i < n; i++) step(1 / 30); CAM.sx = CAM.fx; CAM.sz = CAM.fz; R.fade = 1; }
   if (HASH.phase) setPhase(HASH.phase);
