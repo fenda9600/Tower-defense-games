@@ -2,7 +2,7 @@
 const UI = (() => {
   const U = {
     ctx: null, s: 3, insetTop: 0, goldShown: 0, hurt: 0, coins: [], msg: null, hover: null, menu: null, armed: null, idle: 99, mx: -1, my: -1, inside: false,
-    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, speedRect: null, statsRect: null, statsTap: -1e9, downT: 0, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
+    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, speedRect: null, statsRect: null, statsTap: -1e9, downT: 0, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0, lore: null, loreRect: null,
   };
   const COLR = { bg: 'rgba(9,11,17,0.86)', bg2: 'rgba(24,27,38,0.94)', bd: '#5d4c35', bdHi: '#e8b04a', tx: '#efe4cd', dim: '#a79e8a', amber: '#e8b04a', ember: '#ff8a3c', cold: '#8fc7ff', red: '#e5553c', dark: '#0b0d14', ok: '#9fd08a' };
   const _pv = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3();
@@ -10,6 +10,7 @@ const UI = (() => {
   U.proj = proj;
   U.playerActive = () => U.manual;
   U.setManual = on => { U.manual = !!on; if (!on) { U.menu = null; U.armed = null; } };
+  U.showLore = bio => { U.lore = LORE[bio.key] ? { bio, d: LORE[bio.key], t: 0, dur: 18 } : null; };
   U.banner = (text, dur, big, sub) => { U.msg = { text, t: 0, dur, big, sub }; };
   U.ping = (x, y, z, byPlayer) => { fxTimed(4, x, y + .12, z, 5, 5, byPlayer ? 1.0 : 1.5, byPlayer ? 1.4 : 1.1, byPlayer ? 1.8 : .5, .7, .55, { ground: true }); };
   U.closeMenu = () => { U.menu = null; U.armed = null; };
@@ -26,6 +27,39 @@ const UI = (() => {
   }
   function text(str, x, y, col, o) { return PX.text(U.ctx, str, x, y, U.s, col || COLR.tx, o); }
   const tw = str => PX.measure(str, U.s) * U.s;
+  const NOHEAD = '，。、；：！？」』）·';
+  function wrap(str, maxW) {
+    const out = []; let line = '';
+    for (const ch of str) {
+      if (line && tw(line + ch) > maxW && NOHEAD.indexOf(ch) < 0) { out.push(line); line = ch === ' ' ? '' : ch; }
+      else line += ch;
+    }
+    if (line) out.push(line); return out;
+  }
+  function drawLore(yTop) {
+    const L = U.lore, c = U.ctx, s = U.s, W = R.dw, H = R.dh, LH = PX.LINE * s, mp = 6 * s, gap = 3 * s;
+    L.t += R.frameDt; if (L.t >= L.dur) { U.lore = null; U.loreRect = null; return; }
+    const a = sat(Math.min((L.t - .4) * 2, (L.dur - L.t) * 2.5)); if (a <= 0) { U.loreRect = null; return; }
+    const d = L.d, sc = s + 1, title = '战史 · ' + L.bio.name, lw = Math.max(tw('战事'), tw('地利')) + 4 * s, cw = tw('国');
+    let n = clamp(Math.floor(W * .3 / cw), 12, 21); const wMax = W - 10 * s;
+    const bodyW = () => lw + n * cw + mp * 2;
+    while (n > 8 && bodyW() > wMax) n--;
+    const war = wrap(d.war, n * cw), land = wrap(d.land, n * cw), foot = '点击收起';
+    const w = Math.max(bodyW(), PX.measure(title, sc) * sc + mp * 2), lh = LH + s;
+    const h = mp * 2 + PX.LINE * sc + gap + (d.place ? lh : 0) + gap + (war.length + land.length) * lh + gap * 2 + lh;
+    const x = 5 * s, y = clamp(yTop, 5 * s, Math.max(5 * s, H - h - 30 * s));
+    c.globalAlpha = a * (U.menu ? .35 : 1);
+    plate(x, y, w, h, { bd: COLR.bdHi });
+    let yy = y + mp - s;
+    PX.text(c, title, x + mp, yy, sc, '#ffd9a8'); yy += PX.LINE * sc + gap;
+    if (d.place) { text(d.place, x + mp, yy, COLR.dim); yy += lh; }
+    c.fillStyle = COLR.bd; c.fillRect(x + mp, yy, w - mp * 2, s); yy += gap;
+    text('战事', x + mp, yy, COLR.ember); war.forEach((l, i) => text(l, x + mp + lw, yy + i * lh, COLR.tx)); yy += war.length * lh + gap;
+    text('地利', x + mp, yy, COLR.cold); land.forEach((l, i) => text(l, x + mp + lw, yy + i * lh, COLR.tx)); yy += land.length * lh + gap;
+    text(foot, x + w - mp, yy, COLR.dim, { align: 'r' });
+    c.globalAlpha = 1;
+    U.loreRect = { x, y, w, h };
+  }
 
   function initUI() {
     const cv = document.getElementById('hud'); U.ctx = cv.getContext('2d'); U.ctx.imageSmoothingEnabled = false;
@@ -49,7 +83,7 @@ const UI = (() => {
       const k = e.key;
       if (k >= '1' && k <= '4') { pickKind(TOWER_KINDS[+k - 1]); e.preventDefault(); }
       else if (k === ' ' || k === 'Enter') { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); else sfx('uiDeny', CAM.x, CAM.z, .5); e.preventDefault(); }
-      else if (k === 'Escape') { if (CHEAT.open) CHEAT.hide(); else U.closeMenu(); }
+      else if (k === 'Escape') { if (CHEAT.open) CHEAT.hide(); else if (U.menu || U.armed) U.closeMenu(); else if (U.lore) U.lore.dur = Math.min(U.lore.dur, U.lore.t + .4); }
       else if (k === 'u' || k === 'U') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doUpgrade(t); } }
       else if (k === 'x' || k === 'X' || k === 'Delete' || k === 'Backspace') { const t = U.menu && U.menu.tower; if (t) { touchInput(); doSell(t); } }
       else if (k === 'm' || k === 'M') { AU.setMuted(!AU.muted); }
@@ -93,6 +127,7 @@ const UI = (() => {
   }
   function onDown() {
     const sr = U.soundRect; if (sr && U.mx >= sr.x && U.mx <= sr.x + sr.w && U.my >= sr.y && U.my <= sr.y + sr.h) { if (AU.ready && sr.armed) AU.setMuted(!AU.muted); sr.armed = true; return; }
+    const lr = U.loreRect; if (lr && U.lore && U.mx >= lr.x && U.mx <= lr.x + lr.w && U.my >= lr.y && U.my <= lr.y + lr.h) { U.lore.dur = Math.min(U.lore.dur, U.lore.t + .4); return; }
     const inR = r => r && U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h;
     if (inR(U.speedRect)) { cycleSpeed(); return; }
     // double-tap the resource bar (top left) to open the hidden resource editor
@@ -234,6 +269,7 @@ const UI = (() => {
       PX.icon(c, 'coin', Math.round(px - 4 * s * .75), Math.round(py - 4 * s * .75), Math.max(2, s - 1), 1);
       if (u >= 1) { U.goldShown = Math.min(G.gold, U.goldShown + q.value); U.goldBump = 1; sfx('coin', CAM.x, CAM.z, .35, rnd()); U.coins.splice(i, 1); }
     }
+    if (U.lore) drawLore(y0 + topH + 4 * s); else U.loreRect = null;
     if (U.msg) {
       const m = U.msg; m.t += R.frameDt; const a = sat(Math.min(m.t * 3, (m.dur - m.t) * 2));
       if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
