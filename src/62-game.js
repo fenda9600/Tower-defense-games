@@ -92,7 +92,7 @@ function buildTower(pad, kind, byPlayer) {
   const t = new Tower(pad, kind, G.B.pads.indexOf(pad)); G.towers.push(t); UI.ping(pad.x, pad.y, pad.z, byPlayer); return t;
 }
 function upgradeTower(t, byPlayer) {
-  if (!t || t.lvl >= Math.min(t.maxLvl, tierCap()) || t.state !== 'active' || G.phase !== 'play') return false; const c = t.def.cost[t.lvl + 1]; if (G.gold < c) return false;
+  if (!t || t.lvl >= Math.min(t.maxLvl, tierCap()) || t.state !== 'active' || G.phase !== 'play') return false; const c = upgradeCost(t); if (G.gold < c) return false;
   G.gold -= c; UI.goldShown = Math.min(UI.goldShown, G.gold); t.upgrade(); UI.ping(t.x, t.y, t.z, byPlayer); return true;
 }
 function sellTower(t) {
@@ -100,7 +100,7 @@ function sellTower(t) {
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
-const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06] };
+const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7 };
 function aiThink(dt) {
   if (G.phase !== 'play' || UI.playerActive()) return;
   AI.think -= dt; if (AI.think > 0) return; AI.think = .5;
@@ -132,10 +132,19 @@ function aiThink(dt) {
   }
   for (const t of towers) {
     if (t.state !== 'active' || t.lvl >= Math.min(t.maxLvl, cap)) continue;
-    const c = t.def.cost[t.lvl + 1], use = sat(t.recent / 60);
+    const c = upgradeCost(t), use = sat(t.recent / 60);
     let sc = (.5 + use * .9 + (t.lvl === 0 ? .12 : 0)) * (N >= 4 ? 1.25 : .7) * (empty.length === 0 ? 1.6 : 1) * (110 / c);
     if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05;
     opts.push({ sc, cost: c, act: 'up', t });
+  }
+  // the lesser upgrade: more men for a work that is seeing action (66-crew.js). A new work covers more road than more men in an old one,
+  // and a later dynasty's arms tell more against the chiefs, so the adviser only posts men once every base is built on and only to works
+  // that have no greater upgrade left. It is cheap, so it is only ever the first choice, never what the gold goes on while something
+  // dearer is being saved for, and never while a work lies in ruins.
+  if (!empty.length && !towers.some(t => t.ruin)) for (const t of towers) {
+    if (t.state !== 'active' || crewOf(t) >= CREW.max || t.lvl < Math.min(t.maxLvl, cap)) continue;
+    const c = crewCost(t), use = sat(t.recent / 60);
+    opts.push({ sc: (.2 + use * 1.2) * 2 * (110 / (c + 40)) * AI.crew, cost: c, act: 'crew', lesser: true, t });
   }
   // a work the chief has brought down is raised again before anything new is built
   for (const t of towers) if (t.ruin) opts.push({ sc: 2 + t.lvl * .3, cost: rebuildCost(t), act: 'rebuild', t });
@@ -148,11 +157,11 @@ function aiThink(dt) {
   let pick = opts[0];
   if (pick.cost > G.gold) {
     AI.wait += .5;
-    const aff = opts.find(o => o.cost <= G.gold && o.sc > pick.sc * (AI.wait > 9 ? .45 : .8));
+    const aff = opts.find(o => !o.lesser && o.cost <= G.gold && o.sc > pick.sc * (AI.wait > 9 ? .45 : .8));
     if (!aff) return; pick = aff;
   }
   AI.wait = 0;
-  if (pick.act === 'build') buildTower(pick.pad, pick.kind, false); else if (pick.act === 'wallAdd') wallReinforce(false); else if (pick.act === 'wallUp') wallUpgrade(false); else if (pick.act === 'rebuild') rebuildTower(pick.t, false); else upgradeTower(pick.t, false);
+  if (pick.act === 'build') buildTower(pick.pad, pick.kind, false); else if (pick.act === 'wallAdd') wallReinforce(false); else if (pick.act === 'wallUp') wallUpgrade(false); else if (pick.act === 'rebuild') rebuildTower(pick.t, false); else if (pick.act === 'crew') crewTower(pick.t, false); else upgradeTower(pick.t, false);
   AI.think = N < 3 ? .12 : .8;
 }
 
