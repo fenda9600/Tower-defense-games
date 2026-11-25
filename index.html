@@ -2662,7 +2662,8 @@ Object.assign(BIOME_DRESS, {
     // the city wall rides the rim of the cliffs above the river: climb in from the water along each near side to the top of the terraced cliff
     for (const side of [0, 1]) {
       const rim = [];
-      for (let v = -BH + 1; v <= BH - 1; v += .8) {
+      // along the right edge the river bends away before the keep and its rim runs aslant, which this search across rows cannot follow
+      for (let v = side ? -BH + 1 : BN + 18; v <= BH - 1; v += .8) {
         const P = u => side ? [v, u] : [u, v], h = u => H(...P(u));
         if (h(BH - .4) > sea + .3) continue;
         for (let u = BH - .5; u > Math.max(v, 2); u -= .1) {
