@@ -356,7 +356,7 @@ function finalizeBoard(B) {
     for (const ex of extras || []) {
       if (mir) ex.soup.mirrorXZ();
       const E = ex.soup.P; for (let i = 0; i < E.length; i += 3) { E[i] -= cx; E[i + 1] -= cy; E[i + 2] -= cz; }
-      const em = new THREE.Mesh(ex.soup.build(), ex.mat); em.renderOrder = ex.order || 0; mesh.add(em);
+      const em = new THREE.Mesh(ex.soup.build(), ex.mat); em.renderOrder = ex.order || 0; em.receiveShadow = ex.mat === MAT.world; em.visible = !ex.hide; mesh.add(em);
     }
     B.group.add(mesh);
     const piece = { mesh, cx, cy, cz, kind, t: 0, delay: 0, spin: new THREE.Vector3(rr(-1, 1), rr(-1, 1), rr(-1, 1)) };

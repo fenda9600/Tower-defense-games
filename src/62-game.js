@@ -168,7 +168,7 @@ function startCrumble() {
     let best = null, bd = 1e9; for (const p of B.pieces) if (p.kind === 'chunk') { const d = dist2(p.cx, p.cz, t.x, t.z); if (d < bd) { bd = d; best = p; } }
     if (best) best.mesh.attach(t.group);
   }
-  for (const f of B.flames) removeFlame(f); B.flames.length = 0;
+  for (const f of B.flames) removeFlame(f); B.flames.length = 0; wallDouse();
   for (const p of B.pieces) { p.t = 0; p.delay = .25 + rnd() * .9 + sat((36 - (p.cx + p.cz)) / 72) * 1.3 + (p.kind !== 'chunk' ? .2 : 0); p.vy = 0; }
   FX.groundAt = () => -500; clearFX(); setBoardCasting(B, true);
   sfx('crumble', 0, 0, 1.3); FX.shake = 1.2;

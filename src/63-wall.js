@@ -21,11 +21,28 @@ function gateWeight(m) { const w = GATE.weight[m.type]; return w === undefined ?
 const SIEGE = { depth: 3.2, ladderFrom: 3, melee: 1.2, climb: { skel: 1.7, knight: 2.2, rat: 1.3, slimelet: 1.7, scarab: 1.5, spider: 1.3, ghoul: .9, toad: 1.1, wraith: 1.6, brute: 2.6, ladder: 1.7 } };
 
 function resetWall() {
-  const B = G.B;
-  G.wall = { lvl: 0, n: 0, men: [], gate: GATE.hp[0], open: false, calm: 0, dealt: 0, recent: 0, kills: 0, siegeN: 0, stormN: 0, ladderN: 0, lost: 0, raised: 0, topped: 0, breaks: 0, hurtT: 9, cried: false, upI: 0 };
+  const B = G.B; wallDouse();
+  G.wall = { lvl: 0, n: 0, men: [], gate: GATE.hp[0], open: false, calm: 0, dealt: 0, recent: 0, kills: 0, siegeN: 0, stormN: 0, ladderN: 0, lost: 0, raised: 0, topped: 0, breaks: 0, hurtT: 9, cried: false, upI: 0, fallen: false, fires: [], B };
   for (const l of B.ladders) { l.bearer = null; l.user = null; l.cd = 0; l.up = 0; }
   const l0 = B.ladders[0], dx = l0.foot.x - l0.top.x, dz = l0.foot.z - l0.top.z, d = Math.hypot(dx, dz); G.wall.fx = dx / d; G.wall.fz = dz / d;
   for (let i = 0; i < WALL.start; i++) addWallMan(false);
+}
+// The keep carries four swappable skins (buildKeep): gate shut / stove in, east curtain whole / breached.
+function wallLook() {
+  const W = G.wall, B = G.B; if (!W || W.B !== B) return;
+  const k = B.keepSkin || (B.keepSkin = (B.pieces.find(p => p.kind === 'keep') || { mesh: { children: [] } }).mesh.children); if (k.length < 4) return;
+  k[0].visible = !W.open && !W.fallen; k[1].visible = !k[0].visible; k[2].visible = !W.fallen; k[3].visible = W.fallen;
+}
+function wallDouse() { const W = G.wall; if (!W || !W.fires) return; for (const f of W.fires) removeFlame(f); W.fires.length = 0; }
+// The pass is lost: the gate goes in, the east curtain comes down and the last of the garrison with it.
+function wallFall() {
+  const W = G.wall, B = G.B, g = B.gate, q = B.wallSlots; W.fallen = true; W.open = true; W.gate = 0;
+  for (let i = W.men.length - 1; i >= 0; i--) killWallMan(W.men[i], -W.fx, -W.fz);
+  const a = q[3], b = q[7], gy = a.y - 3.14; FX.shake = Math.min(1.4, FX.shake + .9); sfx('crumble', a.x, a.z, 1, .2);
+  for (let i = 0; i < 7; i++) { const u = i / 6, x = lerp(a.x, b.x, u), z = lerp(a.z, b.z, u); fxDust(x + W.fx * .6, gy + rr(.4, 2.2), z + W.fz * .6, 7, 1.7, { speed: 3.2 }); }
+  fxDust(g.x, g.y + .8, g.z, 16, 1.6, { speed: 3 });
+  for (const [u, h, size] of [[.3, 1.0, .8], [.62, .8, 1.05], [.9, 1.9, .65]]) W.fires.push(addFlame({ x: lerp(a.x, b.x, u) + W.fx * .25, y: gy + h, z: lerp(a.z, b.z, u) + W.fz * .25, size, layers: 2, embers: 1.6, glow: .9, smoke: 4 }));
+  W.fires.push(addFlame({ x: g.x - W.fx * .5, y: g.y + .7, z: g.z - W.fz * .5, size: .9, layers: 2, embers: 1.4, glow: .9, smoke: 3 }));
 }
 function gateMax() { return GATE.hp[G.wall.lvl]; }
 function addWallMan(fx) {
@@ -138,6 +155,8 @@ const _wc = [], _wp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 }, _wq = new THREE.Quater
 const STORM_SC = { wall: 9, climb: 8, hold: 7, raise: 7, toLadder: 6.5, toFoot: 6, toDoor: 5 };
 function updateWall(dt) {
   const W = G.wall, B = G.B; if (!W) return;
+  if (G.phase === 'defeat' && !W.fallen && W.B === B) wallFall();
+  wallLook();
   const lvl = W.lvl, r2 = WALL.range[lvl] * WALL.range[lvl], gx = B.gate.x, gz = B.gate.z, play = G.phase === 'play', gateS = B.L - .35;
   W.recent = Math.max(0, W.recent - dt * .25); W.hurtT += dt;
   // ladders stand while their bearers live; each sends up one man at a time
