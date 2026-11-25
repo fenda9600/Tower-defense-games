@@ -193,6 +193,7 @@ function initKits() {
   KIT.rubble = new PartBatch(S => { S.rock(.14, 0, 0, 0, COL.stone, {}); }, 160, { rad: .1 });
   KIT.plank = new PartBatch(S => { S.box(.12, .6, .05, 0, 0, 0, COL.wood, { l: L_WOOD }); }, 100, { rad: .08 });
   initBestiary();
+  initArmy();
 }
 
 const SPEC = {
@@ -246,10 +247,13 @@ function rigHuman(kit, sp, e) {
   if (e.helm) I.helm.put(M3, fl, null);
   if (e.plate) I.plate.put(M2, fl, null);
   if (e.hood) I.hood.put(M3, fl, null); if (e.robe) I.robe.put(M2, fl, null); if (e.drum) I.drum.put(M2, fl, null); if (e.standard) I.standard.put(M2, 0, null);
+  if (e.hat) e.hat.put(M3, fl, null); if (e.back) e.back.put(M2, fl, null);
   if (e.keg) I.keg.put(M2, fl, null); if (e.wraps) { I.wraps.put(M2, fl, null); I.wrapHead.put(M3, fl, null); } if (e.crown) I.crown.put(M3, fl, null); if (e.jhat) I.jhat.put(M3, fl, null); if (e.general) { I.genHelm.put(M3, fl, null); I.genBack.put(M2, fl, null); }
-  const kL = e.stiff ? 0 : Math.max(0, cw) * 1.0 * mv, kR = e.stiff ? 0 : Math.max(0, -cw) * 1.0 * mv;
-  const M10 = xf(_M[10], M1, sp.hipX, 0, 0, -sw - kL * .25, 0, 0), M11 = xf(_M[11], M10, 0, -sp.uLeg, 0, kL, 0, 0);
-  const M12 = xf(_M[12], M1, -sp.hipX, 0, 0, sw - kR * .25, 0, 0), M13 = xf(_M[13], M12, 0, -sp.uLeg, 0, kR, 0, 0);
+  const kL = e.stiff || e.ride ? 0 : Math.max(0, cw) * 1.0 * mv, kR = e.stiff || e.ride ? 0 : Math.max(0, -cw) * 1.0 * mv;
+  // a rider's thighs go forward and out around the saddle, his shins hang
+  const rX = e.ride ? -1.15 : 0, rZ = e.ride ? .55 : 0, rK = e.ride ? 1.2 : 0;
+  const M10 = xf(_M[10], M1, sp.hipX, 0, 0, -sw - kL * .25 + rX, 0, rZ), M11 = xf(_M[11], M10, 0, -sp.uLeg, 0, kL + rK, 0, -rZ * .8);
+  const M12 = xf(_M[12], M1, -sp.hipX, 0, 0, sw - kR * .25 + rX, 0, -rZ), M13 = xf(_M[13], M12, 0, -sp.uLeg, 0, kR + rK, 0, rZ * .8);
   kit.uLeg.put(M10, fl, tint); kit.lLeg.put(M11, fl, tint); kit.uLeg.put(M12, fl, tint); kit.lLeg.put(M13, fl, tint);
   return M3;
 }

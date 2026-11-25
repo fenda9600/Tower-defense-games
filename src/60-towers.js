@@ -6,7 +6,7 @@ const G = {
 const TOWER = {
   archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['连发火箭，射速快。', '可射飞行之敌。'] },
   bombard: { name: '火炮台', short: '火炮', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['装填慢，炮弹炸裂一片。', '只打地面之敌。'] },
-  spire: { name: '引雷塔', short: '雷塔', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [16, 20, 26], desc: ['连环雷电，令敌迟缓。', '可击飞行之敌。'] },
+  spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [40, 52, 66], desc: ['床弩齐发，一箭贯数敌，', '中者迟滞，可射飞敌。'] },
   guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 90, 150], range: [3.4, 3.7, 4.0], n: [2, 3, 3], hp: [62, 90, 135], dmg: [7, 10, 15], rate: [7, 6, 5], air: false, ground: true, light: [55, 70, 90], desc: ['戍卒出营拦路，', '与敌近身搏杀。'] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
@@ -117,25 +117,30 @@ function blueprint(kind, lvl) {
     mounts.flame = [lx, lh - .3, lz + .34]; mounts.flameSize = .24 + lvl * .04; mounts.flame2 = lvl === 2 ? [-lx, lh - .3, lz + .34] : null; mounts.top = H + 1.7;
     mounts.gun = [0, H + .15, .05]; mounts.gunLen = [.95, 1.12, 1.25][lvl]; mounts.gunR = [.15, .18, .215][lvl];
   } else if (kind === 'spire') {
-    // Thunder pagoda: a slim tiered stone pagoda that holds a floating storm pearl.
-    const H = [2.7, 3.4, 4.1][lvl], bas = COL.basalt, basL = COL.basaltL, cu = COL.brass, tiers = 2 + lvl, r0 = .56, r1 = .3, rot = { r: [0, PI / 8, 0] };
-    const rAt = u => lerp(r0, r1, u);
-    piece('plinth', 0, S => {
-      S.cyl(1.0, .2, 0, .1, 0, basL, Object.assign({ n: 8, l: L_ROCK }, rot)); S.cyl(.8, .12, 0, .26, 0, bas, Object.assign({ n: 8, l: L_ROCK, rt: .86 }, rot)); S.cyl(.74, .12, 0, .38, 0, basL, Object.assign({ n: 8, l: L_ROCK, rt: 1.12 }, rot));
-      for (let k = 0; k < 8; k++) { const a = k / 8 * TAU, tri = [k & 1, (k >> 1) & 1, (k >> 2) & 1]; for (let j = 0; j < 3; j++) { const rr2 = .64 + j * .1; if (tri[j]) S.box(.2, .012, .05, Math.cos(a) * rr2, .205, Math.sin(a) * rr2, COL.crystal, { emis: .4, jit: 0, r: [0, -a + HPI, 0] }); else for (const sg of [-1, 1]) S.box(.08, .012, .05, Math.cos(a) * rr2 - Math.sin(a) * sg * .06, .205, Math.sin(a) * rr2 + Math.cos(a) * sg * .06, COL.crystal, { emis: .4, jit: 0, r: [0, -a + HPI, 0] }); } }
+    // Crossbow platform: a rammed earth or brick stage with a timber deck carrying a bed crossbow of one, two or three bows.
+    const H = [1.1, 1.5, 1.9][lvl], W = 1.7, earth = lvl === 2 ? st : COL.ram, lay = lvl === 2 ? L_MASON : L_DIRT;
+    piece('base', 0, S => {
+      S.box(W + .2, .2, W + .2, 0, .1, 0, sdk, { l: L_MASON });
+      S.cyl(W * .72, H - .2, 0, .2 + (H - .2) / 2, 0, earth, { n: 4, l: lay, rt: .9, r: [0, PI / 4, 0], jit: .03 });
+      if (lvl >= 1) for (let y = .45; y < H - .1; y += .35) S.box(W * .98 - y * .1, .04, W * .98 - y * .1, 0, y, 0, mulC(earth, .8), { l: lay, jit: 0 });
+      S.box(.36, .5, .06, 0, .45, W / 2 - .02, COL.black, { jit: 0 }); S.box(.46, .07, .1, 0, .74, W / 2, redD, { l: L_WOOD });
     });
-    piece('shaft', 1, S => {
-      S.cyl(r0, H - .44, 0, .44 + (H - .44) / 2, 0, bas, Object.assign({ n: 8, l: L_ROCK, rt: r1 / r0, jit: .03 }, rot));
-      for (let k = 0; k < 4; k++) { const a = k * HPI, n = 3 + lvl; for (let j = 0; j < n; j++) { const u = (j + .7) / (n + .6), y = .44 + u * (H - .44), rr2 = rAt(u) * .925 + .012; S.box(.07, .2, .02, Math.sin(a) * rr2, y, Math.cos(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [-.1, a, 0], ro: 'YXZ' }); } }
+    piece('deck', 1, S => {
+      S.box(W + .1, .1, W + .1, 0, H + .05, 0, wd, { l: L_WOOD }); for (const x of [-.6, -.3, 0, .3, .6]) S.box(.26, .03, W, x, H + .11, 0, w, { l: L_WOOD });
+      for (const [a, b2] of corners) S.box(.1, .55, .1, a * W / 2, H + .38, b2 * W / 2, red, { l: L_WOOD });
+      for (const sg of [-1, 1]) { S.box(W, .06, .06, 0, H + .58, sg * W / 2, redD, { l: L_WOOD }); S.box(.06, .06, W, sg * W / 2, H + .58, 0, redD, { l: L_WOOD }); S.box(W, .04, .04, 0, H + .34, sg * W / 2, redD, { l: L_WOOD }); S.box(.04, .04, W, sg * W / 2, H + .34, 0, redD, { l: L_WOOD }); }
+      if (lvl === 2) for (const [a, b2] of corners) S.box(.24, .32, .24, a * (W / 2 + .02), H + .3, b2 * (W / 2 + .02), sl, { l: L_MASON });
     });
-    piece('eaves', 2, S => {
-      for (let t = 0; t < tiers; t++) { const u = (t + .55) / (tiers + .25), y = .44 + u * (H - .44), rr2 = rAt(u); cnRoof(S, { y: y - .16, a: rr2 + .42 - t * .03, h: .3, t0: (rr2 - .04) / (rr2 + .42 - t * .03), n: 2, m: 4, lift: .16, rr: .028, ry: PI / 4 * (t & 1) }); S.cyl(rr2 + .05, .07, 0, y + .16, 0, cu, Object.assign({ n: 8, l: L_METAL, rough: .45 }, rot)); }
+    piece('ammo', 2, S => {
+      // spare bolts in a rack and a winch for drawing the bows
+      const x = -W / 2 + .25, z = -W / 2 + .3; S.box(.5, .08, .2, x + .1, H + .2, z, wd, { l: L_WOOD });
+      for (let k = 0; k < 5; k++) { S.box(.03, .03, .72, x - .08 + k * .08, H + .27, z + .2, wl, { l: L_WOOD, jit: 0 }); S.cone(.03, .08, x - .08 + k * .08, H + .27, z + .6, iron, { n: 4, r: [HPI, 0, 0], l: L_METAL }); }
+      S.cyl(.09, .5, W / 2 - .3, H + .3, -W / 2 + .3, wd, { n: 6, r: [0, 0, HPI], l: L_WOOD }); for (const sg of [-1, 1]) S.box(.04, .3, .14, W / 2 - .3 + sg * .27, H + .22, -W / 2 + .3, w, { l: L_WOOD });
     });
-    piece('claws', 3, S => {
-      for (let k = 0; k < 4; k++) { const a = k * HPI + PI / 4, cs = Math.cos(a), sn = Math.sin(a); S.seg([cs * .2, H - .1, sn * .2], [cs * .46, H + .22, sn * .46], .055, .042, cu, { l: L_METAL, n: 4, rough: .45 }); S.seg([cs * .46, H + .22, sn * .46], [cs * .3, H + .72, sn * .3], .042, .012, cu, { l: L_METAL, n: 4, rough: .45 }); }
-      S.cyl(.36, .12, 0, H - .02, 0, basL, Object.assign({ n: 8, l: L_ROCK }, rot)); S.cyl(.22, .1, 0, H + .08, 0, cu, { n: 8, l: L_METAL, rough: .45, rt: .6 });
-    });
-    mounts.crystal = [0, H + .44, 0]; mounts.crystalS = [.2, .24, .29][lvl]; mounts.shards = [0, 2, 4][lvl]; mounts.rings = lvl === 2; mounts.top = H + 1.2; mounts.flame = null; mounts.lightAt = [0, H + .45, 0];
+    const fx = W / 2 - .2, fz = W / 2 - .2, bs = [.34, .4, .46][lvl];
+    piece('fire', 3, S => brazier(S, fx, H + .1, fz, bs));
+    if (lvl >= 1) piece('flag', 4, S => { cnBanner(S, -W / 2 + .1, H + .1, H + 2.2 + lvl * .3, W / 2 - .1, COL.clothD, rng, { w: .34, len: .9, col2: mulC(COL.lacqL, 1.1) }); });
+    mounts.flame = [fx, H + .1 + bs * .72, fz]; mounts.flameSize = bs; mounts.top = H + 1.3; mounts.gun = [0, H + .1, 0]; mounts.bows = lvl + 1;
   } else {
     // Garrison hall: rammed earth or brick walls under a tiled roof, a halberd rack and a corner tower at the top level.
     const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], brick = lvl === 2;
@@ -250,7 +255,7 @@ class Tower {
     this.em.I = d.light[lvl]; this.em.range = this.kind === 'archer' ? 12 : 10.5;
     if (this.kind === 'archer') mt.archers.forEach((a, i) => this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + i * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }));
     if (this.kind === 'bombard') this.makeGun();
-    if (this.kind === 'spire') this.makeCrystal();
+    if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
     this.state = 'active'; this.appear = 0;
     fxDust(this.x, this.y + .2, this.z, 10, 1.3, { speed: 2.2 });
@@ -268,15 +273,27 @@ class Tower {
     this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, .4, 0); this.barrel.rotation.x = -.42; this.carriage.add(this.barrel);
     this.gunYaw = this.yaw;
   }
-  makeCrystal() {
-    const mt = this.mounts, mk = (sx, sy) => { const S = new Soup(), r = (sx + sy) * .42; S.add(gSph(8, 6), { s: r, c: [1, 1, 1], jit: 0, smooth: true, cf: v => .5 + .5 * smooth(-r, r, v.y) + (v.x > 0 ? .1 : 0) }); return S.build(); };
-    this.cmat = new THREE.MeshBasicMaterial({ vertexColors: true, color: new THREE.Color(.3, .6, 1) });
-    this.crystal = new THREE.Group(); this.crystal.position.set(mt.crystal[0], mt.crystal[1], mt.crystal[2]);
-    const c = new THREE.Mesh(mk(mt.crystalS, mt.crystalS * 1.9), this.cmat); c.castShadow = true; this.crystal.add(c); this.core = c;
-    this.shards = [];
-    for (let i = 0; i < mt.shards; i++) { const s = new THREE.Mesh(mk(.07, .16), this.cmat); this.crystal.add(s); this.shards.push(s); }
-    if (mt.rings) { const S = new Soup(); for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; S.box(.46, .1, .2, Math.cos(a) * 1.0, 0, Math.sin(a) * 1.0, COL.basaltL, { l: L_ROCK, r: [0, -a + HPI, 0] }); for (let j = 0; j < 3; j++) { const rr2 = .94 + j * .06, on = (k >> j) & 1; if (on) S.box(.3, .014, .03, Math.cos(a) * rr2, .056, Math.sin(a) * rr2, COL.crystal, { emis: .5, jit: 0, r: [0, -a + HPI, 0] }); else for (const sg of [-1, 1]) S.box(.12, .014, .03, Math.cos(a) * rr2 - Math.sin(a) * sg * .09, .056, Math.sin(a) * rr2 + Math.cos(a) * sg * .09, COL.crystal, { emis: .5, jit: 0, r: [0, -a + HPI, 0] }); } } this.ringG = new THREE.Mesh(S.build(), MAT.world); this.ringG.castShadow = true; this.ringG.position.y = -1.25; this.crystal.add(this.ringG); }
-    this.group.add(this.crystal);
+  makeBow() {
+    // a bed crossbow on a turning post: one bow at the first level, two and then three bows (the san gong chuang nu) above
+    const mt = this.mounts, n = mt.bows, S = new Soup(), wd = COL.woodD, w = COL.wood;
+    S.cyl(.12, .5, 0, .25, 0, wd, { n: 6, l: L_WOOD }); S.box(.5, .08, .5, 0, .04, 0, wd, { l: L_WOOD });
+    for (const sg of [-1, 1]) S.box(.06, .3, .5, sg * .14, .55, 0, w, { l: L_WOOD });
+    this.carriage = new THREE.Mesh(S.build(), MAT.world); this.carriage.castShadow = this.carriage.receiveShadow = true; this.carriage.position.set(mt.gun[0], mt.gun[1], mt.gun[2]); this.group.add(this.carriage);
+    const Bq = new Soup(), L = 1.5;
+    Bq.box(.16, .12, L, 0, 0, 0, w, { l: L_WOOD }); Bq.box(.06, .03, L * .9, 0, .075, .05, wd, { l: L_WOOD, jit: 0 }); Bq.box(.2, .16, .2, 0, -.02, -L / 2 + .1, wd, { l: L_WOOD }); Bq.cyl(.06, .34, 0, -.02, -L / 2 + .1, COL.iron, { n: 6, r: [0, 0, HPI], l: L_METAL });
+    for (let b = 0; b < n; b++) {
+      const z = L / 2 - .12 - b * .26, sp = 1.05 - b * .08, c = b === 1 ? mulC(COL.lacq, .9) : C(0x5a3e24);
+      let p = [0, 0, z]; for (let i = 1; i <= 5; i++) { const u = i / 5, q = [u * sp, .02, z - u * u * .28]; Bq.seg(p, q, .045 - u * .02, .04 - u * .02, c, { n: 5, l: L_WOOD }); p = q; }
+      p = [0, 0, z]; for (let i = 1; i <= 5; i++) { const u = i / 5, q = [-u * sp, .02, z - u * u * .28]; Bq.seg(p, q, .045 - u * .02, .04 - u * .02, c, { n: 5, l: L_WOOD }); p = q; }
+      Bq.box(.14, .14, .1, 0, 0, z, COL.iron, { l: L_METAL });
+    }
+    this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, .74, 0); this.carriage.add(this.barrel);
+    // the string and the bolt slide back together as the winch draws
+    const St = new Soup(), tipZ = L / 2 - .12 - (n - 1) * .26 - .28;
+    St.box(.03, .03, .03, 0, .08, 0, COL.rope, {}); for (const sg of [-1, 1]) St.seg([0, .08, 0], [sg * (1.05 - (n - 1) * .08), .02, .28], .008, .008, COL.rope, { n: 3 });
+    St.box(.035, .035, 1.25, 0, .1, .62, COL.woodL, { jit: 0 }); St.cone(.05, .18, 0, .1, 1.33, COL.steel, { n: 4, r: [HPI, 0, 0], l: L_METAL }); for (const r of [0, HPI]) St.box(.1, .008, .14, 0, .1, .08, C(0xb02a1c), { r: [0, 0, r], jit: 0 });
+    this.string = new THREE.Mesh(St.build(), MAT.world); this.string.position.set(0, 0, tipZ); this.barrel.add(this.string); this.string0 = tipZ;
+    this.gunYaw = this.yaw;
   }
   upgrade() { if (this.lvl >= 2 || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
   sell() {
@@ -304,7 +321,7 @@ class Tower {
     }
     this.appear = Math.min(1, this.appear + dt * 2.2);
     TOWER_STUN = this.stun > 0;
-    if (TOWER_STUN) { this.stun -= dt; const k = Math.min(1, this.stun * 2); FX.add.push(this.x, this.y + 1.7, this.z, 4.2, 5.6, 0, 0, .2, .5, 1.2, .3 * k, 2, 0, 0, 0); if (rnd() < dt * 5) { const a = rnd() * TAU, h = rr(.6, 3); fxBolt([this.x + Math.cos(a) * .8, this.y + h, this.z + Math.sin(a) * .8], [this.x + Math.cos(a + 1.2) * .8, this.y + h + rr(-.5, .5), this.z + Math.sin(a + 1.2) * .8], .12, [.5, .85, 1.5], .03); } if (rnd() < dt * 18) fxPart(this.x + rr(-.7, .7), this.y + rr(.4, 3.2), this.z + rr(-.7, .7), 0, rr(-.5, .1), 0, rr(.4, .9), rr(.05, .08), .6, 1.1, 2.0, { drag: .5 }); }
+    if (TOWER_STUN) { this.stun -= dt; if (rnd() < dt * 8) fxDust(this.x + rr(-.8, .8), this.y + rr(.2, 2.4), this.z + rr(-.8, .8), 1, .6, { a: .4 }); }
     this.em.on = damp(this.em.on, TOWER_STUN ? .12 : 1, TOWER_STUN ? 8 : 3, dt);
     if (this.flame) this.flame.on = this.em.on; if (this.flame2) this.flame2.on = this.em.on;
     this.cool -= dt;
@@ -362,29 +379,24 @@ class Tower {
     const tgt = findTarget(this.x, this.z, d.range[lvl], true, true);
     const was = this.charge;
     this.charge = tgt ? Math.min(1, this.charge + dt / d.rate[lvl]) : Math.max(0, this.charge - dt * .25);
-    if (was < .68 && this.charge >= .68 && tgt) sfx('charge', this.x, this.z, .5);
-    const c = this.charge, pulse = .85 + .15 * Math.sin(G.t * (6 + c * 20));
-    this.spin += dt * (.8 + c * 5); this.core.rotation.y = this.spin; this.core.position.y = Math.sin(G.t * 1.6 + this.idx) * .05;
-    this.shards.forEach((s, i) => { const a = this.spin * .7 + i * TAU / this.shards.length; s.position.set(Math.cos(a) * .58, Math.sin(a * 1.3) * .14 - .05, Math.sin(a) * .58); s.rotation.y = -a * 2; });
-    if (this.ringG) this.ringG.rotation.y = -this.spin * .25;
-    const k = (.9 + 4.5 * c * c) * pulse * this.appear; this.cmat.color.setRGB(.28 * k, .62 * k, 1.15 * k);
-    this.em.I = (d.light[lvl] + 70 * c * c) * pulse;
-    const cp = this.w(this.mounts.crystal, _ap);
-    FX.add.push(cp.x, cp.y, cp.z, 1.5 + c, 1.5 + c, 0, 0, .25, .55, 1.0, (.1 + .22 * c) * pulse, 2, 0, 0, 0);
-    if (c > .5 && rnd() < dt * 14 * c) { const a = rnd() * TAU; fxBolt([cp.x, cp.y, cp.z], [cp.x + Math.cos(a) * .7, cp.y + rr(-.5, .5), cp.z + Math.sin(a) * .7], .1, [.45, .7, 1.4], .035); }
+    if (was < .1 && this.charge >= .1 && tgt) sfx('charge', this.x, this.z, .5);
+    if (tgt) { const want = Math.atan2(tgt.x - this.x, tgt.z - this.z); this.gunYaw = angDamp(this.gunYaw, want, 6, dt); }
+    else this.gunYaw = angDamp(this.gunYaw, this.yaw + Math.sin(G.t * .3 + this.idx) * .6, 1.2, dt);
+    this.carriage.rotation.y = this.gunYaw - this.yaw;
+    const c = this.charge; this.recoil = Math.max(0, this.recoil - dt * 3);
+    this.string.position.z = this.string0 - easeInOut(c) * .55 + this.recoil * .1; this.string.visible = c > .05 || this.recoil > 0;
+    this.barrel.rotation.x = -.06 - .08 * this.recoil;
     if (c >= 1 && tgt) {
-      this.charge = 0; let from = [cp.x, cp.y, cp.z], cur = tgt, dmg = d.dmg[lvl]; const hit = [];
+      this.charge = 0; this.recoil = 1; let cur = tgt, dmg = d.dmg[lvl]; const hit = [];
+      this.carriage.updateMatrixWorld(true); const mz = _tv.set(0, .1, .9).applyMatrix4(this.barrel.matrixWorld), ox = mz.x, oy = mz.y, oz = mz.z;
       for (let j = 0; j < d.jumps[lvl] && cur; j++) {
-        hit.push(cur); const to = [cur.x, cur.y + cur.hitH, cur.z];
-        fxBolt(from, to, .26 - j * .015, [.5, .78, 1.6], .1 - j * .008);
-        fxSparks(to[0], to[1], to[2], 5, 3.5, 1.2, 2, 4, { grav: 3, size: .06 }); fxTimed(2, to[0], to[1], to[2], 1.6, 1.6, .5, .9, 2, .7, .16);
-        const cx = cur.x, cz = cur.z; slowMonster(cur, d.slow[lvl], d.slowT[lvl]); hitMonster(cur, dmg, 'bolt', 0, 0, this);
-        dmg *= .86; from = to; let nb = null, nd = 3.0 * 3.0;
+        hit.push(cur); shootArrow(ox + rr(-.15, .15), oy + rr(-.05, .1), oz + rr(-.15, .15), cur, dmg, this, { kind: 'bolt', slow: [d.slow[lvl], d.slowT[lvl]], fast: true });
+        const cx = cur.x, cz = cur.z; dmg *= .86; let nb = null, nd = 3.0 * 3.0;
         for (const m of G.mons) { if (m.dead || m.hp <= 0 || !m.vis || hit.includes(m)) continue; const dd = dist2(cx, cz, m.x, m.z); if (dd < nd) { nd = dd; nb = m; } }
         cur = nb;
       }
-      lightFlash(tgt.x, tgt.y + 1.2, tgt.z, 0x9fd0ff, 520, .22, 16); lightFlash(cp.x, cp.y, cp.z, 0x9fd0ff, 300, .18, 12);
-      sfx('zap', this.x, this.z, 1, lvl / 2); FX.shake = Math.min(1, FX.shake + .08);
+      fxDust(ox, oy, oz, 4, .5, { speed: 1.6, a: .4 });
+      sfx('zap', this.x, this.z, 1, lvl / 2); FX.shake = Math.min(1, FX.shake + .05);
     }
   }
   updGuard(dt, d, lvl) {
@@ -395,9 +407,9 @@ class Tower {
 }
 const _ap2 = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
 
-function shootArrow(x, y, z, m, dmg, tower) {
-  const dist = Math.hypot(m.x - x, m.z - z), T = clamp(dist / 14, .22, .62), q = aimPoint(m, T, _ap2);
-  G.arrows.push({ x0: x, y0: y, z0: z, tx: q.x, ty: q.y, tz: q.z, t: 0, T, m, dmg, tower, x, y, z, dx: 0, dy: 0, dz: 1, arc: .25 + dist * .07, alive: true, lI: 22, lCol: 0xff9040, lx: x, ly: y, lz: z, lseed: rnd() * 9, ember: 0 });
+function shootArrow(x, y, z, m, dmg, tower, o = {}) {
+  const dist = Math.hypot(m.x - x, m.z - z), T = clamp(dist / (o.fast ? 24 : 14), o.fast ? .12 : .22, .62), q = aimPoint(m, T, _ap2);
+  G.arrows.push({ x0: x, y0: y, z0: z, tx: q.x, ty: q.y, tz: q.z, t: 0, T, m, dmg, tower, x, y, z, dx: 0, dy: 0, dz: 1, arc: o.fast ? .05 + dist * .02 : .25 + dist * .07, alive: true, lI: o.fast ? 0 : 22, lCol: 0xff9040, lx: x, ly: y, lz: z, lseed: rnd() * 9, ember: 0, kind: o.kind || 'arrow', slow: o.slow || null, plain: !!o.fast });
 }
 function arrowMatrix(x, y, z, dx, dy, dz) { _tq.setFromUnitVectors(_tz, _tv.set(dx, dy, dz).normalize()); return _tm.compose(_tv.set(x, y, z), _tq, _ts.set(1, 1, 1)); }
 function updateProjectiles(dt) {
@@ -411,14 +423,15 @@ function updateProjectiles(dt) {
     a.lx = a.x; a.ly = a.y; a.lz = a.z;
     KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, a.dx, a.dy, a.dz), 0, null);
     const hx = a.x + a.dx * .25, hy = a.y + a.dy * .25, hz = a.z + a.dz * .25;
-    FX.segs.push(hx, hy, hz, .055, hx - a.dx * .95, hy - a.dy * .95, hz - a.dz * .95, .0, 2.6, 1.05, .25, .85);
-    FX.add.push(hx, hy, hz, .3, .3, 0, 0, 3.6, 1.9, .5, 1, 0, 0, 0, 0); FX.add.push(hx, hy, hz, 1.0, 1.0, 0, 0, 1, .45, .12, .22, 2, 0, 0, 0);
-    a.ember += dt * 26; while (a.ember > 1) { a.ember -= 1; fxPart(hx, hy, hz, rr(-.4, .4), rr(-.1, .6), rr(-.4, .4), rr(.25, .6), .05, 2.6, 1.1, .2, { drag: 1.5, rise: .6 }); }
+    if (a.plain) FX.segs.push(hx, hy, hz, .04, hx - a.dx * 1.4, hy - a.dy * 1.4, hz - a.dz * 1.4, .0, .9, .85, .7, .5);
+    else { FX.segs.push(hx, hy, hz, .055, hx - a.dx * .95, hy - a.dy * .95, hz - a.dz * .95, .0, 2.6, 1.05, .25, .85);
+    FX.add.push(hx, hy, hz, .3, .3, 0, 0, 3.6, 1.9, .5, 1, 0, 0, 0, 0); FX.add.push(hx, hy, hz, 1.0, 1.0, 0, 0, 1, .45, .12, .22, 2, 0, 0, 0); }
+    if (!a.plain) a.ember += dt * 26; while (a.ember > 1) { a.ember -= 1; fxPart(hx, hy, hz, rr(-.4, .4), rr(-.1, .6), rr(-.4, .4), rr(.25, .6), .05, 2.6, 1.1, .2, { drag: 1.5, rise: .6 }); }
     if (u >= 1) {
       a.alive = false; swapRemove(A, i);
       if (m && !m.dead && m.hp > 0 && dist2(a.tx, a.tz, m.x, m.z) < 1.0) {
         fxSparks(a.x, a.y, a.z, 5, 3, 3, 1.5, .4, { size: .055, grav: 6 }); fxTimed(2, a.x, a.y, a.z, .9, .9, 1.6, .8, .25, .8, .12);
-        sfx('arrowHit', a.x, a.z, .55, rnd()); hitMonster(m, a.dmg, 'arrow', a.dx, a.dz, a.tower);
+        sfx('arrowHit', a.x, a.z, .55, rnd()); if (a.slow) slowMonster(m, a.slow[0], a.slow[1]); hitMonster(m, a.dmg, a.kind, a.dx, a.dz, a.tower);
       } else if (!m || !m.fly) {
         const gy = B.heightAt(a.x, a.z);
         G.stuck.push({ x: a.x, y: gy + .12, z: a.z, dx: a.dx, dy: Math.min(-.5, a.dy), dz: a.dz, life: 3.2 });
