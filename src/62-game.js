@@ -44,7 +44,7 @@ function buildWave(k, level) {
 function startWave() {
   G.k = G.k % 5 + 1; G.queue = buildWave(G.k, G.level); G.waveT = 0; G.spawning = true; G.bossWave = G.k === 5; G.waveKills = 0; G.waveLeaks = 0; G.wall.cried = false; G.bossDown = false; G.trickle = 6; G.trickleN = 0;
   sfx(G.bossWave ? 'hornBoss' : 'horn', G.B.cave.x, G.B.cave.z, 1.1);
-  UI.banner(G.bossWave ? '第 ' + waveNumber() + ' 波 · ' + MON[bossType()].name : '第 ' + waveNumber() + ' 波', G.bossWave ? 3.6 : 2.2, G.bossWave);
+  UI.banner(G.bossWave ? '第 ' + waveNumber() + ' 波 · ' + MON[bossType()].name : '第 ' + waveNumber() + ' 波', G.bossWave ? 3.6 : 2.2, G.bossWave, G.bossWave ? raidWarn(bossType()) : undefined);
 }
 function endWave() {
   const l = G.waveLeaks;
@@ -95,7 +95,7 @@ function upgradeTower(t, byPlayer) {
   G.gold -= c; UI.goldShown = Math.min(UI.goldShown, G.gold); t.upgrade(); UI.ping(t.x, t.y, t.z, byPlayer); return true;
 }
 function sellTower(t) {
-  if (!t || !t.alive || G.phase !== 'play') return false; const refund = Math.round(t.spent * .6);
+  if (!t || !t.alive || G.phase !== 'play') return false; const refund = towerRefund(t);
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
@@ -134,6 +134,8 @@ function aiThink(dt) {
     if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05;
     opts.push({ sc, cost: c, act: 'up', t });
   }
+  // a work the chief has brought down is raised again before anything new is built
+  for (const t of towers) if (t.ruin) opts.push({ sc: 2 + t.lvl * .3, cost: rebuildCost(t), act: 'rebuild', t });
   // the wall: reinforce when the storming party is more than the garrison can shoot down, upgrade once it is well manned
   { const W = G.wall, threat = sat((W.stormN + W.ladderN + (W.open ? 2 : 0) + (1 - W.gate / gateMax()) * 2) / AI.wall[0]), hurt = 1 - G.lives / G.maxLives, late = sat((N - 3) / 4);
     if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 + (W.n < WALL.start ? 1.5 : 0) - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
@@ -147,7 +149,7 @@ function aiThink(dt) {
     if (!aff) return; pick = aff;
   }
   AI.wait = 0;
-  if (pick.act === 'build') buildTower(pick.pad, pick.kind, false); else if (pick.act === 'wallAdd') wallReinforce(false); else if (pick.act === 'wallUp') wallUpgrade(false); else upgradeTower(pick.t, false);
+  if (pick.act === 'build') buildTower(pick.pad, pick.kind, false); else if (pick.act === 'wallAdd') wallReinforce(false); else if (pick.act === 'wallUp') wallUpgrade(false); else if (pick.act === 'rebuild') rebuildTower(pick.t, false); else upgradeTower(pick.t, false);
   AI.think = N < 3 ? .12 : .8;
 }
 
@@ -194,7 +196,7 @@ function activateBoard(B, lit) {
 }
 function beginBattle(first) {
   const B = G.B;
-  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall();
+  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall(); RAID.shots.length = 0; RAID.ruined = RAID.rebuilt = 0;
   const n = 4 + Math.min(3, G.level);
   for (let i = 0; i < n; i++) spawnMonster(i === n - 1 && G.level > 0 ? 'knight' : 'skel', { s: B.cave.s + 2.2 + i * 1.15, lat: rr(-.7, .7), hpMul: 1 + .22 * G.level });
   G.phase = 'play'; G.phaseT = 0;

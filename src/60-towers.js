@@ -257,7 +257,7 @@ class Tower {
     if (this.kind === 'bombard') this.makeGun();
     if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
-    if (lvl > 0) { const tr = d.tiers[lvl]; UI.banner(d.name + ' · ' + tr[0], 3.6, false, tr[1]); }
+    if (this.mended) this.mended = false; else if (lvl > 0) { const tr = d.tiers[lvl]; UI.banner(d.name + ' · ' + tr[0], 3.6, false, tr[1]); }
     this.state = 'active'; this.appear = 0;
     fxDust(this.x, this.y + .2, this.z, 10, 1.3, { speed: 2.2 });
     sfx('buildDone', this.x, this.z, 1);
@@ -315,6 +315,7 @@ class Tower {
   }
   update(dt) {
     const d = this.def, lvl = this.lvl; this.recent = Math.max(0, this.recent - dt * .25);
+    if (raidTend(this, dt)) return;
     if (this.state !== 'active') {
       this.bt += dt; const bt = this.bt;
       if (this.scaf) this.scaf.scale.y = bt < this.tEnd - .25 ? easeOutBack(bt / .3) : Math.max(.01, 1 - (bt - (this.tEnd - .25)) / .25);

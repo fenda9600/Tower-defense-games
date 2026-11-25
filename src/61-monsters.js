@@ -307,7 +307,7 @@ function updateUnits(dt) {
     let v = want * hopMul, obstacle = null, og = 9;
     if (def.boss) {
       if (!m.foe) for (const f of men) if (!f.dead && f.onRoad && f.s > m.s - .3 && f.s - m.s < 1.9 && Math.abs(f.lat - m.lat) < 1.4) { m.foe = f; break; }
-      if (m.foe) v *= .55;
+      if (m.foe) { v *= .55; if (m.raid) raidEnd(m); } else v *= raidThink(m, dt);
     } else if (m.foe || (m.siege && m.s >= gateS - .02)) v = 0;
     else if (!def.ghost) for (let j = 0; j < nu; j++) {
       const o = U[j]; if (o === m || (def.slip && o.isMan)) continue; const ds = o.s - m.s; if (ds <= 0 || ds > 1.7 + m.rad + o.rad) continue;
@@ -339,9 +339,9 @@ function updateUnits(dt) {
     m.cd -= dt;
     if (m.atk >= 0) {
       m.atk += dt / def.atkT * 1.7;
-      if (m.atk >= .5 && !m.struck) { m.struck = true; const f = m.foe; if (f && !f.dead && Math.hypot(f.x - m.x, f.z - m.z) < m.rad + f.rad + (def.boss ? 1.4 : .8)) strike(m, f, def.dmg * G.dmgMul, false); else if (m.siege && !f) siegeStrike(m); }
+      if (m.atk >= .5 && !m.struck) { m.struck = true; const f = m.foe; if (f && !f.dead && Math.hypot(f.x - m.x, f.z - m.z) < m.rad + f.rad + (def.boss ? 1.4 : .8)) strike(m, f, def.dmg * G.dmgMul, false); else if (m.siege && !f) siegeStrike(m); else if (m.raid && !f) raidStrike(m); }
       if (m.atk >= 1) { m.atk = -1; m.cd = def.atkT * rr(.35, .5); }
-    } else if ((m.foe || m.siege) && m.cd <= 0) { m.atk = 0; m.struck = false; if (def.boss && (m.foe || rnd() < .3)) sfx('roar', m.x, m.z, .5, .7); }
+    } else if ((m.foe || m.siege || m.raid) && m.cd <= 0) { m.atk = 0; m.struck = false; if (def.boss && (m.foe || rnd() < .3)) sfx('roar', m.x, m.z, .5, .7); }
     if (def.boss && v > .05) { const st = Math.floor(m.ph / PI); if (st !== m.step) { m.step = st; const p = pathAt(B, m.s, _ap), sd = (st & 1) ? 1 : -1; const fxp = m.x - p.tz * sd * .5, fzp = m.z + p.tx * sd * .5; fxDust(fxp, m.y + .05, fzp, 7, 1.0, { speed: 2.2 }); FX.shake = Math.min(1.1, FX.shake + .4); sfx('bossStep', m.x, m.z, 1, .6); FX.decals.add(B.heightAt, fxp, fzp, .55, .02, .017, .015, .5, 9); } }
     if (m.s >= gateS) { m.s = gateS; if (!m.siege) { joinSiege(m); if (m.dead) continue; } }
   }
@@ -362,7 +362,7 @@ function updateUnits(dt) {
     const dx = m.x - m._x0, dz = m.z - m._z0, maxLat = Math.max(0, maxLatBase - m.rad * .7);
     if (dx || dz) { m.s = clamp(m.s + clamp(dx * m._tx + dz * m._tz, -.12, .12), .3, gateS); m.lat = clamp(m.lat + (-dx * m._tz + dz * m._tx), -maxLat, maxLat); }
     const p = pathAt(B, m.s, _ap); m.x = p.x - p.tz * m.lat; m.z = p.z + p.tx * m.lat;
-    let yaw = Math.atan2(p.tx, p.tz); if (m.foe) yaw = Math.atan2(m.foe.x - m.x, m.foe.z - m.z);
+    let yaw = Math.atan2(p.tx, p.tz); if (m.foe) yaw = Math.atan2(m.foe.x - m.x, m.foe.z - m.z); else if (m.raid) yaw = Math.atan2(m.raid.x - m.x, m.raid.z - m.z);
     m.yaw = angDamp(m.yaw, yaw, m.def.boss ? 4 : 9, dt);
     m.prog = m.s / L; if (!m.vis && m.s > B.cave.s + 1.7) m.vis = true;
     if (m.pop > 0) m.pop = Math.max(0, m.pop - dt * 3);
