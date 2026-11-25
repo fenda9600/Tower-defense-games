@@ -16,7 +16,8 @@ const FOE = {
   // line: how far out of the camp the front rank stands. surge: the pace of the first rush and how long it lasts.
   muster: { budget: .8, span: 9, wait: 2.5, bossAt: .45, line: 5.2, surge: 1.25, surgeT: 5 },
   // the call to the three armies. trickle: how many parties still follow the chief up the road (it used to be 9). budget: the size of the host he calls, per battlefield.
-  call: { trickle: 4, budget: [30, 9], halt: 1.8, hp: 1.5 },
+  // chief: his health against what it used to be, so that he lives to see the wall. stand: how long at most he holds back and directs the storm before going in himself.
+  call: { trickle: 3, budget: [24, 7], halt: 1.8, hp: 1.5, chief: 1.8, stand: 26, alarm: .8 },
   // promotion. need: kills for each rank; a ruined work counts as `work` kills. Each rank adds hp and dmg (shares of the base) and a little size.
   rank: { need: [1, 3, 6], names: ['什长', '百长', '千长'], hp: .3, dmg: .25, size: .07, work: 2, tint: [[.8, .5, .3], [.85, .85, .9], [1.5, 1.15, .3]] },
   st: { muster: false, musterAt: -1, releaseAt: -1, sneak: null, ruins: 0, sneaks: 0, calls: 0, promos: 0, van: 0, bossAt: 0 },
@@ -72,7 +73,7 @@ function foeWave() {
 }
 // One man of the queue takes the field.
 function foeSpawn(e) {
-  const m = spawnMonster(e.type, { hpMul: e.hpMul });
+  const m = spawnMonster(e.type, { hpMul: e.hpMul * (MON[e.type].boss ? FOE.call.chief : 1) });
   if (e.hold) m.hold = true; if (e.van) m.van = true;
   if (e.type === 'picked') foeTorch(m);
   return m;
@@ -154,6 +155,8 @@ function foeThink(m, dt) {
     // the call to the three armies, the moment the chief is within shot of the wall
     if (!m.called && !(m.dying > 0)) { const r = WALL.range[G.wall.lvl]; if (dist2(B.gate.x, B.gate.z, m.x, m.z) < r * r) foeCall(m); }
     if (m.callT > 0) { m.callT -= dt; m.cast = 1; return 0; }
+    // he stands off and directs the storm while the host he called is still fighting
+    if (m.host) { m.standT -= dt; if (m.standT <= 0 || !m.host.some(q => !q.dead && q.hp > 0)) { m.host = null; sfx('roar', m.x, m.z, .8, .6); } else return 0; }
     return k;
   }
   if (m.foe) return k;
@@ -163,7 +166,7 @@ function foeThink(m, dt) {
     if (m.harCd <= 0) {
       m.harCd = h.every * rr(.85, 1.15); sfx('bow', m.x, m.z, .6, rnd());
       const y0 = m.y + def.top * .75, top = Math.min(2.6, t.mounts.top), dist = Math.hypot(t.x - m.x, t.z - m.z);
-      RAID.shots.push({ x0: m.x, y0, z0: m.z, tx: t.x + rr(-.5, .5), ty: t.y + rr(.5, top), tz: t.z + rr(-.5, .5), t: 0, T: clamp(dist / 10, .4, .8), arc: .6 + dist * .12, tower: t, dmg: h.dmg * (1 + RAID.lvDmg * G.level) * (m.pow || 1), x: m.x, y: y0, z: m.z, ember: 0, by: m });
+      RAID.shots.push({ x0: m.x, y0, z0: m.z, tx: t.x + rr(-.5, .5), ty: t.y + rr(.5, top), tz: t.z + rr(-.5, .5), t: 0, T: clamp(dist / 10, .4, .8), arc: .6 + dist * .12, tower: t, dmg: h.dmg * (1 + RAID.lvDmg * G.level) * (m.pow || 1), x: m.x, y: y0, z: m.z, ember: 0 });
     }
     return k * h.slow;
   }
@@ -194,15 +197,19 @@ function foeCall(m) {
   if (lv >= 1 && menu.indexOf('slime') >= 0) { list.push('slime'); budget -= ROSTER.slime[0]; }
   while (budget > 0 && list.length < 26) { const ty = pool[Math.floor(rnd() * pool.length)]; list.push(ty); budget -= ROSTER[ty][0]; }
   const hpMul = C.hp * (1 + .22 * lv) * ez[1];
+  m.host = []; m.standT = C.stand;
   list.forEach((ty, i) => {
     if (G.mons.length > 88) return;
-    const q = spawnMonster(ty, { s: Math.max(B.cave.s + 2, m.s - 2.2 - .42 * i), lat: ((i % 3) - 1) * .75 + rr(-.15, .15), hpMul, pop: 1 }); q.vis = true; q.surge = 3;
+    const q = spawnMonster(ty, { s: Math.max(B.cave.s + 2, m.s - 2.2 - .42 * i), lat: ((i % 3) - 1) * .75 + rr(-.15, .15), hpMul, pop: 1 }); q.vis = true; q.surge = 3; m.host.push(q);
     fxDust(q.x, q.y + .1, q.z, 4, .7, { a: .45 });
   });
   UI.banner('号令三军', 3.4, true, m.def.name + '麾旗击鼓，三军并进，蚁附攻城');
   sfx('hornBoss', m.x, m.z, 1.1); sfx('roar', m.x, m.z, 1, .8); FX.shake = Math.min(1.2, FX.shake + .7);
   fxTimed(4, m.x, m.y + .08, m.z, 9, 9, 1.6, .7, .25, .6, .9, { ground: true }); fxEmbers(m.x, m.y + 2.5, m.z, 30, 1.2);
 }
+
+// How much the adviser should worry about the wall: the chief is in the field and will bring the storm to it.
+function foeAlarm() { return G.bossWave && G.spawning ? FOE.call.alarm : 0; }
 
 // A kill to an enemy's name. Enough of them and he is promoted on the spot.
 function foeKill(m, n) {

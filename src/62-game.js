@@ -141,7 +141,7 @@ function aiThink(dt) {
   for (const t of towers) if (t.ruin) opts.push({ sc: 2 + t.lvl * .3, cost: rebuildCost(t), act: 'rebuild', t });
   // the wall: reinforce when the storming party is more than the garrison can shoot down, upgrade once it is well manned
   { const W = G.wall, threat = sat((W.stormN + W.ladderN + (W.open ? 2 : 0) + (1 - W.gate / gateMax()) * 2) / AI.wall[0]), hurt = 1 - G.lives / G.maxLives, late = sat((N - 3) / 4);
-    if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 + (W.n < WALL.start ? 1.5 : 0) - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
+    if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 + foeAlarm() + (W.n < WALL.start ? 1.5 : 0) - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
     if (W.lvl < Math.min(WALL.tiers.length - 1, cap)) { const c = WALL.cost[W.lvl + 1]; opts.push({ sc: (AI.wall[1] + late * AI.wall[2] + threat * .8 + hurt * 1.1) * (.4 + W.n / 5) * (empty.length === 0 ? 1.4 : 1) * (170 / c), cost: c, act: 'wallUp' }); } }
   if (!opts.length) return;
   opts.sort((a, b) => b.sc - a.sc);
