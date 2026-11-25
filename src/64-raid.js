@@ -9,12 +9,12 @@ const RAID = {
   calm: 6, mend: .05, rebuild: .3, ruinRefund: .3, lvDmg: .12,
   // how each chief goes about it; README.md gives the source for each
   by: {
-    ogre: { how: 'shoot', range: 5.6, dmg: 8, n: 3, every: 2.4, slow: .8, warn: '鸣镝所向，附离火箭齐发，射沿路工事' },
-    king: { how: 'shoot', range: 5.6, dmg: 8.5, n: 3, every: 2.4, slow: .8, warn: '单于鸣镝所射，万骑随之，射沿路工事' },
-    colossus: { how: 'shoot', range: 6.4, dmg: 7, n: 4, every: 2.6, slow: .85, h: 4.4, warn: '云车瞰临，积弩乱发，矢下如雨' },
-    giant: { how: 'smash', range: 4.3, dmg: 42, blows: 3, rest: 5, warn: '辽军所过，沿路工事必夷伐焚荡' },
-    jotun: { how: 'smash', range: 4.3, dmg: 46, blows: 3, rest: 5, warn: '铁浮屠重铠陷阵，撞毁沿路工事' },
-    queen: { how: 'smash', range: 4.4, dmg: 44, blows: 3, rest: 5, warn: '象阵置于阵前，踏毁沿路工事' },
+    ogre: { how: 'shoot', range: 5.6, dmg: 8, n: 3, every: 4.8, slow: .8, warn: '鸣镝所向，附离火箭齐发，射沿路工事' },
+    king: { how: 'shoot', range: 5.6, dmg: 8.5, n: 3, every: 4.8, slow: .8, warn: '单于鸣镝所射，万骑随之，射沿路工事' },
+    colossus: { how: 'shoot', range: 6.4, dmg: 7, n: 4, every: 5.2, slow: .85, h: 4.4, warn: '云车瞰临，积弩乱发，矢下如雨' },
+    giant: { how: 'smash', range: 4.3, dmg: 42, blows: 2, rest: 12, warn: '辽军所过，沿路工事必夷伐焚荡' },
+    jotun: { how: 'smash', range: 4.3, dmg: 46, blows: 2, rest: 12, warn: '铁浮屠重铠陷阵，撞毁沿路工事' },
+    queen: { how: 'smash', range: 4.4, dmg: 44, blows: 2, rest: 12, warn: '象阵置于阵前，踏毁沿路工事' },
   },
   shots: [], ruined: 0, rebuilt: 0,
 };
