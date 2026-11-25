@@ -97,8 +97,9 @@ function frame(now) {
   requestAnimationFrame(frame);
   const raw = (now - _last) / 1000, rdt = Math.min(.05, Math.max(.001, raw)); _last = now; R.frameDt = rdt;
   // fast-forward: run extra fixed-size substeps instead of a bigger dt, so collisions, the wall garrison and the AI see the same steps as at 1x
-  const n = G.speed > 1 ? G.speed : 1; for (let i = 1; i < n; i++) step(rdt, true);
-  step(rdt);
+  // paused: the world holds still, but the HUD keeps answering so the player can look around, build and plan
+  if (G.paused) UI.update(rdt);
+  else { const n = G.speed > 1 ? G.speed : 1; for (let i = 1; i < n; i++) step(rdt, true); step(rdt); }
   R.fade = Math.min(1, R.fade + rdt * 1.6);
   applyCamera(); renderFrame(); UI.draw();
   if (document.hidden || raw > .25) { _acc = 0; _frames = 0; return; }

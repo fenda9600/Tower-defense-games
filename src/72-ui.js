@@ -2,7 +2,7 @@
 const UI = (() => {
   const U = {
     ctx: null, s: 3, insetTop: 0, goldShown: 0, hurt: 0, coins: [], msg: null, hover: null, menu: null, armed: null, idle: 99, mx: -1, my: -1, inside: false,
-    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, speedRect: null, statsRect: null, statsTap: -1e9, downT: 0, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
+    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, speedRect: null, pauseRect: null, statsRect: null, statsTap: -1e9, downT: 0, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
   };
   const COLR = { bg: 'rgba(9,11,17,0.86)', bg2: 'rgba(24,27,38,0.94)', bd: '#5d4c35', bdHi: '#e8b04a', tx: '#efe4cd', dim: '#a79e8a', amber: '#e8b04a', ember: '#ff8a3c', cold: '#8fc7ff', red: '#e5553c', dark: '#0b0d14', ok: '#9fd08a' };
   const _pv = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3();
@@ -57,13 +57,16 @@ const UI = (() => {
       else if (k === 'r' || k === 'R') { doReinforce(); }
       else if (k === 'g' || k === 'G') { doWallUp(); }
       else if (k === 'f' || k === 'F') { cycleSpeed(); }
+      else if (k === 'p' || k === 'P') { togglePause(); }
     });
   }
   function audioGesture() { if (!AU.ready) AU.unlock(); }
   function touchInput() { U.idle = 0; U.manual = true; }
   function toggleCommand() { U.setManual(!U.manual); U.idle = 0; sfx('uiClick', CAM.x, CAM.z, .8); }
   const SPEEDS = [1, 2, 4];
-  function cycleSpeed() { G.speed = SPEEDS[(SPEEDS.indexOf(G.speed) + 1) % SPEEDS.length]; sfx('uiClick', CAM.x, CAM.z, .8); }
+  function togglePause() { G.paused = !G.paused; sfx('uiClick', CAM.x, CAM.z, .8); }
+  U.togglePause = togglePause;
+  function cycleSpeed() { G.paused = false; G.speed = SPEEDS[(SPEEDS.indexOf(G.speed) + 1) % SPEEDS.length]; sfx('uiClick', CAM.x, CAM.z, .8); }
   U.cycleSpeed = cycleSpeed;
   function deny() { U.deny = 1; sfx('uiDeny', CAM.x, CAM.z, .6); }
   function doBuild(pad, kind) { touchInput(); if (buildTower(pad, kind, true)) { sfx('uiClick', pad.x, pad.z, .8); U.menu = null; U.armed = null; return true; } deny(); return false; }
@@ -94,6 +97,7 @@ const UI = (() => {
   function onDown() {
     const sr = U.soundRect; if (sr && U.mx >= sr.x && U.mx <= sr.x + sr.w && U.my >= sr.y && U.my <= sr.y + sr.h) { if (AU.ready && sr.armed) AU.setMuted(!AU.muted); sr.armed = true; return; }
     const inR = r => r && U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h;
+    if (inR(U.pauseRect)) { togglePause(); return; }
     if (inR(U.speedRect)) { cycleSpeed(); return; }
     // double-tap the resource bar (top left) to open the hidden resource editor
     if (inR(U.statsRect)) { const now = U.downT; if (now - U.statsTap < 400) { U.statsTap = 0; CHEAT.toggle(); } else U.statsTap = now; return; }
@@ -155,7 +159,7 @@ const UI = (() => {
       let range = 0; if (tgt.tower) range = tgt.tower.range; else { const kind = (U.menu && U.hotBtn && U.hotBtn.kind) || U.armed || (U.menu && U.btns[U.menu.focus] && U.gp.active && U.btns[U.menu.focus].kind) || 'archer'; range = TOWER[kind].range[0]; }
       setRing(U.rangeMesh, pad.x, pad.z, range, .07); U.rangeMesh.material.opacity = .34;
     } else { U.padMesh.visible = false; U.rangeMesh.visible = false; }
-    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot) || (U.speedRect && U.speedRect.hot) || U.wallRects.some(r => r.hot)) ? 'pointer' : 'default';
+    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot) || (U.speedRect && U.speedRect.hot) || (U.pauseRect && U.pauseRect.hot) || U.wallRects.some(r => r.hot)) ? 'pointer' : 'default';
   }
 
   function draw() {
@@ -206,10 +210,14 @@ const UI = (() => {
       const hotS = U.inside && U.mx >= xs && U.mx <= xs + w && U.my >= ys && U.my <= ys + h;
       plate(xs, ys, w, h, hotS ? { bd: COLR.bdHi, bg: COLR.bg2 } : {}); PX.icon(c, icn, xs + pad, ys + pad - s, s, AU.ready ? 1 : .8); text(lbl, xs + pad + iw2 + 3 * s, ys + pad - s, AU.ready ? COLR.dim : COLR.tx);
       U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false };
-      const fast = G.speed > 1, sl = '快进 ' + G.speed + '倍', sw = tw('快进 4倍') + pad * 2, sxp = xs + w + 3 * s, hotF = U.inside && U.mx >= sxp && U.mx <= sxp + sw && U.my >= ys && U.my <= ys + h;
+      const fast = G.speed > 1, sl = '快进 ' + G.speed + '倍', sw = tw('快进 4倍') + pad * 2, pw = tw('暂停') + pad * 2, pxp = xs + w + 3 * s, sxp = pxp + pw + 3 * s, hotF = U.inside && U.mx >= sxp && U.mx <= sxp + sw && U.my >= ys && U.my <= ys + h;
       plate(sxp, ys, sw, h, hotF ? { bd: COLR.bdHi, bg: COLR.bg2 } : fast ? { bd: COLR.ember } : {}); text(sl, sxp + sw / 2, ys + pad - s, fast ? COLR.amber : COLR.dim, { align: 'c' });
-      U.speedRect = { x: sxp, y: ys, w: sw, h, hot: hotF }; }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · F 快进 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+      U.speedRect = { x: sxp, y: ys, w: sw, h, hot: hotF };
+      const hotP = U.inside && U.mx >= pxp && U.mx <= pxp + pw && U.my >= ys && U.my <= ys + h;
+      plate(pxp, ys, pw, h, hotP ? { bd: COLR.bdHi, bg: COLR.bg2 } : G.paused ? { bd: COLR.ember } : {}); text(G.paused ? '继续' : '暂停', pxp + pw / 2, ys + pad - s, G.paused ? COLR.amber : COLR.dim, { align: 'c' });
+      U.pauseRect = { x: pxp, y: ys, w: pw, h, hot: hotP };
+      if (G.paused) { const t = '已暂停', ts = s + 2, pw2 = PX.measure(t, ts) * ts + pad * 4, ph = PX.LINE * ts + pad * 2, px2 = Math.round(W / 2 - pw2 / 2), py2 = Math.round(H * .42); plate(px2, py2, pw2, ph, { bd: COLR.ember }); PX.text(c, t, W / 2, py2 + pad, ts, COLR.amber, { align: 'c' }); } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
     // the wall: its garrison, the reinforce skill and the garrison upgrade
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {
