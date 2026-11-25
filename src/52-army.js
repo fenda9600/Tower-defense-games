@@ -54,6 +54,8 @@ SPEC.crouch = Object.assign({}, SPEC.foot, { lean: .2, stoop: .22, stride: .62 }
 
 function initArmy() {
   const I = KIT.item, N = { rad: .2, shadow: false };
+  // a scaling ladder, foot at the origin and running up +Y: carried on the shoulder, then swung up against the wall
+  I.ladder = new PartBatch(S => { const L = 4.3; for (const sg of [-1, 1]) S.box(.06, L, .06, sg * .24, L / 2, 0, COL.wood, { l: L_WOOD }); for (let y = .3; y < L; y += .36) S.box(.5, .045, .045, 0, y, 0, COL.woodL, { l: L_WOOD }); for (const sg of [-1, 1]) S.box(.07, .16, .1, sg * .24, L - .05, -.05, COL.iron, { l: L_METAL }); }, 24, { rad: 4.5 });
   const ink = C(0x23262e), indigo = C(0x283247), hide = C(0x6a4a30), fur = C(0x8c7556), furD = C(0x5a4632), felt = C(0x7a6a54);
   // Foot soldiers of the attacking host: dark tunics, leather armour, a black head cloth.
   KIT.foe = armyKit({ tunic: indigo, pants: C(0x3a3a36), armor: C(0x5a4030), belt: C(0x2a1d14), head: 'wrap', wraps: C(0x8a8068) }, 150);

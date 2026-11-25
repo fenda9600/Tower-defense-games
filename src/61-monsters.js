@@ -19,6 +19,7 @@ const MON = {
   gargoyle: { name: '铁嘴火鹞', en: 'Iron-beaked fire kite', hp: 52, spd: 1.45, rad: .32, mass: 1.2, bounty: 13, lives: 1, hitH: 0, top: .6, dmg: 0, atkT: 1, scale: 1.15, fly: true, flyKit: 'dragon', armor: .72, death: 'rocket', cat: 'air', alt: [2.4, 3.1], flap: 9 },
   necro: { name: '督战校尉', en: 'Battle officer', hp: 105, spd: .85, rad: .3, mass: 1.6, bounty: 18, lives: 1, hitH: .8, top: 2.2, dmg: 5, atkT: 1.2, scale: 1.08, summon: { type: 'skel', n: 2, every: 7.5, max: 3, hp: .6 }, death: 'man' },
   mummy: { name: '轒辒车', en: 'Tortoise cart', hp: 135, spd: .9, rad: .36, mass: 2, bounty: 14, lives: 1, hitH: .7, top: 1.45, dmg: 12, atkT: 1.1, scale: 1, cart: 'tortoise', gait: 2.1, split: ['scarab', 3], death: 'wood' },
+  ladder: { name: '云梯兵', en: 'Ladder bearer', hp: 140, spd: 1.4, armor: .6, rad: .3, mass: 1.4, bounty: 9, lives: 1, hitH: .75, top: 1.5, dmg: 5, atkT: 1.0, scale: 1, death: 'man', ladder: true },
   brute: { name: '狼牙棒手', en: 'Mace bearer', hp: 360, spd: .82, rad: .5, mass: 8, bounty: 30, lives: 2, hitH: 1.0, top: 2.05, dmg: 24, atkT: 1.4, scale: 1.4, regen: .035, death: 'man', cat: 'armor' },
   golem: { name: '铁鹞子', en: 'Western Xia iron hawk', hp: 470, spd: .62, rad: .5, mass: 9, bounty: 34, lives: 2, hitH: 1.05, top: 2.3, dmg: 26, atkT: 1.5, scale: 1.05, armor: .35, slowRes: .5, bard: true, death: 'horse', gait: 3.2, cat: 'armor' },
   brood: { name: '战象', en: 'War elephant', hp: 230, spd: .92, rad: .58, mass: 5, bounty: 24, lives: 2, hitH: 1.3, top: 2.6, dmg: 14, atkT: 1.0, scale: 1, split: ['spider', 5], death: 'beast', gait: 2.6 },
@@ -124,6 +125,7 @@ function finishBoss(m) {
   G.bossDown = true; removeMonster(m);
 }
 
+const _lq = new THREE.Quaternion(), _ly = new THREE.Vector3(0, 1, 0), _lv = new THREE.Vector3(), _lm = new THREE.Matrix4(), _ls = new THREE.Vector3(1, 1, 1);
 const RIGS = {
   skel(m) { m.weapon = KIT.item.dao; return rigHuman(KIT.foe, SPEC.foot, m); },
   knight(m) { m.weapon = KIT.item.dao; m.wScale = 1.1; m.shield = KIT.item.shieldR; m.helm = true; m.plate = true; return rigHuman(KIT.foe, SPEC.foot, m); },
@@ -137,6 +139,7 @@ const RIGS = {
   bomber(m) { m.keg = true; m.hat = KIT.item.ironCap; return rigHuman(KIT.foe, SPEC.foot, m); },
   drummer(m) { m.weapon = KIT.item.mallet; m.drum = true; m.back = KIT.item.banner; return rigHuman(KIT.foe, SPEC.foot, m); },
   necro(m) { m.weapon = KIT.item.flagstaff; m.staff = true; m.helm = true; return rigHuman(KIT.chief, SPEC.foot, m); },
+  ladder(m) { m.weapon = null; m.hat = KIT.item.band; const M = rigHuman(KIT.light, SPEC.foot, m); if (!m.wallSt || m.wallSt === 'toLadder') { _lq.setFromUnitVectors(_ly, _lv.set(Math.sin(m.yaw), .1, Math.cos(m.yaw)).normalize()); KIT.item.ladder.put(_lm.compose(_lv.set(m.x - Math.sin(m.yaw) * 1.7 + Math.cos(m.yaw) * .2, m.y + 1.02 * m.scale, m.z - Math.cos(m.yaw) * 1.7 - Math.sin(m.yaw) * .2), _lq, _ls), m.flash || 0, null); } return M; },
   brute(m) { m.weapon = KIT.item.club; m.wScale = 1.1; m.heavy = true; m.plate = true; m.hat = KIT.item.ironCap; return rigHuman(KIT.foe, SPEC.foot, m); },
   giant(m) { m.weapon = KIT.item.guandao; m.wScale = 1.0; m.heavy = true; m.general = true; return rigHuman(KIT.chief, SPEC.foot, m); },
   ogre(m) { m.weapon = KIT.item.saber; m.wScale = 1.5; m.heavy = true; m.hat = KIT.item.khanHat; return rigHuman(KIT.hu, SPEC.foot, m); },
@@ -202,10 +205,10 @@ function footmanThink(f, dt) {
   const rally = slotPos(f, _fp), rs = tw.pad.s;
   if (f.leave) { f.gone = true; f.alive = false; if (f.flame) { removeFlame(f.flame); f.flame = null; } fxDust(f.x, f.y + .3, f.z, 4, .6); return; }
   let m = f.target;
-  if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > 3.0 || m.dying)) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
+  if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > 3.0 || m.dying || m.wallSt)) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
   if (!m && f.state !== 'march') {
     let best = null, bd = 1e9;
-    for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost) continue; if (Math.abs(q.s - rs) > 2.5) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
+    for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost || q.wallSt) continue; if (Math.abs(q.s - rs) > 2.5) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
     if (best) { m = f.target = best; best.men++; }
   }
   if (m) {
@@ -259,7 +262,7 @@ function updateUnits(dt) {
   const B = G.B, mons = G.mons, men = G.men, L = B.L, maxLatBase = ROAD_HALF + .04, gateS = L - .35;
   for (let i = men.length - 1; i >= 0; i--) { const f = men[i]; if (f.gone) { swapRemove(men, i); continue; } footmanThink(f, dt); if (f.gone) swapRemove(men, i); }
   _units.length = 0;
-  for (const m of mons) { m.haste = 0; if (!m.dead && !m.fly && !m.def.ghost) _units.push(m); }
+  for (const m of mons) { m.haste = 0; if (!m.dead && !m.fly && !m.def.ghost && !m.wallSt) _units.push(m); }
   for (const d of mons) if (!d.dead && d.def.aura && d.vis && !d.dying) for (const m of mons) if (m !== d && !m.dead && !m.fly && !m.def.boss && Math.abs(m.s - d.s) < d.def.aura[0]) m.haste = d.def.aura[1];
   for (const f of men) if (!f.dead && f.onRoad) _units.push(f);
   const U = _units, nu = U.length;
@@ -274,6 +277,8 @@ function updateUnits(dt) {
       if (rnd() < dt * 14) fxDust(m.x + rr(-.8, .8), m.y + rr(.4, 2.6), m.z + rr(-.8, .8), 1, .7, { a: .4 });
       if (m.dying <= 0) finishBoss(m); continue;
     }
+    if (def.ladder && !m.wallSt && m.s > gateS - 4.5) tryLadder(m);
+    if (m.wallSt) { updateStormer(m, dt); continue; }
     if (m.foe && (m.foe.dead || m.foe.gone)) m.foe = null;
     if (def.explode && m.foe) { m.hp = 0; killMonster(m, 'blast', 0, 0, null); continue; }
     if (def.regen && m.hp < m.maxHp && G.t - m.hitAt > 2.2) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * def.regen * dt);
@@ -303,7 +308,7 @@ function updateUnits(dt) {
     if (def.boss) {
       if (!m.foe) for (const f of men) if (!f.dead && f.onRoad && f.s > m.s - .3 && f.s - m.s < 1.9 && Math.abs(f.lat - m.lat) < 1.4) { m.foe = f; break; }
       if (m.foe) v *= .55;
-    } else if (m.foe || m.siege) v = 0;
+    } else if (m.foe || (m.siege && m.s >= gateS - .02)) v = 0;
     else if (!def.ghost) for (let j = 0; j < nu; j++) {
       const o = U[j]; if (o === m || (def.slip && o.isMan)) continue; const ds = o.s - m.s; if (ds <= 0 || ds > 1.7 + m.rad + o.rad) continue;
       if (Math.abs(o.lat - m.lat) > (m.rad + o.rad) * .92) continue;
@@ -342,7 +347,7 @@ function updateUnits(dt) {
   }
   for (const u of U) if (u.isMan) u.foes = 0;
   for (const m of mons) if (!m.dead && m.foe) m.foe.foes++;
-  for (const m of mons) { if (m.dead || m.fly) continue; const p = pathAt(B, m.s, _ap); m.x = p.x - p.tz * m.lat; m.z = p.z + p.tx * m.lat; m.y = p.y + .02 - (m.dying > 0 ? (1.9 - m.dying) * .15 : 0); m._tx = p.tx; m._tz = p.tz; m._x0 = m.x; m._z0 = m.z; }
+  for (const m of mons) { if (m.dead || m.fly || m.wallSt) continue; const p = pathAt(B, m.s, _ap); m.x = p.x - p.tz * m.lat; m.z = p.z + p.tx * m.lat; m.y = p.y + .02 - (m.dying > 0 ? (1.9 - m.dying) * .15 : 0); m._tx = p.tx; m._tz = p.tz; m._x0 = m.x; m._z0 = m.z; }
   for (let i = 0; i < nu; i++) {
     const a = U[i]; if (a.dead) continue;
     for (let j = i + 1; j < nu; j++) {
@@ -353,7 +358,7 @@ function updateUnits(dt) {
     }
   }
   for (const m of mons) {
-    if (m.dead || m.fly) continue;
+    if (m.dead || m.fly || m.wallSt) continue;
     const dx = m.x - m._x0, dz = m.z - m._z0, maxLat = Math.max(0, maxLatBase - m.rad * .7);
     if (dx || dz) { m.s = clamp(m.s + clamp(dx * m._tx + dz * m._tz, -.12, .12), .3, gateS); m.lat = clamp(m.lat + (-dx * m._tz + dz * m._tx), -maxLat, maxLat); }
     const p = pathAt(B, m.s, _ap); m.x = p.x - p.tz * m.lat; m.z = p.z + p.tx * m.lat;

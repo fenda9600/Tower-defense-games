@@ -214,12 +214,12 @@ const UI = (() => {
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {
       const Wl = G.wall, lv = Wl.lvl, maxed = lv >= WALL.tiers.length - 1, full = Wl.n >= WALL.max, upc = maxed ? 0 : WALL.cost[lv + 1];
-      const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = '城防 ' + G.lives + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + WALL.dmg[lv];
+      const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = (Wl.open ? '城门已破' : '城门 ' + Math.ceil(Wl.gate)) + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + WALL.dmg[lv];
       const la = full ? '守军已满' : 'R 增兵 ' + WALL.addCost, lu = maxed ? '已满级' : 'G 升级 ' + upc;
       const bh = LH + 4 * s, w = Math.max(tw(t1), tw(t2), (Math.max(tw(la), tw(lu)) + 8 * s) * 2 + 3 * s) + pad * 2, h = LH * 2 + bh + pad * 2 + 3 * s;
       const xp = Math.round(W / 2 - w / 2), sr = U.speedRect || U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
       plate(xp, yp, w, h, Wl.siegeN ? { bd: COLR.ember } : {}); U.wallBox = { x: xp, y: yp, w, h };
-      text(t1, xp + pad, yp + pad - s, COLR.amber); text(t2, xp + pad, yp + pad + LH, Wl.siegeN ? COLR.ember : COLR.dim);
+      text(t1, xp + pad, yp + pad - s, COLR.amber); text(t2, xp + pad, yp + pad + LH, Wl.open || Wl.stormN || !Wl.n ? COLR.red : Wl.siegeN ? COLR.ember : COLR.dim);
       const by = yp + pad + LH * 2 + 2 * s, bw2 = Math.floor((w - pad * 2 - 3 * s) / 2);
       [[la, !full && G.gold >= WALL.addCost, full, doReinforce], [lu, !maxed && G.gold >= upc, maxed, doWallUp]].forEach(([l, can, done, fn], i) => {
         const bx = xp + pad + i * (bw2 + 3 * s), over = U.inside && !U.gp.active && U.mx >= bx && U.mx <= bx + bw2 && U.my >= by && U.my <= by + bh;

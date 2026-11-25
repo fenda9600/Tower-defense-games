@@ -348,7 +348,10 @@ function buildKeep(B) {
   B.beacon = { x: kx + bx, y: ky + bh + 1.45, z: oz + bz };
   B.gate = { x: kx, y: ky, z: -11.4 };
   // where the wall garrison stands: the two men flanking the gate first, then outward along the east wall walk
-  B.wallSlots = [2.15, -2.0, 2.75, 3.35, 3.95, 4.55, 5.15, -5.05].map(x => ({ x: kx + x, y: ky + 3.14, z: oz + wz + .1 }));
+  B.wallSlots = [2.1, -2.0, 2.62, 3.14, 3.66, 4.18, 4.7, 5.22].map(x => ({ x: kx + x, y: ky + 3.14, z: oz + wz - .1 }));
+  // where scaling ladders go up against the east wall, the gate doorway, and where men who came in by the gate reach the wall walk
+  B.ladders = [2.36, 3.92, 4.96].map(x => ({ foot: { x: kx + x, z: oz + wz + 1.5 }, top: { x: kx + x, y: ky + 3.14, z: oz + wz + .36 } }));
+  B.wallIn = { door: { x: kx, z: oz + gz + gd / 2 - .25 }, up: [{ x: kx + 1.95, y: ky + 3.14, z: oz + wz + .3 }, { x: kx - 2.0, y: ky + 3.14, z: oz + wz + .3 }] };
 }
 
 function buildCave(B) {

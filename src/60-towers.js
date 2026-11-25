@@ -202,7 +202,7 @@ function findTarget(x, z, range, air, ground, minRange = 0) {
   return best;
 }
 function aimPoint(m, dt, out) {
-  if (m.fly) { out.x = m.x + m.vx * dt; out.y = m.y; out.z = m.z + m.vz * dt; return out; }
+  if (m.fly || m.wallSt) { out.x = m.x + (m.vx || 0) * dt; out.y = m.y + (m.fly ? 0 : m.hitH); out.z = m.z + (m.vz || 0) * dt; return out; }
   const B = G.B, adv = m.blocked ? 0 : m.spdNow * dt, s2 = Math.min(B.L - .1, m.s + adv);
   pathAt(B, s2, out); out.x += -out.tz * m.lat; out.z += out.tx * m.lat; out.y += m.hitH; return out;
 }
