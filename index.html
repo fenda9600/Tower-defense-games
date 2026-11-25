@@ -557,7 +557,7 @@ function cnBanner(S, x, y0, y1, z, col, rng, o = {}) {
 const R = {
   renderer: null, scene: null, cam: null, canvas: null,
   dw: 2, dh: 2, iw: 2, ih: 2, maxIH: 1080, quality: 1,
-  viewH: 30, fitW: 50, shiftY: 0, px: 0.04,
+  viewH: 27, fitW: 45, shiftY: 0, px: 0.04,
   sub: new THREE.Vector2(), ditherOfs: new THREE.Vector2(),
   fade: 0, exposure: 1.0,
   rt: {}, mats: {}, fsScene: null, fsCam: null, fsMesh: null,
@@ -895,10 +895,10 @@ function updateBiomeLook(dt) {
 }
 
 
-// The board is 2 * BH on a side. It was 36 (BH 18) and is now 48: a third longer each way, 78 % more ground.
+// The board is 2 * BH on a side: 36, the original size. (It was tried at 48 and put back.) To resize it change BH and NCH.
 // Everything that hugs an edge is written relative to it: BW / BN are the west and north edges the road enters and the pass
 // stands on, BE is the far (east / south) limit, and AREA scales anything scattered by count so the density stays put.
-const BH = 24, CHUNK = 6, NCH = 8, CELL = 0.5, ROAD_HALF = 1.25, PATH_STEP = 0.3;
+const BH = 18, CHUNK = 6, NCH = 6, CELL = 0.5, ROAD_HALF = 1.25, PATH_STEP = 0.3;
 const BW = -BH, BN = -BH, BE = BH, AREA = (BH / 18) * (BH / 18), LIN = BH / 18;
 
 function segDist(px, pz, ax, az, bx, bz) {
@@ -954,14 +954,14 @@ function polyMinDist(poly, x, z, i0 = 0, i1 = poly.length - 1) {
   return [best, bi];
 }
 
-// road length: 58 to 92 on the old board, stretched with the board's side
-const ROAD_MIN = Math.round(58 * LIN + 4), ROAD_MAX = Math.round(92 * LIN + 6);
+// road length: 58 to 92 on the 36 board, stretched with the board's side if it is ever resized
+const ROAD_MIN = Math.round(58 * LIN), ROAD_MAX = Math.round(92 * LIN);
 function tryRoad(rng) {
-  const zc = rng.range(BN + 11.5, BE - 9), kx = rng.range(BW + 16, BE - 7.5);
+  const zc = rng.range(BN + 11.5, BE - 9), kx = rng.range(BW + 18.5, BE - 7.5);
   const way = [[BW + .4, zc], [BW + 6, zc]];
   const endA = [kx, BN + 11.8], endB = [kx, BN + 6.6];
   let cur = way[1], dir = 0;
-  const nMid = rng.int(6, 10);
+  const nMid = rng.int(4, 7);
   const clearOf = (p, upto) => { for (let i = 0; i < upto; i++) if (segDist(p[0], p[1], way[i][0], way[i][1], way[i + 1][0], way[i + 1][1]) < 6.2) return false; return true; };
   for (let k = 0; k < nMid; k++) {
     let ok = false;
@@ -1007,12 +1007,12 @@ function tryRoad(rng) {
 function tryStream(rng, road) {
   const { poly, L, kx } = road;
   for (let t = 0; t < 60; t++) {
-    const sx = rng.range(BW + 8, BE - 6), sz = rng.range(BN + 5.5, 4);
+    const sx = rng.range(BW + 8, BE - 6), sz = rng.range(BN + 5.5, 2);
     if (Math.abs(sx - kx) < 7 && sz < BN + 11) continue;
     if (polyMinDist(poly, sx, sz)[0] < 3.6) continue;
     const front = rng.chance(0.6);
     const ex = front ? rng.range(BW + 5, BE - 5) : BH + 0.6, ez = front ? BH + 0.6 : rng.range(BN + 11, BE - 5);
-    const mx = (sx + ex) / 2 + rng.range(-7, 7), mz = (sz + ez) / 2 + rng.range(-7, 7);
+    const mx = (sx + ex) / 2 + rng.range(-5, 5), mz = (sz + ez) / 2 + rng.range(-5, 5);
     const raw = [];
     for (let k = 0; k <= 40; k++) { const u = k / 40, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u; raw.push([a * sx + b * mx + c * ex, a * sz + b * mz + c * ez]); }
     const sp = resample(raw, 0.5);
@@ -1043,8 +1043,8 @@ function tryStream(rng, road) {
   return null;
 }
 
-// 8 to 11 tower bases on the old board; the longer road carries 11 to 15
-const PADS_MIN = 11, PADS_MAX = 15;
+// 8 to 11 tower bases
+const PADS_MIN = 8, PADS_MAX = 11;
 function choosePads(rng, road, stream) {
   const { poly, L, kx } = road, cand = [];
   const off = ROAD_HALF + 2.0;
@@ -1189,7 +1189,7 @@ function buildBoard(seed, index) {
   for (const p of pads) p.y0 = py[clamp(Math.round(p.s / PATH_STEP), 0, n - 1)] + .05;
 
   const ponds = [];
-  for (let t = 0; t < 900 && ponds.length < Math.round(bio.ponds * AREA); t++) {
+  for (let t = 0; t < 700 && ponds.length < Math.round(bio.ponds * AREA); t++) {
     const r = rng.range(1.2, 2.3), x = rng.range(-BH + 3.4 + r, BH - 3.4 - r), z = rng.range(-BH + 3.4 + r, BH - 3.4 - r);
     if (dfAt(dRoad, x, z) < ROAD_HALF + 2.6 + r || dfAt(dStr, x, z) < 3.9 + r) continue;
     if (x < BW + 6 + r || z < BN + 6 + r || (Math.abs(x - kx) < 6.5 + r && z < BN + 9.5 + r)) continue;
@@ -1336,7 +1336,8 @@ function buildBoard(seed, index) {
     const S = chunkAt((a[0] + c[0]) / 2, (a[2] + c[2]) / 2).soup;
     for (const v of [a, b, c, a, c, d]) S.v(v[0], v[1], v[2], 0, 1, 0, v[3][0], v[3][1], v[3][2], v[0] * .25, v[2] * .25, L_COBBLE, v[4]);
   }
-  for (let q = 0; q < 22; q++) {
+  const nCracks = Math.round(16 * LIN);
+  for (let q = 0; q < nCracks; q++) {
     const i = rng.int(20, n - 20); if (Math.abs(i - ci0) * PATH_STEP < 4) continue;
     let x = px[i] - tz[i] * rng.range(-.9, .9), z = pz[i] + tx[i] * rng.range(-.9, .9), a = rng.range(0, TAU); const y = py[i] + .045, S = chunkAt(x, z).soup;
     for (let sgm = 0; sgm < rng.int(3, 6); sgm++) {
@@ -1928,7 +1929,7 @@ function scatterProps(B) {
   const bio = B.bio;
   const at = (x, z, build, r, T0) => { if (Math.abs(x) > BH - .8 || Math.abs(z) > BH - .8) return; const T = T0 || new Soup(); if (!T0) build(T); B.put(T, x, z, { ry: rng() * TAU }); if (r) placed.push([x, z, r]); };
   const nA = k => Math.round(k * AREA), nL = k => Math.round(k * LIN); // by-area and by-road-length counts for the larger board
-  for (let k = 0; k < 2; k++) drop(T => PROP.towerRuin(T, rng), 2.9, { far: 3.6 });
+  for (let k = 0; k < nA(1); k++) drop(T => PROP.towerRuin(T, rng), 2.9, { far: 3.6 });
   drop(T => PROP.well(T, rng), 1.3, { near: 5.5, far: 2.6 });
   drop(T => PROP.statue(T, rng), 1.2, { near: 6, far: 2.4 });
   drop(T => PROP.ribcage(T, rng), 2.4, { far: 2.8 });
@@ -2647,15 +2648,16 @@ function initWeather() {
   const m = new THREE.ShaderMaterial({
     uniforms: u, transparent: true, depthWrite: false, depthTest: true, side: THREE.DoubleSide, blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
     vertexShader: `attribute vec4 iSeed; varying vec4 vCol; varying vec2 vUv; varying float vAdd;
+const float WXS = ${(2 * BH + 12).toFixed(1)}; // the weather volume: the board plus a margin
 uniform float uTime; uniform float uFade; uniform vec3 uLightPos[12]; uniform vec3 uLightCol[12]; uniform vec3 uAmb; uniform vec2 uN;
 uniform vec3 uVelA; uniform vec3 uVelB; uniform vec2 uSwayA; uniform vec2 uSwayB; uniform vec2 uSizeA; uniform vec2 uSizeB; uniform vec4 uColA; uniform vec4 uColB; uniform vec3 uAlA; uniform vec3 uAlB; uniform vec2 uYA; uniform vec2 uYB;
 void main(){
   float isB = step(iSeed.w, uN.y), show = step(iSeed.w, uN.x + uN.y);
   vec3 vel = mix(uVelA, uVelB, isB), al = mix(uAlA, uAlB, isB); vec2 sway = mix(uSwayA, uSwayB, isB), sz = mix(uSizeA, uSizeB, isB), yr = mix(uYA, uYB, isB); vec4 cp = mix(uColA, uColB, isB);
   float r1 = fract(iSeed.w * 91.7 + iSeed.x * 3.1), r2 = fract(iSeed.w * 357.3 + iSeed.z * 5.7), span = max(yr.y - yr.x, 0.01);
-  vec3 p = vec3(iSeed.x * 64.0, iSeed.y * span, iSeed.z * 64.0) + vel * uTime * (0.65 + 0.7 * r1);
+  vec3 p = vec3(iSeed.x * WXS, iSeed.y * span, iSeed.z * WXS) + vel * uTime * (0.65 + 0.7 * r1);
   p.x += sin(uTime * sway.y * (0.6 + r2) + iSeed.y * 40.0) * sway.x; p.z += cos(uTime * sway.y * (0.5 + r1) + iSeed.x * 40.0) * sway.x; p.y += sin(uTime * sway.y * 0.7 + r1 * 30.0) * sway.x * 0.3;
-  p.x = mod(p.x, 64.0) - 32.0; p.z = mod(p.z, 64.0) - 32.0; p.y = mod(p.y, span) + yr.x;
+  p.x = mod(p.x, WXS) - WXS * 0.5; p.z = mod(p.z, WXS) - WXS * 0.5; p.y = mod(p.y, span) + yr.x;
   float size = mix(sz.x, sz.y, r2);
   vec4 mv = viewMatrix * vec4(p, 1.0);
   vec3 vv = (viewMatrix * vec4(vel, 0.0)).xyz; float vl = length(vv.xy); vec2 dir = vl > 0.0001 ? vv.xy / vl : vec2(0.0, 1.0);
@@ -2663,7 +2665,7 @@ void main(){
   gl_Position = show > 0.5 ? projectionMatrix * mv : vec4(2.0, 2.0, 2.0, 1.0);
   vec3 L = uAmb; for (int i = 0; i < 12; i++) { vec3 d = uLightPos[i] - p; L += uLightCol[i] / (dot(d, d) + 3.0); }
   float tw = al.y > 0.0 ? pow(max(0.0, sin(uTime * al.y * (0.5 + r1) + r2 * 60.0)), 4.0) : 1.0;
-  float ef = smoothstep(32.0, 29.0, max(abs(p.x), abs(p.z))) * smoothstep(yr.x, yr.x + 0.5, p.y) * smoothstep(yr.y, yr.y - 1.2, p.y);
+  float ef = smoothstep(WXS * 0.5, WXS * 0.5 - 3.0, max(abs(p.x), abs(p.z))) * smoothstep(yr.x, yr.x + 0.5, p.y) * smoothstep(yr.y, yr.y - 1.2, p.y);
   vCol = vec4(cp.rgb * mix(vec3(1.0), L, cp.a), al.x * tw * ef * uFade); vAdd = 1.0 - cp.a; vUv = position.xy;
 }`,
     fragmentShader: `precision highp float; varying vec4 vCol; varying vec2 vUv; varying float vAdd;
