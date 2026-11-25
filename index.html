@@ -797,6 +797,290 @@ function renderFrame() {
 
 const COL0 = Object.assign({}, COL);
 const BIOMES = [
+  // ---- Six battlefields, each a terrain that reads at a glance: the shape of the ground is the story of the battle ----
+  {
+    // 钓鱼城 (1259): a walled city on a cliff-girt mountain where the Jialing and Qu rivers meet; the river wraps the board's two near sides.
+    key: 'diaoyu', name: '钓鱼城', en: 'Diaoyu Fortress',
+    col: { stone: 0x7a6a5c, stoneD: 0x4a3f38, stoneL: 0xa49282, earth: 0x403a2a, earthD: 0x2a261c, grass: 0x3a5230, grassD: 0x2a3c24, moss: 0x48602e, road: 0x7c7468, roadD: 0x575048, mud: 0x2a2820, bark: 0x30261c, tuftA: 0x4a6a32, tuftB: 0x7c8a48, leaf: 0x264a2c, leafL: 0x3e6a3a },
+    strata: [0x8a6a54, 0x5a4438, 0x9c7c62, 0x6e5444, 0xb08c6c, 0x4c3a30, 0x8e7058, 0x5e4a3c],
+    hemi: [0x6a8cbc, 0x1c2420, 1.12], moon: [0xb4c8f0, 1.5], fill: [0x406a8c, .32], moonPos: [16, 42, -30],
+    clear: [.004, .007, .012], mistAmb: [.06, .1, .14], mist: [-1.6, .9, 1.1, .14], sky: [.016, .028, .05], lift: [.010, .018, .030], sat: .93, expo: 1, sprAmb: [.05, .07, .1],
+    cover: [.55, .78, 1.0, .35], coverCol: [.05, .085, .04], coverP: [.92, .3, .4, 0],
+    wat: [0, .7, 1.2, 0], watA: [.008, .02, .024], watB: [.2, .3, .3], fall: [0, 1, 1, 0], fallA: [.02, .04, .05], fallB: [.24, .34, .38], spray: 'water', watEdge: 0x0a1416,
+    relief: [1.5, .45, 1.2, 0], puddles: 6, ponds: 0, sway: .9, wind: 1.1,
+    terrain: {
+      sea: -2.1, bank: .8, step: 1.3, rock: 1, flow: .3, freeStream: true,
+      lift: (x, z) => 1.5 * smooth(17, 11, Math.max(x, z)),
+      // the cliff keeps a shoulder clear of the road and the tower pads, wide enough for the city wall
+      sculpt: (x, z, dr, ds, K) => {
+        const e = Math.max(x, z) + (fbm(x * .16 + 3, z * .16, K.sd + 80, 2) - .5) * 3.2;
+        let pd = 9; for (const p of K.pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
+        return -6.2 * smooth(11.8, 15.2, e) * smooth(ROAD_HALF + 1.3, ROAD_HALF + 2.3, dr) * smooth(2.4, 3.2, pd);
+      },
+    },
+    wx: { n: [.08, .05], velA: [.3, -.1, .15], swayA: [.5, .5], sizeA: [.03, .05], colA: [.75, .85, .9, 1], alA: [.45, 0, 0], yA: [-2, 9], velB: [.1, .05, .05], swayB: [1.2, .4], sizeB: [.03, .05], colB: [1.2, 1.5, .5, 0], alB: [.8, 1.2, 0], yB: [0, 3], amb: [.12, .16, .2] },
+    mobs: { ghoul: 1.5, knight: 1.6, drummer: 1.4, wraith: 1.2 }, early: { knight: 3, drummer: 5 }, boss: ['giant', 'ogre'], tints: { wisp: [.7, 1.2, 1.1] }, wispHex: 0x90e0c0,
+    trees: [['song', 9, 3.0, 4.8], ['tree', 4, 2.6, 4.2], ['bamboo', 5, 2.6, 3.8]], stumps: 3, rocks: 40, tufts: 260, webs: 0,
+  },
+  {
+    // 赤壁 (208): a broad river at night, chained warships burning on it, red cliffs on the far bank.
+    key: 'chibi', name: '赤壁', en: 'Red Cliffs',
+    col: { stone: 0x5a3a32, stoneD: 0x341f1c, stoneL: 0x7e5244, earth: 0x2e2626, earthD: 0x1c1717, grass: 0x34302a, grassD: 0x24201c, moss: 0x3a3428, road: 0x5e5450, roadD: 0x3c3432, mud: 0x1a1514, bark: 0x15110f, tuftA: 0x4a3c28, tuftB: 0x7a5a34, leaf: 0x243424, leafL: 0x3a4a2c },
+    strata: [0x7a2e22, 0x3a1a16, 0x9a3c26, 0x2a1a18, 0xb04a2a, 0x4a2218, 0x8a3424, 0x301816],
+    hemi: [0x5c5470, 0x2c140e, 1.12], moon: [0xc0b0d0, 1.25], fill: [0xff5a20, .38], moonPos: [18, 40, -32],
+    clear: [.009, .004, .005], mistAmb: [.1, .05, .04], mist: [-1.0, .6, 1.0, .12], sky: [.024, .036, .07], lift: [.022, .011, .01], sat: .97, expo: 1.02, sprAmb: [.1, .055, .04],
+    cover: [.8, .74, 1.0, .6], coverCol: [.1, .088, .086], coverP: [.97, .4, .4, 0],
+    wat: [0, .6, 1.6, 0], watA: [.014, .022, .04], watB: [.2, .1, .06], fall: [0, 1, 1, 0], fallA: [.04, .02, .02], fallB: [.3, .16, .1], spray: 'water', watEdge: 0x0c1420,
+    relief: [1.3, .4, 1.5, 0], puddles: 0, ponds: 0, sway: .7, wind: .9,
+    terrain: {
+      sea: -.75, bank: .6, rock: .7, flow: .4, freeStream: true, prot: -1.5,
+      // the road winds differently on every board, so the river floods the open ground on the near side wherever the road leaves room
+      prep(K) {
+        const N = 72, at = i => -17.75 + i * .5, free = new Uint8Array(N * N), seen = new Uint8Array(N * N);
+        let m = new Float32Array(N * N), t = new Float32Array(N * N);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const x = at(i), z = at(j);
+          if (x + z < -4 || K.dRoadAt(x, z) < ROAD_HALF + 1.15 || (z < -9 && Math.abs(x - K.kx) < 7) || (x < -10 && Math.abs(z - K.zc) < 5)) continue;
+          if (!K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 2.7)) free[j * N + i] = 1;
+        }
+        for (let s = 0; s < N * N; s++) {
+          if (!free[s] || seen[s]) continue;
+          const cells = [], st = [s]; seen[s] = 1;
+          while (st.length) {
+            const c = st.pop(), i = c % N; cells.push(c);
+            for (const o of [i > 0 ? c - 1 : -1, i < N - 1 ? c + 1 : -1, c - N, c + N]) if (o >= 0 && o < N * N && free[o] && !seen[o]) { seen[o] = 1; st.push(o); }
+          }
+          // a pocket boxed in by the road would only be a pond
+          if (cells.length >= 150) for (const c of cells) m[c] = 1;
+        }
+        for (let pass = 0; pass < 4; pass++) {
+          const dx = pass & 1 ? N : 1;
+          for (let c = 0; c < N * N; c++) { const i = dx === 1 ? c % N : (c - c % N) / N; let s = 0, n = 0; for (let k = -2; k <= 2; k++) if (i + k >= 0 && i + k < N) { s += m[c + k * dx]; n++; } t[c] = s / n; }
+          const u = m; m = t; t = u;
+        }
+        K.river = { m, N };
+      },
+      sculpt: (x, z, dr, ds, K) => {
+        const R = K.river, f = v => clamp((v + 17.75) * 2, 0, R.N - 1.001), fx = f(x), fz = f(z), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * R.N + i, m = R.m;
+        const w = (m[o] * (1 - u) + m[o + 1] * u) * (1 - v) + (m[o + R.N] * (1 - u) + m[o + R.N + 1] * u) * v;
+        return -3.2 * smooth(.3, .7, w + (fbm(x * .25, z * .25, K.sd + 81, 2) - .5) * .3);
+      },
+    },
+    wx: { n: [.26, .14], velA: [.3, -.42, .16], swayA: [.5, .7], sizeA: [.035, .07], colA: [.3, .28, .3, 1], alA: [.85, 0, 0], yA: [-3, 14], velB: [.2, .95, .12], swayB: [.7, .9], sizeB: [.03, .05], colB: [2.6, .9, .14, 0], alB: [1, 2.2, .3], yB: [-2, 10], amb: [.5, .3, .26] },
+    mobs: { bomber: 2.4, gargoyle: 1.8, golem: 1.5, toad: 0, slime: .5, wisp: 1.4, skel: 1.4 }, early: { bomber: 2, gargoyle: 4, golem: 6 }, boss: ['colossus'], tints: { golem: [1.5, .5, .26], wolf: [.75, .45, .4], wisp: [1.5, .6, .2], gargoyle: [1.2, .7, .6], toad: [1.2, .7, .5] }, wispHex: 0xff8030,
+    trees: [['charred', 7, 2.6, 4.4], ['song', 3, 2.8, 4.0]], stumps: 4, rocks: 40, tufts: 60, webs: 0,
+  },
+  {
+    // 偷渡阴平 (263): Deng Ai's march over the Yinping road; the way is a ledge and plank walkway over chasms, between stone pillars.
+    key: 'yinping', name: '偷渡阴平', en: 'Yinping Crossing',
+    col: { stone: 0x6c7280, stoneD: 0x3e424e, stoneL: 0x949aa8, earth: 0x3c3c3a, earthD: 0x262628, grass: 0x44523a, grassD: 0x30392c, moss: 0x4a5a3a, road: 0x6e6a62, roadD: 0x4c4944, mud: 0x2c2a28, bark: 0x2a2420, tuftA: 0x56663e, tuftB: 0x8a9058, leaf: 0x1e3a30, leafL: 0x2e5044 },
+    strata: [0x707684, 0x3a3e4a, 0x5c6270, 0x8c94a2, 0x4a4e5a, 0x666c7a, 0xa0a8b6, 0x42465a],
+    hemi: [0x7a98d0, 0x161a24, 1.1], moon: [0xc8d8ff, 1.6], fill: [0x5070a0, .28], moonPos: [20, 44, -28],
+    clear: [.003, .004, .009], mistAmb: [.08, .1, .15], mist: [-3.2, 1.4, 1.25, .16], sky: [.014, .02, .04], lift: [.010, .014, .026], sat: .9, expo: .98, sprAmb: [.06, .07, .1],
+    cover: [.9, .62, .4, .3], coverCol: [.5, .54, .6], coverP: [.74, .8, .3, 0],
+    wat: [0, 1, 1, 0], watA: [.012, .02, .03], watB: [.3, .4, .5], fall: [0, 1, 1, 0], fallA: [.022, .034, .054], fallB: [.2, .27, .38], spray: 'none',
+    relief: [1.3, .4, 1.6, 0], puddles: 0, ponds: 0, sway: 1.1, wind: 1.35,
+    terrain: {
+      dry: true, step: 1.05, rock: 1, prot: -.7, abyss: -2.4,
+      sculpt: (x, z, dr, ds, K) => {
+        const n = fbm(x * .12 + 5, z * .12, K.sd + 82, 3), m = fbm(x * .31, z * .31 + 4, K.sd + 85, 2);
+        // the keep's gate opens onto level ground, not onto a pillar or a drop
+        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7));
+        return lerp(-5.2, 5.6 * (.75 + .5 * m), smooth(.52, .7, n)) * smooth(ROAD_HALF + .4, ROAD_HALF + 1.6, dr) * smooth(2.4, 4.2, dk);
+      },
+    },
+    wx: { n: [.4, .1], velA: [1.6, -.9, .7], swayA: [.4, 1.2], sizeA: [.04, .07], colA: [1, 1.05, 1.12, 1], alA: [.7, 0, .2], yA: [-4, 14], velB: [3.2, -.4, 1.4], swayB: [.3, 1.5], sizeB: [.03, .05], colB: [.9, .95, 1.05, 1], alB: [.4, 0, .7], yB: [-4, 10], amb: [.32, .38, .5] },
+    mobs: { wolf: 2.2, gargoyle: 2.2, bat: 1.8, golem: 1.2, toad: 0, slime: .4 }, early: { gargoyle: 3, wolf: 2 }, boss: ['jotun'], tints: { wolf: [1.6, 1.7, 1.9], gargoyle: [.9, 1.0, 1.2], wisp: [.6, .9, 1.4] }, wispHex: 0x90b8ff,
+    trees: [], stumps: 0, rocks: 30, tufts: 120, webs: 0,
+  },
+  {
+    // 夷陵 (222): Liu Bei's camps strung for miles through a wooded gorge, set ablaze by Lu Xun.
+    key: 'yiling', name: '夷陵', en: 'Yiling',
+    col: { stone: 0x5e6056, stoneD: 0x383a34, stoneL: 0x84867a, earth: 0x3a3424, earthD: 0x242018, grass: 0x34502a, grassD: 0x263a20, moss: 0x3e5a28, road: 0x6a6252, roadD: 0x48423a, mud: 0x2a2418, bark: 0x2a2018, tuftA: 0x405e2a, tuftB: 0x6e7c38, leaf: 0x1c3a1e, leafL: 0x2e5428 },
+    strata: [0x5c5444, 0x2e2a22, 0x6a604c, 0x3e3628, 0x7a6c54, 0x34302a, 0x625846, 0x2a261e],
+    hemi: [0x5a6a8a, 0x2a160c, 1.1], moon: [0xb8b8d8, 1.3], fill: [0xff6a28, .48], moonPos: [12, 44, -34],
+    clear: [.008, .005, .006], mistAmb: [.09, .06, .05], mist: [-.3, .6, 1.0, .12], sky: [.02, .01, .006], lift: [.018, .012, .01], sat: .95, expo: 1, sprAmb: [.09, .06, .05],
+    cover: [.5, .78, 1.0, .4], coverCol: [.06, .07, .04], coverP: [.95, .35, .4, 0],
+    wat: [0, 1, 1, 0], watA: [.014, .014, .016], watB: [.3, .24, .2], fall: [0, 1, 1, 0], fallA: [.04, .03, .03], fallB: [.3, .24, .2], spray: 'water',
+    relief: [1.2, .4, 1.1, 0], puddles: 4, ponds: 0, sway: .8, wind: .9,
+    terrain: {
+      rock: .15, prot: -1,
+      ramp: (x, z, dr, K) => 3.6 * smooth(2.8, 9.5, dr) * (.55 + .9 * fbm(x * .09, z * .09, K.sd + 83, 3)),
+      prep(K) {
+        // camp sites strung along both sides of the road a little way up the wooded slopes, spread as evenly as the ground allows.
+        // A camp reaches 1.8 from its centre and must clear the zones the board protects from sculpting (road, stream, pads, keep, cave),
+        // or its shelf would not come out level; and it keeps to the foot of the edge cliffs, not notched into their face
+        const cand = [];
+        for (let z = -15; z <= 15; z += .5) for (let x = -15; x <= 15; x += .5) {
+          const dr = K.dRoadAt(x, z);
+          if (dr < ROAD_HALF + 3.5 || dr > ROAD_HALF + 8.5 || K.dStrAt(x, z) < 5.6 || K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 4.7)) continue;
+          if (Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)) < 5.3 || (x < -8.6 && Math.abs(z - K.zc) < 6.2)) continue;
+          if (K.cliffAt(x, z) > 1.3) continue;
+          cand.push([x, z, dr]);
+        }
+        // nearest the road first, so the camps line it; then, if there are more than nine, keep the nine that spread furthest along it
+        const near = [];
+        for (const c of cand.sort((a, b) => a[2] - b[2])) if (near.every(q => Math.hypot(c[0] - q[0], c[1] - q[1]) >= 3.8)) near.push(c);
+        K.camps = [];
+        while (K.camps.length < Math.min(9, near.length)) {
+          let best = null, far = -1;
+          for (const c of near) { let d = Math.hypot(c[0] - K.kx, c[1] + 15); for (const q of K.camps) d = Math.min(d, Math.hypot(c[0] - q.x, c[1] - q.z)); if (d > far) { far = d; best = c; } }
+          K.camps.push({ x: best[0], z: best[1], y: K.hBase(best[0], best[1]) + K.cliffAt(best[0], best[1]) + this.ramp(best[0], best[1], best[2], K) });
+        }
+        K.sites = K.camps.map(c => [c.x, c.z, 1.9]);
+      },
+      sculpt(x, z, dr, ds, K, h) {
+        // only the nearest camp's shelf counts, so a neighbour's apron never tilts it
+        let near = null, nd = 3; for (const c of K.camps) { const d = Math.hypot(x - c.x, z - c.z); if (d < nd) { nd = d; near = c; } }
+        const q = this.ramp(x, z, dr, K);
+        return near ? lerp(q, near.y - h, smooth(3, 1.9, nd)) : q;
+      },
+    },
+    wx: { n: [.2, .18], velA: [.3, -.38, .16], swayA: [.5, .7], sizeA: [.035, .065], colA: [.32, .3, .3, 1], alA: [.8, 0, 0], yA: [-2, 12], velB: [.25, 1.1, .12], swayB: [.8, .9], sizeB: [.03, .05], colB: [2.6, 1.0, .18, 0], alB: [1, 2.2, .3], yB: [-1, 9], amb: [.42, .3, .24] },
+    mobs: { spider: 2, brood: 1.6, toad: 1.6, wisp: 1.4, bomber: 1.2, slime: .6 }, early: { spider: 2, brood: 6 }, boss: ['queen'], tints: { wisp: [1.5, .7, .25], golem: [1.1, .8, .6] }, wispHex: 0xff9040,
+    trees: [], stumps: 6, rocks: 34, tufts: 200, webs: 2,
+  },
+  {
+    // 井陉 (204 BC): out of the narrow Taihang pass the road runs to a river, where Han Xin drew up with his back to the water.
+    key: 'jingxing', name: '井陉', en: 'Jingxing Pass',
+    col: { stone: 0x8a7458, stoneD: 0x5a4834, stoneL: 0xb09474, earth: 0x7a6446, earthD: 0x544430, grass: 0x6a6a3a, grassD: 0x4c4c2c, moss: 0x5a5c30, road: 0x9a8a6c, roadD: 0x6e624c, mud: 0x3a3226, bark: 0x3a2c20, tuftA: 0x7a7440, tuftB: 0xb0a058, leaf: 0x4a5a2c, leafL: 0x6a7a3a },
+    strata: [0xa88460, 0x7a5a40, 0xc4a07a, 0x6a4e38, 0xb89470, 0x8a6a4c, 0xd4b48c, 0x705440],
+    hemi: [0x6a78b0, 0x302418, 1.12], moon: [0xd8ccf0, 1.48], fill: [0x4a8090, .3], moonPos: [24, 30, -34],
+    clear: [.006, .005, .012], mistAmb: [.08, .07, .11], mist: [-1.2, .6, .8, .1], sky: [.03, .028, .05], lift: [.014, .012, .026], sat: .94, expo: .92, sprAmb: [.08, .07, .1],
+    cover: [.7, .78, .9, .5], coverCol: [.36, .29, .19], coverP: [.95, .5, .25, .05],
+    wat: [0, .9, 1.1, 0], watA: [.01, .03, .034], watB: [.3, .36, .34], fall: [0, 1, 1, 0], fallA: [.03, .05, .06], fallB: [.26, .34, .36], spray: 'water', watEdge: 0x101a1a,
+    relief: [1.3, .3, 1.3, 0], puddles: 0, ponds: 0, sway: 1.1, wind: 1.15, beacon: .8,
+    terrain: {
+      sea: -1.4, bank: .7, step: 1.25, rock: 1, flow: .6, freeStream: true,
+      // Han Xin's line, by distance inland from the top of the bank: standards, two ranks of shields, the chevaux-de-frise.
+      // The standards and shields stand within core of the bank, the chevaux-de-frise within deep; the line is at most cap long
+      ranks: { back: .45, shields: [1.0, 1.6], juma: 2.6, core: 1.9, deep: 3.3, cap: 9.8 },
+      rv: (x, z, K) => x + (fbm(x * .09 + 3, z * .09, K.sd + 87, 2) - .5) * 4,
+      prep(K) {
+        // Pick the straight reach of bank for the line: the shields and standards on ground the board barely shields from sculpting, so
+        // their shelf comes out level, with water carved from the bank on to the board edge or the river, and all of it in the default view.
+        // The chevaux-de-frise only need room for a piece. A reach facing the river on the right is preferred; one on the near edge is the fallback
+        // room: 1 a piece fits, 2 land the sculpt reaches, 4 the same for water, where the stream bed does not matter
+        const R = this.ranks, N = 145, room = new Uint8Array(N * N);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const x = -BH + i * .25, z = -BH + j * .25, dr = K.dRoadAt(x, z), ds = K.dStrAt(x, z);
+          if (Math.abs(x) > BH - .9 || Math.abs(z) > BH - .9 || K.cliffAt(x, z) > .4 || (x < -10 && Math.abs(z - K.zc) < 4.6)) continue;
+          let pd = 1e9; for (const p of K.pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
+          const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)), open = dr > ROAD_HALF + 2.1 && pd > 3.1 && dk > 3;
+          room[j * N + i] = (dr > 2.2 && pd > 2.55 && dk > .9 && ds > 2.6 ? 1 : 0) | (open && ds > 2.8 ? 2 : 0) | (open ? 4 : 0);
+        }
+        const get = (x, z) => room[clamp(Math.round((z + BH) * 4), 0, N - 1) * N + clamp(Math.round((x + BH) * 4), 0, N - 1)];
+        // the default camera cuts off the near corner and the two side corners
+        const seen = (x, z, m) => x + z < 19.5 + m && Math.abs(x - z) < 27 + m;
+        // a cross-section of the bank at u: 0 if the shields or the water have no room; else 1, plus 2 if the chevaux-de-frise fit too,
+        // 8 if it reaches into the foot of the pass, 16 if it comes near a side of the view. A line turned far from the camera shows its shields edge on
+        const search = (core, pool, face) => {
+          let best = { score: -1e9 };
+          for (const [p0, a0, a1, pen] of [[0, -.8, .8, 0], [HPI, -.8, 0, 1.5]]) for (let a = a0; a <= a1 + 1e-6; a += .2) {
+            const wx = Math.cos(p0 + a), wz = Math.sin(p0 + a), edgeOn = 5 * Math.max(0, .5 - Math.cos(p0 + a - PI / 4));
+            for (let bz = -16; bz <= 16; bz += .5) for (let bx = p0 ? -10 : 6; bx <= 16; bx += .5) {
+              // the line faces the pass the enemy comes out of, not the keep behind it
+              if ((-wx * (-BH - bx) - wz * (K.zc - bz)) / Math.hypot(-BH - bx, K.zc - bz) < face) continue;
+              const sec = u => {
+                const cx = bx - wz * u, cz = bz + wx * u;
+                let f = 1;
+                for (let v = .2; v < R.core; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & core) || !seen(x, z, 0)) return 0; if (x < -1) f |= 8; if (!seen(x, z, -2)) f |= 16; }
+                for (let w = .2; ; w += .4) {
+                  const x = cx + wx * w, z = cz + wz * w;
+                  if (x > BH - .9 || z > BH - .9) { if (w < 1) return 0; break; }
+                  if (!(get(x, z) & 4) || w > 6 || (w < 1 && !seen(x, z, 1))) { if (pool && w > 1.6) break; return 0; }
+                  if (this.rv(x, z, K) > 14.5) break;
+                }
+                for (let v = R.core; v <= R.deep; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & 1) || !seen(x, z, 0)) return f; }
+                return f | 2;
+              };
+              const s0 = sec(0); if (!s0) continue;
+              let k = 0, m = [s0];
+              for (; (k + 1) * .7 <= R.cap; k++) { const s1 = sec((k + 1) * .35), s2 = sec(-(k + 1) * .35); if (!s1 || !s2) break; m.push(s1, s2); }
+              const frac = b => m.filter(s => s & b).length / m.length, L = k * .7;
+              const score = L * (.8 + .2 * frac(2)) - pen - edgeOn - 2 * frac(8) - 2 * frac(16);
+              if (score > best.score) best = { score, L, x: bx, z: bz, wx, wz, pool };
+            }
+          }
+          return best;
+        };
+        // where no reach of bank has a level shelf for even four shields, the line stands on whatever room is left beside the road and pads,
+        // and failing that with only a cut of water behind it that does not reach the river; only a board with no such place at all
+        // lets the line turn away from the pass
+        let F = search(2, false, .3);
+        for (const pool of [false, true]) if (!(F.L >= 2.8)) { const G = search(1, pool, .3); if (G.L > (F.L ?? -1)) F = G; }
+        if (F.L === undefined) F = search(1, true, -1);
+        // the shelf is cut to the ground's own middle height there, so it stays earth-coloured rather than turning to cut rock
+        const hs = [];
+        for (let u = -F.L / 2; u <= F.L / 2 + 1e-6; u += .7) for (let v = 0; v <= R.core; v += .4) { const x = F.x - F.wz * u - F.wx * v, z = F.z + F.wx * u - F.wz * v; hs.push(K.hBase(x, z) + K.cliffAt(x, z)); }
+        F.Y = hs.sort((a, b) => a - b)[hs.length >> 1];
+        K.line = F;
+        K.sites = [];
+        for (let u = -F.L / 2; u <= F.L / 2 + 1e-6; u += 1) K.sites.push([F.x - F.wz * u - F.wx * 1.8, F.z + F.wx * u - F.wz * 1.8, 1.9]);
+      },
+      sculpt(x, z, dr, ds, K, h) {
+        // the pass walls stop short of the ground in front of the keep gate
+        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5), Math.max(0, z + 8.5));
+        const pass = 5.8 * smooth(1.5, -5.5, x + (fbm(x * .1, z * .1 + 6, K.sd + 86, 2) - .5) * 5) * smooth(2.2, 4.6, dr) * smooth(.5, 3.5, dk);
+        const q = pass - 4.2 * smooth(12.2, 15.2, this.rv(x, z, K));
+        const F = K.line, dx = x - F.x, dz = z - F.z, u = -dx * F.wz + dz * F.wx, v = dx * F.wx + dz * F.wz;
+        const w = smooth(F.L / 2 + 2.4, F.L / 2 + .6, Math.abs(u)) * smooth(-this.ranks.deep - 2, -this.ranks.deep, v) * (F.pool ? smooth(7.5, 6, v) : 1);
+        if (!w) return q;
+        // the line's shelf is level at F.Y and drops into deep water behind it. The board terraces whatever is returned here,
+        // so the result is passed through the inverse of that terracing, or the shelf would come out stepped
+        const st = this.step, tq = Math.abs(q) > .02 ? (Math.floor(q / st) + smooth(.42, .88, q / st - Math.floor(q / st))) * st : q;
+        const Q = lerp(tq, F.Y - (F.Y - this.sea + 1.6) * smooth(0, 1.4, v) - h, w), f = Math.floor(Q / st);
+        return (f + .42 + .46 * (.5 - Math.sin(Math.asin(1 - 2 * (Q / st - f)) / 3))) * st;
+      },
+    },
+    wx: { n: [.1, .2], velA: [.5, -.05, .25], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .82, .62, 1], alA: [.45, 0, 0], yA: [-1, 8], velB: [3.4, -.1, 1.6], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .76, .58, 1], alB: [.36, 0, .9], yB: [-.5, 4.5], amb: [.3, .24, .28] },
+    mobs: { knight: 1.8, skel: 1.6, wolf: 1.4, drummer: 1.5, mummy: 1.1, toad: 0, slime: .4 }, early: { knight: 3, drummer: 5 }, boss: ['king'], tints: { wolf: [1.4, 1.2, .9], golem: [1.4, 1.1, .75] }, wispHex: 0xffc070,
+    trees: [['song', 6, 2.8, 4.4], ['tree', 6, 2.4, 3.8]], stumps: 3, rocks: 50, tufts: 160, webs: 0,
+  },
+  {
+    // 街亭 (228): Ma Su left the road for a lone hill; Zhang He ringed it and cut the water, and the stream below runs dry.
+    key: 'jieting', name: '街亭', en: 'Jieting',
+    col: { stone: 0x8a7a62, stoneD: 0x5c5040, stoneL: 0xae9c80, earth: 0x6e5c40, earthD: 0x4a3e2c, grass: 0x6c6438, grassD: 0x4e482a, moss: 0x5e5a30, road: 0x908068, roadD: 0x66594a, mud: 0x5a4a36, bark: 0x3c3024, tuftA: 0x80743e, tuftB: 0xb4a058, leaf: 0x4c5a2a, leafL: 0x6c7838 },
+    strata: [0x9c8464, 0x6a5440, 0xb49a76, 0x5c4836, 0xa48a68, 0x7a6248, 0xc4aa84, 0x5e4c3a],
+    hemi: [0x7078a8, 0x30261a, 1.1], moon: [0xe0d4f4, 1.45], fill: [0x8a6a40, .26], moonPos: [22, 34, -32],
+    clear: [.007, .006, .011], mistAmb: [.08, .07, .09], mist: [-.3, .4, .5, .1], sky: [.034, .03, .044], lift: [.016, .013, .024], sat: .92, expo: .92, sprAmb: [.08, .07, .09],
+    cover: [.85, .7, .9, .7], coverCol: [.34, .28, .19], coverP: [.95, .5, .25, .05],
+    wat: [0, 1, 1, 0], watA: [.01, .02, .02], watB: [.3, .3, .3], fall: [0, 1, 1, 0], fallA: [.02, .04, .04], fallB: [.2, .3, .3], spray: 'none',
+    relief: [1.0, .3, 1.0, 0], puddles: 0, ponds: 0, sway: 1.0, wind: 1.1, cracks: 0,
+    terrain: {
+      dry: true, rock: .08, prot: -.6,
+      // how far (x, z) lies inside the hill's foot: the foot keeps a strip of open ground to the road, the pads and the keep, where the besiegers stand
+      foot(K, x, z, dr) {
+        const h = K.hill; let c = Math.min(dr - ROAD_HALF - 1.0, h.R - Math.hypot(x - h.x, z - h.z));
+        for (const p of K.pads) c = Math.min(c, Math.hypot(x - p.x, z - p.z) - 2.8);
+        return Math.min(c, Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)) - 2.6);
+      },
+      prep(K) {
+        // the hill stands apart: clear of the road, the pads and the keep, and well off the rock walls along the back and left edges
+        let best = -1, bx = 0, bz = 0;
+        for (let z = -12; z <= 15; z += .5) for (let x = -12; x <= 15; x += .5) {
+          let d = K.dRoadAt(x, z) - ROAD_HALF; for (const p of K.pads) d = Math.min(d, Math.hypot(x - p.x, z - p.z) - 1.6);
+          const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7));
+          d = Math.min(d, dk - 1, x + BH - 8, z + BH - 8, BH - 3 - Math.abs(x), BH - 3 - Math.abs(z));
+          if (d > best) { best = d; bx = x; bz = z; }
+        }
+        const w = clamp(best - 3.2, 1.0, 2.4);
+        K.hill = { x: bx, z: bz, R: best + 1.2, w, tiers: w > 1.7 ? 3 : 2, y0: K.hBase(bx, bz) + K.cliffAt(bx, bz) };
+        // the summit's reach in 24 directions, for laying out the camp on it
+        K.hill.rim = Array.from({ length: 24 }, (_, k) => { const c = Math.cos(k / 24 * TAU), s = Math.sin(k / 24 * TAU); let r = 0; while (r < 6 && this.foot(K, bx + c * r, bz + s * r, K.dRoadAt(bx + c * r, bz + s * r)) >= w) r += .1; return r; });
+        K.hill.top = Math.min(...K.hill.rim);
+        K.sites = [[bx, bz, K.hill.R]];
+      },
+      sculpt(x, z, dr, ds, K, h) {
+        const H = K.hill, n = H.tiers, t = n * sat((this.foot(K, x, z, dr) + (fbm(x * .3, z * .3, K.sd + 88, 2) - .5) * .7) / H.w), f = Math.floor(t);
+        // terraces and summit are level in absolute height, so the dry streambed and the ground's own roll don't show through them
+        return lerp(-.35 * smooth(3.4, .6, ds), H.y0 + Math.min(n, f + smooth(.68, .97, t - f)) * 4.8 / n - h, sat(t * 2));
+      },
+    },
+    wx: { n: [.08, .22], velA: [.4, -.05, .2], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .82, .62, 1], alA: [.45, 0, 0], yA: [-1, 8], velB: [3.8, -.1, 1.7], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .76, .58, 1], alB: [.4, 0, .9], yB: [-.5, 4.5], amb: [.3, .25, .26] },
+    mobs: { skel: 1.6, knight: 1.5, wolf: 1.6, scarab: 1.2, drummer: 1.3, toad: 0, slime: .3 }, early: { knight: 3, drummer: 4 }, boss: ['ogre', 'giant'], tints: { wolf: [1.3, 1.15, .9] }, wispHex: 0xffc060,
+    trees: [['tree', 6, 2.2, 3.4], ['charred', 3, 2.2, 3.4]], stumps: 6, rocks: 48, tufts: 110, webs: 0,
+  },
   {
     key: 'ashen', name: '雁门关', en: 'Yanmen Pass', col: {},
     strata: [0x8f8474, 0x3c3f4c, 0x66564a, 0x767a86, 0x70503f, 0x4c4f5c, 0x9a8e7c, 0x55483e],
@@ -834,19 +1118,6 @@ const BIOMES = [
     wx: { n: [.045, .09], velA: [.12, .02, .08], swayA: [1.3, .45], sizeA: [.05, .085], colA: [1.3, 1.9, .4, 0], alA: [1, 1.3, 0], yA: [.3, 3.4], velB: [.2, -.07, .12], swayB: [.6, .4], sizeB: [.03, .05], colB: [.7, .95, .7, 1], alB: [.5, 0, 0], yB: [-1, 7], amb: [.09, .2, .15] },
     mobs: { toad: 3.5, wisp: 1.8, spider: 2, brood: 2, slime: 1.6, mummy: 0, bomber: .5 }, early: { toad: 2, wisp: 3, brood: 6 }, boss: ['queen'], tints: { golem: [.75, 1.0, .6], wisp: [.5, 1.4, .7], wolf: [.7, .75, .6], gargoyle: [.8, 1, .8] }, wispHex: 0x70ffa0,
     trees: [['willow', 9, 3.0, 4.6], ['tree', 5, 2.6, 4.4]], stumps: 8, rocks: 42, tufts: 420, webs: 3,
-  },
-  {
-    key: 'ember', name: '赤壁', en: 'Red Cliffs',
-    col: { stone: 0x403c42, stoneD: 0x242228, stoneL: 0x5e5a62, earth: 0x2e2728, earthD: 0x1c1819, grass: 0x3a2f2c, grassD: 0x261e1c, moss: 0x3a3230, road: 0x5e5652, roadD: 0x3c3634, mud: 0x1e1716, bark: 0x15110f, tuftA: 0x3a2c24, tuftB: 0x6a4a30 },
-    strata: [0x3a363c, 0x1c1a20, 0x5a2a22, 0x2a262c, 0x6e3a24, 0x242026, 0x4a4650, 0x301a18],
-    hemi: [0x5c5470, 0x2c140e, 1.18], moon: [0xc0b0d0, 1.32], fill: [0xd04a20, .2], moonPos: [18, 40, -32],
-    clear: [.008, .004, .006], mistAmb: [.09, .05, .05], mist: [-.3, .5, .9, .1], sky: [.02, .006, .002], lift: [.02, .011, .012], sat: .96, expo: 1, sprAmb: [.09, .05, .04],
-    cover: [.8, .74, 1.0, .6], coverCol: [.1, .092, .1], coverP: [.97, .4, .4, 0],
-    wat: [2, 1, 1.5, .5], watA: [.22, .02, 0], watB: [.03, .026, .03], fall: [2, .45, 1.2, 0], fallA: [2.1, .56, .07], fallB: [.2, .02, .008], spray: 'lava',
-    relief: [1.9, .7, 1.1, 0], puddles: 0, ponds: 2, sway: .7, wind: .9, bankGlow: 1, vein: 1,
-    wx: { n: [.26, .12], velA: [.3, -.42, .16], swayA: [.5, .7], sizeA: [.035, .07], colA: [.3, .28, .3, 1], alA: [.85, 0, 0], yA: [-3, 14], velB: [.2, .85, .12], swayB: [.7, .9], sizeB: [.03, .05], colB: [2.6, .9, .14, 0], alB: [1, 2.2, .3], yB: [-2, 10], amb: [.5, .3, .26] },
-    mobs: { bomber: 2.4, gargoyle: 2, golem: 1.8, toad: 0, slime: .5, wisp: 1.4 }, early: { bomber: 2, gargoyle: 4, golem: 6 }, boss: ['colossus'], tints: { golem: [1.5, .5, .26], wolf: [.75, .45, .4], wisp: [1.5, .6, .2], gargoyle: [1.2, .7, .6], toad: [1.2, .7, .5] }, wispHex: 0xff8030,
-    trees: [['charred', 11, 2.6, 4.4]], stumps: 4, rocks: 80, tufts: 40, webs: 0,
   },
   {
     key: 'dunes', name: '玉门关', en: 'Jade Gate',
@@ -1139,7 +1410,7 @@ void main(){
 function buildBoard(seed, index) {
   let lay = null, ls = seed;
   while (!lay) { lay = genLayout(ls); ls += 101; }
-  const bio = biomeFor(index), RL = bio.relief; applyBiomePalette(bio);
+  const bio = biomeFor(index), RL = bio.relief, TER = bio.terrain || {}; applyBiomePalette(bio);
   const rng = makeRng(seed * 9176 + 11); soupRng = makeRng(seed * 131 + 5);
   const sd = (seed * 53) % 997;
   const P = lay.pts, n = P.length, L = lay.L, kx = lay.kx, zc = lay.cave.z;
@@ -1147,15 +1418,20 @@ function buildBoard(seed, index) {
   for (let i = 0; i < n; i++) { px[i] = P[i][0]; pz[i] = P[i][1]; }
   for (let i = 0; i < n; i++) { const a = Math.max(0, i - 1), b = Math.min(n - 1, i + 1); const dx = px[b] - px[a], dz = pz[b] - pz[a], l = Math.hypot(dx, dz) || 1; tx[i] = dx / l; tz[i] = dz / l; }
 
-  const hBase = (x, z) => {
+  const liftAt = TER.lift ? (x, z) => TER.lift(x, z, kx, zc, sd) : () => 0;
+  const hBase0 = (x, z) => {
     let h = (fbm(x * .055 + sd, z * .055 + 3.1, sd, 3) - .5) * RL[0] + (fbm(x * .17 + 3, z * .17 + 7, sd + 5, 2) - .5) * RL[1] + .9 * smooth(7, -13, z);
     if (RL[3]) { const w = x * .42 + z * .2 + (fbm(x * .09, z * .09, sd + 70, 2) - .5) * 5, r = 1 - Math.abs(Math.sin(w)); h += RL[3] * r * r * (.4 + .9 * fbm(x * .07 + 9, z * .07, sd + 71, 2)); }
     return h;
   };
+  const hBase = (x, z) => hBase0(x, z) + liftAt(x, z);
 
-  { const raw = new Float32Array(n); for (let i = 0; i < n; i++) raw[i] = hBase(px[i], pz[i]) * .6;
+  { const raw = new Float32Array(n); for (let i = 0; i < n; i++) raw[i] = hBase0(px[i], pz[i]) * .6 + liftAt(px[i], pz[i]);
     let a = raw, b = new Float32Array(n);
-    for (let pass = 0; pass < 2; pass++) { for (let i = 0; i < n; i++) { let s = 0, c = 0; for (let k = -16; k <= 16; k++) { const j = clamp(i + k, 0, n - 1); s += a[j]; c++; } b[i] = s / c; } const t = a; a = b; b = t; }
+    const blur = () => { for (let i = 0; i < n; i++) { let s = 0, c = 0; for (let k = -16; k <= 16; k++) { const j = clamp(i + k, 0, n - 1); s += a[j]; c++; } b[i] = s / c; } const t = a; a = b; b = t; };
+    blur(); blur();
+    // a river or lake board keeps its road on a causeway above the water
+    if (TER.sea !== undefined) { const lo = TER.sea + (TER.bank || .6); for (let pass = 0; pass < 2; pass++) { for (let i = 0; i < n; i++) a[i] = Math.max(a[i], lo); if (!pass) blur(); } }
     py.set(a); }
 
   const SP = lay.stream, sn = SP.length, swl = new Float32Array(sn);
@@ -1192,6 +1468,19 @@ function buildBoard(seed, index) {
     let y = 1e9; for (let k = 0; k < 24; k++) { const a = k / 12 * TAU, d = r + (k < 12 ? 1.3 : 2.1); y = Math.min(y, hBase(x + Math.cos(a) * d, z + Math.sin(a) * d)); }
     ponds.push({ x, z, r, y: Math.min(y, hBase(x, z)) - .22 });
   }
+  const cliffAt = (x, z) => {
+    const dcl = x + BH + (fbm(z * .23 + 1.7, x * .11, sd + 9, 2) - .5) * 2.6;
+    let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, -15, z)) * RL[2];
+    const dbr = z + BH + (fbm(x * .23 + 5.1, z * .11, sd + 13, 2) - .5) * 2.4;
+    const c2 = smooth(4.4, 1.0, dbr) * (1.8 + 2.2 * fbm(x * .2 + 9, z * .2, sd + 15, 2)) * smooth(5.4, 7.6, Math.abs(x - kx)) * RL[2];
+    c = Math.max(c, c2) + 1.5 * smooth(11, 1, Math.hypot(x + BH, z + BH)) * smooth(7, 2.5, Math.min(x + BH, z + BH));
+    if (c > .02) { const v = c / 1.2, f = Math.floor(v); c = (f + smooth(.45, .9, v - f)) * 1.2; }
+    if (x < -12.2) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(-12.2, -13.2, x);
+    return c;
+  };
+  const SCX = { kx, zc, sd, keepY, pads, rng, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), hBase, cliffAt };
+  if (TER.prep) TER.prep(SCX);
+  const SEA = TER.sea;
   const pondD = (q, x, z) => Math.hypot(x - q.x, z - q.z) * (.82 + .36 * vnoise(x * .55 + q.x, z * .55 + q.z, sd + 60));
   let _cl = 0;
   const hAt = (x, z) => {
@@ -1209,14 +1498,22 @@ function buildBoard(seed, index) {
     for (const q of ponds) { const d = pondD(q, x, z); if (d < q.r + 1.5) h = lerp(h, q.y - .45, smooth(q.r + 1.5, q.r * .4, d)); }
     const dkx = Math.max(0, Math.abs(x - kx) - 5.2), dkz = Math.max(0, z + 11.7), dk = Math.hypot(dkx, dkz);
     if (dk < 1.8) h = lerp(h, keepY, smooth(1.8, .2, dk));
-    const dcl = x + BH + (fbm(z * .23 + 1.7, x * .11, sd + 9, 2) - .5) * 2.6;
-    let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, -15, z)) * RL[2];
-    const dbr = z + BH + (fbm(x * .23 + 5.1, z * .11, sd + 13, 2) - .5) * 2.4;
-    const c2 = smooth(4.4, 1.0, dbr) * (1.8 + 2.2 * fbm(x * .2 + 9, z * .2, sd + 15, 2)) * smooth(5.4, 7.6, Math.abs(x - kx)) * RL[2];
-    c = Math.max(c, c2) + 1.5 * smooth(11, 1, Math.hypot(x + BH, z + BH)) * smooth(7, 2.5, Math.min(x + BH, z + BH));
-    if (c > .02) { const v = c / 1.2, f = Math.floor(v); c = (f + smooth(.45, .9, v - f)) * 1.2; }
-    if (x < -12.2) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(-12.2, -13.2, x);
-    _cl = c; return h + c;
+    const c = cliffAt(x, z);
+    let q = 0;
+    if (TER.sculpt) {
+      // Battle terrain: carve or raise everything away from the road, the tower pads, the keep, the cave mouth and the stream.
+      let pd = 1e9; for (const p of pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
+      const pr = TER.prot || 0;
+      let prot = Math.max(smooth(ROAD_HALF + 2.6 + pr, ROAD_HALF + .55, dr), smooth(3.3 + pr * .5, 2.45, pd), smooth(3.4, .6, dk));
+      if (x < -10.4) prot = Math.max(prot, smooth(4.4, 2.6, Math.abs(z - zc)) * smooth(-10.4, -12.4, x));
+      // the ground as it would stand without the sculpt, edge cliffs included, for terrain that levels to an absolute height
+      q = TER.sculpt(x, z, dr, ds, SCX, h + c);
+      if (!TER.dry && (!TER.freeStream || q > 0)) prot = Math.max(prot, smooth(3.8, 2.4, ds));
+      q *= 1 - prot;
+      if (TER.step && Math.abs(q) > .02) { const st = TER.step, v = q / st, f = Math.floor(v); q = (f + smooth(.42, .88, v - f)) * st; }
+      h += q;
+    }
+    _cl = Math.max(c, Math.abs(q) * (TER.rock === undefined ? 1 : TER.rock)); return h + c;
   };
 
   const chunks = [];
@@ -1237,8 +1534,9 @@ function buildBoard(seed, index) {
     const fx = clamp((x + BH) / CELL, 0, NV - 1.001), fz = clamp((z + BH) / CELL, 0, NV - 1.001), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * NV + i;
     return (HG[o] * (1 - u) + HG[o + 1] * u) * (1 - v) + (HG[o + NV] * (1 - u) + HG[o + NV + 1] * u) * v;
   };
-  const tcol = (x, z, ny, cl) => {
+  const tcol = (x, z, ny, cl, y) => {
     const n1 = fbm(x * .3 + sd, z * .3, 3, 2), n2 = h2(Math.floor(x * 2 + 99), Math.floor(z * 2 + 99), sd + 2);
+    if (SEA !== undefined && y < SEA + .3) { const wet = smooth(SEA + .3, SEA - .2, y); return [mulC(mixC(mixC(COL.earthD, COL.mud, n1), COL.mud, wet), (.55 + .25 * n2) * (1 - .4 * smooth(SEA - .4, SEA - 2.5, y))), L_DIRT, lerp(.9, .4, wet)]; }
     if (cl > .5 || ny < .8) {
       let c = mixC(COL.stoneD, COL.stone, n1 * .9 + .1); if (ny > .93 && n1 > .5) c = mixC(c, COL.grassD, .4);
       return [mulC(c, .82 + .32 * n2), L_ROCK, .96];
@@ -1258,7 +1556,7 @@ function buildBoard(seed, index) {
     const tris = ((i + j) & 1) ? [[a, d, c], [a, c, b]] : [[a, d, b], [b, d, c]];
     for (const t of tris) {
       _sa.set(t[1][0] - t[0][0], t[1][1] - t[0][1], t[1][2] - t[0][2]); _sb.set(t[2][0] - t[0][0], t[2][1] - t[0][1], t[2][2] - t[0][2]); _sn.crossVectors(_sa, _sb).normalize();
-      const m = tcol((t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][2] + t[1][2] + t[2][2]) / 3, _sn.y, cl);
+      const m = tcol((t[0][0] + t[1][0] + t[2][0]) / 3, (t[0][2] + t[1][2] + t[2][2]) / 3, _sn.y, cl, (t[0][1] + t[1][1] + t[2][1]) / 3);
       S.tri(t[0], t[1], t[2], m[0], m[1], m[2], m[3] ? { emis: m[3] } : undefined);
     }
   }
@@ -1364,7 +1662,22 @@ function buildBoard(seed, index) {
       for (const [dx, dz] of [[0, 0], [0, 1], [1, 1], [0, 0], [1, 1], [1, 0]]) waterV(S, x + dx, q.y, z + dz, (x + dx) * .8, (z + dz) * .8, .02, .14);
     }
   }
-  if (bio.key === 'ember') {
+  if (SEA !== undefined) {
+    // open water: a sheet over every cell that dips below the river or lake, and a dark face where it meets the board edge
+    const deep = mulC(C(bio.watEdge || 0x0c1820), 1);
+    for (let j = 0; j < NV - 1; j++) for (let i = 0; i < NV - 1; i++) {
+      const o = j * NV + i, lo = Math.min(HG[o], HG[o + 1], HG[o + NV], HG[o + NV + 1]);
+      if (lo > SEA - .02) continue;
+      const x0 = -BH + i * CELL, z0 = -BH + j * CELL, x1 = x0 + CELL, z1 = z0 + CELL, S = chunkAt(x0 + CELL / 2, z0 + CELL / 2);
+      for (const [x, z] of [[x0, z0], [x0, z1], [x1, z1], [x0, z0], [x1, z1], [x1, z0]]) waterV(S.water, x, SEA, z, x * .8, z * .8, TER.flow || .05, .12);
+      const side = (ax, az, bx, bz, ha, hb, ox, oz) => { if (ha < SEA || hb < SEA) facing(S.soup, [ax, SEA, az], [ax, Math.min(ha, SEA), az], [bx, Math.min(hb, SEA), bz], [bx, SEA, bz], ox, oz, deep, L_PLAIN, .2); };
+      if (i === 0) side(x0, z0, x0, z1, HG[o], HG[o + NV], -1, 0);
+      if (i === NV - 2) side(x1, z0, x1, z1, HG[o + 1], HG[o + NV + 1], 1, 0);
+      if (j === 0) side(x0, z0, x1, z0, HG[o], HG[o + 1], 0, -1);
+      if (j === NV - 2) side(x0, z1, x1, z1, HG[o + NV], HG[o + NV + 1], 0, 1);
+    }
+  }
+  if (bio.cracks) {
     for (let q = 0; q < 46; q++) {
       let x = rng.range(-BH + 1.5, BH - 1.5), z = rng.range(-BH + 1.5, BH - 1.5), a = rng.range(0, TAU);
       if (dfAt(dRoad, x, z) < ROAD_HALF + .6 || dfAt(dStr, x, z) < 1.4 || dfAt(dStr, x, z) > 9 || Math.abs(hAt(x + .6, z) - hAt(x - .6, z)) > .3) continue;
@@ -1389,11 +1702,15 @@ function buildBoard(seed, index) {
       sv.push([x, swl[u], z, -dz / l * w, dx / l * w, u * .5, w]);
     }
     for (let u = 0; u < sv.length - 1; u++) {
+      if (TER.dry) break;
       const a = sv[u], b = sv[u + 1], S = chunkAt((a[0] + b[0]) / 2, (a[2] + b[2]) / 2).water;
+      if (SEA !== undefined && (Math.max(a[1], b[1]) < SEA + .05 || heightAt((a[0] + b[0]) / 2, (a[2] + b[2]) / 2) < SEA)) continue;
+      if (TER.freeStream && heightAt((a[0] + b[0]) / 2, (a[2] + b[2]) / 2) < Math.min(a[1], b[1]) - 1) continue;
       const q = [[a[0] - a[3], a[1], a[2] - a[4], -a[6], a[5]], [a[0] + a[3], a[1], a[2] + a[4], a[6], a[5]], [b[0] + b[3], b[1], b[2] + b[4], b[6], b[5]], [b[0] - b[3], b[1], b[2] - b[4], -b[6], b[5]]];
       for (const k of [0, 1, 2, 0, 2, 3]) waterV(S, q[k][0], q[k][1], q[k][2], q[k][3], q[k][4], 1.25, .24);
     }
     const e = sv[sv.length - 1], ox = Math.abs(e[0]) > BH - .01 ? Math.sign(e[0]) : 0, oz = ox ? 0 : Math.sign(e[2]);
+    if (!TER.dry && !(SEA !== undefined && e[1] < SEA + .4)) {
     const bed = e[1] - .3, top = bed + .5, ax = Math.abs(oz), az = Math.abs(ox), w = e[6];
     let ext = .4; for (let d = 0; d <= 1.0; d += .1) ext = Math.max(ext, wallReach(top, bed - d) + .22);
     ext = Math.min(ext, .95);
@@ -1408,11 +1725,11 @@ function buildBoard(seed, index) {
       const q = [[a0, -w, e[5]], [a1, w, e[5]], [b1, w, u1], [b0, -w, u1]];
       for (const k of [0, 1, 2, 0, 2, 3]) waterV(S.water, q[k][0][0], q[k][0][1], q[k][0][2], q[k][1], q[k][2], 1.25, .24); }
     fallAt = { x: e[0], y: e[1], z: e[2], ox, oz, w, ext, v0 };
-  }
+  } }
 
   const B = {
     seed, index, lay, L, n, px, pz, py, tx, tz, pads, kx, zc, keepY, heightAt, hAt, chunks, structs, fires, glows, chunkAt, rng, sd, bio, ponds, env: [],
-    dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), cross: lay.cross, ci0, wlc, swl, SP, fallAt, mirrored: (index % 2) === 1,
+    sea: SEA, ter: TER, scx: SCX, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), cross: lay.cross, ci0, wlc, swl, SP, fallAt, mirrored: (index % 2) === 1,
     put(T, x, z, o = {}) { const y = o.y === undefined ? heightAt(x, z) + (o.dy || 0) : o.y; chunkAt(x, z).soup.merge(T, { p: [x, y, z], ry: o.ry || 0, r: o.r, s: o.s, tint: o.tint, ao: o.ao === undefined ? [0, .55, .6] : o.ao }); },
   };
   buildBridge(B); buildPads(B); buildKeep(B); buildCave(B); scatterProps(B);
@@ -1867,11 +2184,13 @@ function buildCave(B) {
 }
 
 function scatterProps(B) {
-  const rng = B.rng, placed = [], H = B.heightAt;
+  const rng = B.rng, placed = (B.scx.sites || []).slice(), H = B.heightAt;
   const free = (x, z, r, roadMin = .6) => {
     if (Math.abs(x) > BH - .7 - r || Math.abs(z) > BH - .7 - r) return false;
     if (B.dRoadAt(x, z) < ROAD_HALF + roadMin + r) return false;
     if (B.dStrAt(x, z) < 1.5 + r) return false;
+    if (B.sea !== undefined && H(x, z) < B.sea + .3) return false;
+    if (B.ter.abyss !== undefined && H(x, z) < B.ter.abyss) return false;
     for (const p of B.pads) if (dist2(x, z, p.x, p.z) < (2.15 + r) * (2.15 + r)) return false;
     if (Math.abs(x - B.kx) < 5.7 + r && z < -11.2 + r) return false;
     if (x < -12.4 && Math.abs(z - B.zc) < 3.4 + r) return false;
@@ -1879,7 +2198,7 @@ function scatterProps(B) {
     for (const q of placed) if (dist2(x, z, q[0], q[1]) < (q[2] + r) * (q[2] + r)) return false;
     return true;
   };
-  const waterD = (x, z) => { let d = B.dStrAt(x, z); for (const q of B.ponds) d = Math.min(d, Math.hypot(x - q.x, z - q.z) - q.r); return d; };
+  const waterD = (x, z) => { let d = B.ter.dry ? 99 : B.dStrAt(x, z); if (B.sea !== undefined && H(x, z) < B.sea + .6) d = 0; for (const q of B.ponds) d = Math.min(d, Math.hypot(x - q.x, z - q.z) - q.r); return d; };
   const slope = (x, z) => Math.abs(H(x + .5, z) - H(x - .5, z)) + Math.abs(H(x, z + .5) - H(x, z - .5));
   const find = (r, o = {}) => {
     for (let t = 0; t < 90; t++) {
@@ -1947,6 +2266,7 @@ function scatterProps(B) {
     const x = rng.range(-BH + .8, BH - .8), z = rng.range(-BH + .8, BH - .8);
     if (B.dRoadAt(x, z) < ROAD_HALF + .35 || waterD(x, z) < 1.1 || slope(x, z) > .5) continue;
     if (Math.abs(x - B.kx) < 5.4 && z < -11.6) continue;
+    if (B.ter.abyss !== undefined && H(x, z) < B.ter.abyss) continue;
     const T = new Soup(); PROP.tuft(T, rng); B.put(T, x, z, { ao: null, s: rng.range(.8, 1.5) });
   }
   for (let k = 0; k < 60; k++) {
@@ -2085,21 +2405,9 @@ Object.assign(PROP, {
     for (const s of [-1, 1]) S.cyl(r * (s < 0 ? .98 : .83), .02, s * len / 2, r * (s < 0 ? .8 : .9), 0, mulC(COL.woodL, .7), { n: 7, l: L_WOOD, r: [0, 0, HPI] });
     for (let k = 0; k < 2; k++) { const x = rng.range(-len * .3, len * .3), a = rng.range(-1, 1); S.seg([x, r, 0], [x + rng.range(-.15, .15), r + .35 * Math.cos(a), .35 * Math.sin(a)], r * .35, r * .2, bark, { l: L_WOOD, n: 5 }); }
   },
-  basalt(S, rng) {
-    const n = rng.int(5, 10), R = .3, G = [[0, 0], [1, 0], [-1, 0], [.5, .87], [-.5, .87], [.5, -.87], [-.5, -.87], [1.5, .87], [-1.5, -.87], [0, 1.73]];
-    for (let k = 0; k < n; k++) {
-      const q = G[k], hh = rng.range(.35, 2.2) * (k < 3 ? 1.25 : .8), c = mulC(mixC(COL.stoneD, COL.stone, rng() * .7), .8 + .3 * rng());
-      S.cyl(R * 1.04, hh, q[0] * R * 1.75, hh / 2 - .1, q[1] * R * 1.75, c, { n: 6, l: L_ROCK, r: [0, PI / 6, 0], grad: [-hh / 2, hh * .1, .65] });
-      S.cyl(R * .9, .05, q[0] * R * 1.75, hh - .08, q[1] * R * 1.75, mulC(c, 1.3), { n: 6, l: L_ROCK, r: [0, PI / 6, 0] });
-    }
-  },
   spire(S, rng, hh, cols) {
     let y = 0, r = hh * rng.range(.2, .28), x = 0, z = 0, k = rng.int(0, 3);
     while (y < hh && r > .12) { S.rock(r, x, y + r * .4, z, mulC(cols[k % cols.length], .8 + .3 * rng()), { sq: .62, d: 1 }); y += r * .78; r *= rng.range(.8, .93); x += rng.range(-.08, .08); z += rng.range(-.08, .08); k++; }
-  },
-  vent(S, rng) {
-    for (let k = 0; k < 7; k++) { const a = k / 7 * TAU + rng() * .3, r = rng.range(.2, .34); S.rock(r, Math.cos(a) * .52, r * .3, Math.sin(a) * .52, mulC(mixC(COL.stoneD, COL.stone, rng()), .8), { sq: .8 }); }
-    S.cyl(.4, .06, 0, .09, 0, [.8, .22, .03], { n: 8, emis: .3, jit: 0 });
   },
   jar(S, rng) {
     const c = mulC(C(0x9a5a3c), .8 + .35 * rng()), s = rng.range(.8, 1.25);
@@ -2142,16 +2450,6 @@ const BIOME_DRESS = {
     for (let k = 0; k < 5; k++) drop(T => PROP.log(T, rng), .9, { far: 1.2 });
     for (let k = 0; k < 9; k++) { const hh = rng.range(2.6, 4.2); drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0 }); }
   },
-  ember(X) {
-    const { B, rng, drop } = X, cols = [COL.stoneD, COL.stone, C(0x5a2a22), COL.stoneD];
-    for (let k = 0; k < 9; k++) drop(T => PROP.basalt(T, rng), 1.0, { far: 1.4 });
-    for (let k = 0; k < 6; k++) { const hh = rng.range(2.0, 4.2); drop(T => PROP.spire(T, rng, hh, cols), hh * .28, { far: 1.6, steep: true }); }
-    for (let k = 0; k < 3; k++) drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 4.5 });
-    for (let k = 0; k < 4; k++) { const p = drop(T => PROP.vent(T, rng), .8, { far: 2.2 }); if (p) B.fires.push({ x: p[0], y: X.H(p[0], p[1]) + .12, z: p[1], size: .5, fx: { layers: 0, smoke: 1.3, embers: 1.1, glow: .55 } }); }
-    B.env.push({ x: B.bridge.x, y: B.wlc + .55, z: B.bridge.z, c: 0xff5a1e, I: 44, d: 9, flick: 1 });
-    if (B.ponds[0]) { const q = B.ponds[0]; B.env.push({ x: q.x, y: q.y + .7, z: q.z, c: 0xff5a1e, I: 40, d: 9, flick: 1 }); }
-    if (B.fallAt) B.env.push({ x: B.fallAt.x - B.fallAt.ox * 1.2, y: B.fallAt.y + .6, z: B.fallAt.z - B.fallAt.oz * 1.2, c: 0xff5a1e, I: 36, d: 8, flick: 1 });
-  },
   dunes(X) {
     const { B, rng, drop } = X, cols = B.bio.strata.map(h => C(h));
     for (let k = 0; k < 11; k++) drop(T => PROP.cactus(T, rng), .4, { far: .9 });
@@ -2168,6 +2466,383 @@ const BIOME_DRESS = {
     }
   },
 };
+
+// Set dressing for the six battlefields: war camps, warships, city walls on the cliff rim, the plank road over the chasms.
+Object.assign(COL, { canvas: C(0xc4b494), canvasD: C(0x8a7c64), char: C(0x1c1612), flame: C(0xff6a1c), hanR: C(0x9a2a1c), weiB: C(0x2a3e5c) });
+
+// both windings, for thin cloth and planks seen from either side
+function dquad(S, a, b, c, d, col, layer, rough, o) { const st = S.P.length; S.quad(a, b, c, d, col, layer, rough, o); S._double(st); }
+
+Object.assign(PROP, {
+  // A ridge tent of oiled canvas on two poles, guy ropes pegged out. burnt: blackened, smouldering. fire: the canvas alight.
+  tent(S, rng, o = {}) {
+    const L = rng.range(1.3, 1.8), W = rng.range(.62, .8), H = rng.range(.92, 1.15), burnt = o.burnt || o.fire, door = o.door || COL.clothR;
+    const cv = o.fire ? mixC(COL.char, COL.flame, .6) : burnt ? mixC(COL.char, COL.canvasD, .25) : mulC(o.col || COL.canvas, .85 + .25 * rng());
+    const em = o.fire ? { emis: .55 } : burnt ? { emis: .02 } : undefined;
+    for (const sg of [-1, 1]) dquad(S, [-L / 2, .02, sg * W], [L / 2, .02, sg * W], [L / 2, H, 0], [-L / 2, H, 0], mulC(cv, sg > 0 ? 1 : .82), L_CLOTH, .95, em);
+    for (const sx of [-1, 1]) {
+      const st = S.P.length; S.tri([sx * L / 2, .02, -W], [sx * L / 2, .02, W], [sx * L / 2, H, 0], mulC(cv, .9), L_CLOTH, .95, em); S._double(st);
+      S.seg([sx * L / 2, 0, 0], [sx * L / 2, H + .14, 0], .03, .025, COL.woodD, { l: L_WOOD, n: 4 });
+      for (const sz of [-1, 1]) S.seg([sx * L / 2, H - .05, 0], [sx * (L / 2 + .45), .02, sz * (W + .35)], .008, .008, COL.rope, { n: 3, jit: 0 });
+    }
+    if (!burnt) { const st = S.P.length; S.tri([L / 2 + .01, .02, -W * .45], [L / 2 + .01, .02, W * .45], [L / 2 + .01, H * .62, 0], door, L_CLOTH, .95); S._double(st); }
+    S.seg([-L / 2 - .05, H + .01, 0], [L / 2 + .05, H + .01, 0], .03, .03, COL.woodD, { l: L_WOOD, n: 4 });
+    if (burnt) for (let k = 0; k < 4; k++) S.box(rng.range(.3, .6), .06, .08, rng.range(-L / 2, L / 2), .04, rng.range(-W, W), [.7, .18, .03], { emis: rng.range(.15, .3), r: [0, rng() * TAU, 0] });
+  },
+  // A campfire ring; the flame itself is a board fire.
+  campfire(S, rng) {
+    for (let k = 0; k < 8; k++) { const a = k / 8 * TAU; S.rock(.11, Math.cos(a) * .38, .05, Math.sin(a) * .38, mixC(COL.stoneD, COL.stone, rng()), { sq: .7 }); }
+    for (let k = 0; k < 4; k++) { const a = k / 4 * TAU + rng() * .4; S.seg([Math.cos(a) * .3, .03, Math.sin(a) * .3], [0, .3, 0], .045, .035, mulC(COL.bark, .6), { l: L_WOOD, n: 5 }); }
+    S.cyl(.24, .04, 0, .04, 0, [.8, .25, .04], { n: 7, emis: .3, jit: 0 });
+  },
+  // A tower warship of the river fleets: a long hull, a two-storey castle aft, a mat sail, length about L * .74 + 1.5.
+  // burning: scorched and glowing, but still hull, castle and sail, so it reads as a ship on dark water.
+  warship(S, rng, o = {}) {
+    const L = o.L || rng.range(3.4, 4.2), burnt = o.burning, wood = burnt ? mixC(COL.char, COL.woodD, .6) : mulC(COL.woodD, .9 + .2 * rng()), deck = burnt ? mixC(COL.char, COL.wood, .45) : COL.wood;
+    const hot = burnt ? { emis: .05 } : {};
+    S.box(L * .74, .42, .98, 0, -.02, 0, wood, { l: L_WOOD });
+    for (const sg of [-1, 1]) {
+      S.box(.9, .4, .86, sg * (L * .37 + .3), .12, 0, wood, { l: L_WOOD, r: [0, 0, sg * .42] });
+      S.box(L * .76, .12, .08, 0, .26, sg * .53, mulC(wood, 1.15), { l: L_WOOD });
+      // oars: false ships them along the gunwale, as on a fleet lashed together
+      for (let k = 0; k < 6; k++) { const x = -L * .3 + k * L * .12, ow = o.oars === false; S.seg([x, .2, sg * .5], ow ? [x - .9, .34, sg * .58] : [x - .25, -.22, sg * 1.05], .018, .016, mulC(COL.woodL, burnt ? .5 : .8), { l: L_WOOD, n: 3 }); }
+    }
+    S.box(L * .72, .05, 1.04, 0, .2, 0, deck, { l: L_WOOD });
+    const cx = -L * .2;
+    S.box(1.3, .55, .86, cx, .5, 0, burnt ? mulC(COL.lacq, .5) : COL.lacq, Object.assign({ l: L_WOOD }, hot));
+    S.box(1.42, .06, .98, cx, .8, 0, wood, { l: L_WOOD });
+    S.box(.9, .42, .66, cx - .1, 1.04, 0, burnt ? mulC(COL.lacqD, .55) : COL.lacqD, Object.assign({ l: L_WOOD }, hot));
+    cnRoof(S, { x: cx - .1, y: 1.25, a: .6, b: .46, h: .3, ridge: .3, col: burnt ? mulC(COL.tileD, .55) : COL.tileD, n: 2, m: 2 });
+    for (const sg of [-1, 1]) cnMerlons(S, -L * .36, sg * .5, L * .3, sg * .5, .26, { rng, h: .2, w: .16, d: .06, pitch: .32, col: mulC(wood, 1.2), skip: burnt ? .35 : 0 });
+    const mx = L * .14;
+    S.seg([mx, .2, 0], [mx, 2.7, 0], .06, .045, wood, { l: L_WOOD, n: 5 });
+    const T = new Soup(); clothPanel(T, { x0: -.55, x1: .55, yTop: 0, len: 1.7, z: 0, col: burnt ? mulC(COL.ramD, .7) : mulC(COL.ramD, 1.1), rng, nx: 3, ny: 6, rag: burnt ? .6 : 0, sway: .3 });
+    S.merge(T, { p: [mx + .05, 2.55, 0], ry: HPI + .25, ao: null });
+    for (let k = 0; k < 6; k++) S.seg([mx - .05, 2.5 - k * .3, -.6], [mx - .05, 2.5 - k * .3, .6], .012, .012, COL.woodD, { l: L_WOOD, n: 3 });
+    cnBanner(S, -L * .45, .2, 1.9, 0, o.flag || COL.clothB, rng, { w: .34, len: .9 });
+    if (burnt) for (let k = 0; k < 7; k++) S.box(rng.range(.2, .5), .05, .06, rng.range(-L * .35, L * .3), .24, rng.range(-.4, .4), [.8, .22, .03], { emis: rng.range(.18, .35), r: [0, rng() * TAU, 0] });
+  },
+  // A small river sampan with a mat awning.
+  sampan(S, rng) {
+    const L = rng.range(1.5, 1.9), w = mulC(COL.woodD, .9 + .2 * rng());
+    S.box(L * .7, .2, .5, 0, 0, 0, w, { l: L_WOOD });
+    for (const sg of [-1, 1]) S.box(.4, .18, .44, sg * (L * .35 + .12), .06, 0, w, { l: L_WOOD, r: [0, 0, sg * .45] });
+    const st = S.P.length;
+    for (let k = 0; k <= 6; k++) { const a = PI * k / 6, a2 = PI * (k + 1) / 6; if (k < 6) S.quad([-.3, .1 + Math.sin(a) * .32, Math.cos(a) * .26], [.3, .1 + Math.sin(a) * .32, Math.cos(a) * .26], [.3, .1 + Math.sin(a2) * .32, Math.cos(a2) * .26], [-.3, .1 + Math.sin(a2) * .32, Math.cos(a2) * .26], mulC(COL.thatch, .7 + .2 * rng()), L_THATCH, .95); }
+    S._double(st);
+    S.seg([L * .3, .1, 0], [L * .62, .6, .1], .014, .012, COL.woodL, { l: L_WOOD, n: 3 });
+  },
+  // A stretch of rammed-earth city wall faced in stone, with a walkway and crenels. Runs along x.
+  cityWall(S, rng, len, h) {
+    const mc = () => mixC(COL.stoneD, COL.stoneL, rng() * .7 + .1);
+    S.box(len + .02, h + 1.2, .62, 0, (h - 1.2) / 2, 0, mc(), { l: L_MASON, jit: .03 });
+    S.box(len + .04, .1, .7, 0, h + .05, 0, COL.stoneL, { l: L_MASON });
+    cnMerlons(S, -len / 2, .3, len / 2, .3, h + .1, { rng, h: .26, w: .22, d: .12, pitch: .4 });
+  },
+  // A small watchtower over the wall: a brick base, a lacquered storey, a hipped roof.
+  watchtower(S, rng) {
+    S.box(1.1, 1.8, 1.1, 0, .5, 0, mixC(COL.stoneD, COL.stone, .5), { l: L_MASON });
+    S.box(.9, .55, .9, 0, 1.68, 0, COL.lacq, { l: L_WOOD });
+    S.box(.95, .08, .95, 0, 1.42, 0, COL.woodD, { l: L_WOOD });
+    cnRoof(S, { y: 1.95, a: .78, h: .45, col: COL.tile });
+  },
+  // One bay of a cliff plank road on the road's side sg, running along x: planks over a joist that juts from the rock,
+  // a dark edge beam, a strut down to the cliff, and a hand rail on posts every other bay.
+  plankway(S, rng, sg, post) {
+    const z0 = ROAD_HALF - .2, z1 = ROAD_HALF + 1.15, L = PATH_STEP * 2, wd = mulC(COL.woodD, .75);
+    for (const x of [-L / 4, L / 4]) S.box(L / 2 - .04, .06, z1 - z0, x, .02, sg * (z0 + z1) / 2, mulC(COL.woodL, .6 + .3 * rng()), { l: L_WOOD, jit: .04 });
+    S.box(.1, .1, z1 - z0 + .7, 0, -.08, sg * (z0 + z1 + .7) / 2, wd, { l: L_WOOD });
+    S.box(L + .04, .16, .06, 0, -.01, sg * z1, wd, { l: L_WOOD });
+    S.seg([0, -.1, sg * (z1 - .05)], [0, -1.3, sg * (ROAD_HALF + .1)], .045, .04, wd, { l: L_WOOD, n: 4 });
+    S.box(L + .04, .05, .05, 0, .7, sg * (z1 - .05), COL.woodD, { l: L_WOOD });
+    if (post) S.box(.06, .72, .06, 0, .36, sg * (z1 - .05), COL.woodD, { l: L_WOOD });
+  },
+  // A pavise, the tall shield the river line was dressed with: lacquered in the army's colour, a pale badge, faces +z.
+  pavise(S, rng, col) {
+    S.box(.44, .7, .05, 0, .37, 0, mulC(col, .85 + .3 * rng()), { l: L_WOOD, r: [-.18, 0, 0] });
+    S.box(.24, .24, .02, 0, .44, .04, COL.bone, { l: L_CLOTH, r: [-.18, 0, 0] });
+    S.seg([0, .2, -.05], [0, -.02, -.4], .02, .02, COL.woodD, { l: L_WOOD, n: 3 });
+  },
+});
+
+// A camp: a few tents round a fire, a banner, and with o.gate (the world angle the camp opens toward) a palisade round the other three sides; o.s scales the whole camp.
+// o.fire sets some tents alight; o.hearth === false leaves out the stone fire ring, where a board fire stands in for it.
+function campAt(X, x, z, ry, o = {}) {
+  const { B, rng } = X, T = new Soup(), n = o.n || rng.int(2, 4);
+  for (let k = 0; k < n; k++) {
+    const a = k / n * TAU + rng.range(-.3, .3), d = rng.range(1.25, 1.6), S2 = new Soup();
+    PROP.tent(S2, rng, { burnt: o.burnt && rng() < .75, fire: o.fire && rng() < .6, col: o.col, door: o.door });
+    T.merge(S2, { p: [Math.cos(a) * d, 0, Math.sin(a) * d], ry: -a + HPI + rng.range(-.2, .2) });
+  }
+  if (o.hearth !== false) { const F = new Soup(); PROP.campfire(F, rng); T.merge(F, { p: [0, 0, 0] }); }
+  if (o.flag) { const Fl = new Soup(); PROP.banner(Fl, rng, o.flag, 3.2); T.merge(Fl, { p: [.6, 0, -.5] }); }
+  if (o.gate !== undefined) for (let k = 1; k < 4; k++) {
+    const b = o.gate + ry + k * HPI, P = new Soup(); PROP.palisade(P, rng, 2.0);
+    T.merge(P, { p: [Math.cos(b) * 2.45, 0, Math.sin(b) * 2.45], ry: -b - HPI });
+  }
+  B.put(T, x, z, { ry, s: o.s, ao: [0, .45, .6] });
+  return [x, z];
+}
+
+// stable ground near (x, z) for a camp: free of the road, pads, water and other props, not too steep
+function campSpot(X, x, z, r) {
+  if (!X.free(x, z, r, .5)) return false;
+  return X.slope(x, z) < .55 && X.slope(x + r * .6, z) < .7 && X.slope(x - r * .6, z) < .7 && X.slope(x, z + r * .6) < .7 && X.slope(x, z - r * .6) < .7;
+}
+
+// a spot on open water, clear of the board edge, the causeway and what is already afloat
+function waterSpot(X, r, tries = 200) {
+  const { B, rng } = X;
+  for (let t = 0; t < tries; t++) {
+    const x = rng.range(-BH + 1.6 + r, BH - 1.6 - r), z = rng.range(-BH + 1.6 + r, BH - 1.6 - r);
+    if (B.dRoadAt(x, z) < ROAD_HALF + 1.6 + r * .6) continue;
+    let ok = true; for (let k = 0; k < 8 && ok; k++) { const a = k / 8 * TAU; if (X.H(x + Math.cos(a) * r, z + Math.sin(a) * r) > B.sea - .35) ok = false; }
+    if (!ok || X.placed.some(q => dist2(x, z, q[0], q[1]) < (q[2] + r) * (q[2] + r))) continue;
+    return [x, z];
+  }
+  return null;
+}
+
+// a tree spot with level footing round the trunk and no ground rising past its crown: steep boards are all risers and pillars
+function treeSpot(X, h, o, tries = 14) {
+  const ab = X.B.ter.abyss;
+  for (let t = 0; t < tries; t++) {
+    const p = X.find(.7, o); if (!p) return null;
+    const y = X.H(p[0], p[1]); let lo = y, hi = y, crown = -1e9;
+    for (let k = 0; k < 8; k++) {
+      const c = Math.cos(k / 8 * TAU), s = Math.sin(k / 8 * TAU), g = X.H(p[0] + c * .25, p[1] + s * .25);
+      lo = Math.min(lo, g); hi = Math.max(hi, g); crown = Math.max(crown, X.H(p[0] + c * 1.2, p[1] + s * 1.2));
+    }
+    if (hi - lo < .45 && crown < y + h * .6 && (ab === undefined || lo > ab + .5)) return p;
+  }
+  return null;
+}
+
+// fires on the board are capped: every flame is a light and a particle source
+function addFire(B, x, y, z, size, smoke) { if (B.fires.length >= 12) return; B.fires.push({ x, y, z, size, fx: { layers: size > .5 ? 2 : 1, smoke: smoke || 1.2, embers: 1.1, glow: .8 } }); }
+
+Object.assign(BIOME_DRESS, {
+  diaoyu(X) {
+    const { B, rng, H } = X, sea = B.sea;
+    // the city wall rides the rim of the cliffs above the river: climb in from the water along each near side to the top of the terraced cliff
+    for (const side of [0, 1]) {
+      const rim = [];
+      for (let v = -BH + 1; v <= BH - 1; v += .8) {
+        const P = u => side ? [v, u] : [u, v], h = u => H(...P(u));
+        if (h(BH - .4) > sea + .3) continue;
+        for (let u = BH - .5; u > Math.max(v, 2); u -= .1) {
+          if (h(u) < sea + 2 || h(u + .7) > h(u) - .9 || h(u - .8) > h(u) + .6) continue;
+          const [wx, wz] = P(u - .35);
+          rim.push([wx, wz, X.free(wx, wz, .1, .4)]);
+          break;
+        }
+      }
+      const segs = [];
+      for (let i = 0, run = 0; i < rim.length - 1; i++) {
+        const [ax, az, fa] = rim[i], [bx, bz, fb] = rim[i + 1], dx = bx - ax, dz = bz - az, d = Math.hypot(dx, dz);
+        if (!fa || !fb || d > 1.8 || Math.abs(H(ax, az) - H(bx, bz)) > .8) { run++; continue; }
+        const nx = side ? -dz / d : dz / d, nz = side ? dx / d : -dx / d, mx = (ax + bx) / 2, mz = (az + bz) / 2, y = Math.min(H(ax, az), H(bx, bz), H(mx, mz)) - .12;
+        const T = new Soup(); PROP.cityWall(T, rng, d + .12, .9);
+        B.put(T, mx, mz, { y, ry: Math.atan2(nx, nz), ao: null });
+        segs.push([mx, mz, nx, nz, y, d, run]);
+      }
+      // a watchtower where each stretch of wall ends, and about every five paces along it
+      const towers = [];
+      for (let k = 0, since = 0; k < segs.length; k++) {
+        const [mx, mz, nx, nz, y, d, run] = segs[k], first = !k || segs[k - 1][6] !== run, end = first || k === segs.length - 1 || segs[k + 1][6] !== run;
+        since = first ? 0 : since + d;
+        const tx = mx - nx * .25, tz = mz - nz * .25;
+        if ((!end && since < 5) || !X.free(tx, tz, .55, .4) || towers.some(t => dist2(t[0], t[1], tx, tz) < 2.4 * 2.4)) continue;
+        const W = new Soup(); PROP.watchtower(W, rng); B.put(W, tx, tz, { y: y + .05, ry: Math.atan2(nx, nz), ao: null }); towers.push([tx, tz]); since = 0;
+      }
+      for (const [x, z, f] of rim) if (f) X.placed.push([x, z, .45]);
+    }
+    for (let k = 0; k < 4; k++) { const p = waterSpot(X, 1.1); if (!p) break; const T = new Soup(); PROP.sampan(T, rng); B.put(T, p[0], p[1], { y: sea - .06, ry: rng() * TAU, ao: null }); X.placed.push([p[0], p[1], 1.1]); }
+    for (let k = 0; k < 7; k++) { const hh = rng.range(2.6, 4); X.drop(T => PROP.bamboo(T, rng, hh), .7, { far: 1.0, maxSlope: .4 }); }
+    for (let k = 0; k < 2; k++) X.drop(T => PROP.log(T, rng), .9, { far: 1.2, maxSlope: .15 });
+  },
+  chibi(X) {
+    const { B, rng, H } = X, SC = 1.25, LEN = 5.1, GAP = 5.3, sea = B.sea, ships = [];
+    // firelight thrown across the water towards the viewer, which is the +x +z diagonal on either mirror
+    const glare = (x, z, n) => {
+      const T = new Soup();
+      for (let k = 0; k < n; k++) { const d = rng.range(.6, 3.4), w = rng.range(-1, 1) * (.4 + d * .3); T.box(rng.range(.35, .9), .01, rng.range(.06, .12), (d - w) * .7071, 0, (d + w) * .7071, [.9, .32, .07], { emis: rng.range(.12, .3) * (1.2 - d * .25), r: [0, -PI / 4, 0] }); }
+      B.put(T, x, z, { y: sea + .015, ao: null });
+    };
+    // a ship's whole footprint, oars included, must lie on open water, and in view: the camera cuts off the near corner
+    const afloat = (x, z, dx, dz, w = 1.3) => {
+      if (x + z > 17) return false;
+      for (let a = -LEN / 2; a <= LEN / 2 + .01; a += LEN / 6) for (const b of [-w, -.7, 0, .7, w]) {
+        const px = x + dx * a - dz * b, pz = z + dz * a + dx * b;
+        if (Math.abs(px) > BH - .2 || Math.abs(pz) > BH - .2 || H(px, pz) > sea - (Math.abs(b) > .71 ? 0 : .35) || B.dRoadAt(px, pz) < ROAD_HALF + .8) return false;
+      }
+      return !ships.some(q => dist2(x, z, q[0], q[1]) < 5 * 5);
+    };
+    // the chained fleet: warships lashed bow to stern, grown link by link along the river's bends, most of them burning
+    const grow = (x, z, a) => {
+      const out = [[x, z, a]];
+      while (out.length < 5) {
+        const [px, pz, pa] = out[out.length - 1]; let next = null;
+        for (const da of [0, .2, -.2, .4, -.4, .6, -.6, .8, -.8]) { const b = pa + da, qx = px + Math.cos(b) * GAP, qz = pz + Math.sin(b) * GAP; if (afloat(qx, qz, Math.cos(b), Math.sin(b), .85)) { next = [qx, qz, b]; break; } }
+        if (!next) break; out.push(next);
+      }
+      return out;
+    };
+    let fleet = [], bestSc = -1e9;
+    for (let z = -BH + 1.5; z < BH - 1; z += 1) for (let x = -BH + 1.5; x < BH - 1; x += 1) {
+      if (H(x, z) > sea - .35) continue;
+      for (let d = 0; d < 16; d++) {
+        const a = d / 16 * TAU; if (!afloat(x, z, Math.cos(a), Math.sin(a), .85)) continue;
+        const f = grow(x, z, a), m = f[f.length >> 1], sc = f.length * 100 - Math.abs(m[0] + m[1] - 8) - Math.abs(m[0] - m[1]) * .6;
+        if (sc > bestSc) { bestSc = sc; fleet = f; }
+      }
+    }
+    fleet.forEach(([x, z, a], i) => {
+      const burning = i < fleet.length - 1 || fleet.length === 1, T = new Soup(), dx = Math.cos(a), dz = Math.sin(a);
+      PROP.warship(T, rng, { burning, flag: COL.weiB, L: 3.5, oars: false });
+      B.put(T, x, z, { y: sea - .12, ry: -a, s: SC, ao: null }); X.placed.push([x, z, 3]); ships.push([x, z]);
+      if (burning) { addFire(B, x + dx * .5, sea + 1.1, z + dz * .5, .9, 2.4); glare(x, z, 14); }
+      if (i) {
+        const [px, pz] = fleet[i - 1], ax = px + Math.cos(fleet[i - 1][2]) * LEN * .45, az = pz + Math.sin(fleet[i - 1][2]) * LEN * .45, bx = x - dx * LEN * .45, bz = z - dz * LEN * .45, l = Math.hypot(bx - ax, bz - az), C2 = new Soup();
+        for (let s = 0; s < 5; s++) C2.seg([s / 5 * l, .3 - Math.sin(s / 5 * PI) * .12, 0], [(s + 1) / 5 * l, .3 - Math.sin((s + 1) / 5 * PI) * .12, 0], .04, .04, COL.iron, { l: L_METAL, n: 3 });
+        B.put(C2, ax, az, { y: sea, ry: -Math.atan2(bz - az, bx - ax), ao: null });
+      }
+    });
+    // the fire lights the water under the fleet
+    for (let i = 0, n = Math.min(3, fleet.length); i < n; i++) { const f = fleet[n === 1 ? 0 : Math.round(i * (fleet.length - 1) / (n - 1))]; B.env.push({ x: f[0], y: sea + .9, z: f[1], c: 0xff6a24, I: 60, d: 11, flick: 1 }); }
+    // Cao Cao's ships still at anchor, and Huang Gai's fire boats among them
+    for (let t = 0, n = 0; t < 400 && n < 3; t++) {
+      const x = rng.range(-BH + 3, BH - 3), z = rng.range(-BH + 3, BH - 3), a = rng() * PI, dx = Math.cos(a), dz = Math.sin(a);
+      if (!afloat(x, z, dx, dz)) continue;
+      const burning = n === 0, T = new Soup(); PROP.warship(T, rng, { burning, flag: COL.clothR, L: 3.5 });
+      B.put(T, x, z, { y: sea - .12, ry: -a, s: SC, ao: null }); X.placed.push([x, z, 3]); ships.push([x, z]); n++;
+      if (burning) { addFire(B, x, sea + 1.0, z, .6, 1.8); glare(x, z, 8); }
+    }
+    for (let k = 0; k < 2; k++) X.drop(T => PROP.wreck(T, rng), 2.2, { far: 1.8, water: 2.5 });
+    for (let k = 0; k < 5; k++) { const hh = rng.range(2.0, 4.0); X.drop(T => PROP.spire(T, rng, hh, [COL.stoneD, COL.stone, C(0x7a2e22), COL.stoneL]), hh * .28, { far: 1.6, maxSlope: .35, dy: -.1 }); }
+  },
+  yinping(X) {
+    const { B, rng, H } = X;
+    // the plank road: where the ledge falls away beside the road, beams are let into the rock and planks laid over them
+    for (let i = 14; i < B.n - 10; i += 2) {
+      if (Math.abs(i - B.ci0) * PATH_STEP < 3.2) continue;
+      const x0 = B.px[i], z0 = B.pz[i], y = B.py[i], nx = -B.tz[i], nz = B.tx[i];
+      for (const sg of [-1, 1]) {
+        const ox = x0 + nx * sg * (ROAD_HALF + 1.3), oz = z0 + nz * sg * (ROAD_HALF + 1.3);
+        if (H(ox, oz) > y - 1.1) continue;
+        if (B.pads.some(p => dist2(p.x, p.z, ox, oz) < 9)) continue;
+        const T = new Soup(); PROP.plankway(T, rng, sg, (i >> 1) % 2 === 0);
+        B.put(T, x0, z0, { y, ry: -Math.atan2(B.tz[i], B.tx[i]), ao: null });
+      }
+    }
+    // Deng Ai's men left their mark: felt rolls and rope at the steepest drops, and a cairn to the dead
+    for (let k = 0; k < 4; k++) X.drop(T => PROP.cairn(T, rng), .5, {});
+    for (let k = 0; k < 14; k++) { const hh = rng.range(2.4, 4.6), p = treeSpot(X, hh, { far: 1.0, steep: true }); if (p) X.drop(T => PROP.pine(T, rng, hh), .7, { at: p }); }
+  },
+  yiling(X) {
+    const { B, rng, H } = X, camps = B.scx.camps;
+    // seven hundred li of camps on shelves cut into the wooded slopes, each opening toward the road.
+    // Lu Xun's fire has taken most: some still ablaze, some burnt out and smoking, a few untouched
+    const STATE = ['ablaze', 'untouched', 'ablaze', 'smoking'];
+    let lit = 0;
+    camps.forEach((c, i) => {
+      c.state = STATE[i % 4];
+      const gate = Math.atan2(B.dRoadAt(c.x, c.z - .5) - B.dRoadAt(c.x, c.z + .5), B.dRoadAt(c.x - .5, c.z) - B.dRoadAt(c.x + .5, c.z));
+      campAt(X, c.x, c.z, rng() * TAU, { burnt: c.state !== 'untouched', fire: c.state === 'ablaze', hearth: c.state === 'untouched', flag: COL.hanR, n: 3, gate, s: .68 });
+      if (c.state !== 'ablaze') return;
+      addFire(B, c.x, H(c.x, c.z) + .25, c.z, .9, 2.4);
+      if (lit++ < 3) B.env.push({ x: c.x, y: H(c.x, c.z) + 1.2, z: c.z, c: 0xff6a24, I: 40, d: 9, flick: 1 });
+    });
+    // after the blazes, so the fire cap never takes one of theirs: smoke off the burnt-out camps, then the untouched camps' cookfires
+    for (const c of camps) if (c.state === 'smoking') addFire(B, c.x, H(c.x, c.z) + .15, c.z, .35, 2.8);
+    for (const c of camps) if (c.state === 'untouched') addFire(B, c.x, H(c.x, c.z) + .2, c.z, .3, .5);
+    // the wooded gorge sides, mostly pine; the trees round the burnt camps are scorched
+    for (let k = 0, song = 0; k < 22; k++) {
+      const h = rng.range(2.6, 4.4), p = treeSpot(X, h, { far: 1.6, steep: true }); if (!p) continue;
+      const kind = camps.some(c => c.state !== 'untouched' && Math.hypot(p[0] - c.x, p[1] - c.z) < 4.5) ? 'charred' : song < 3 && rng() < .3 ? (song++, 'song') : 'pine';
+      X.drop(T => PROP[kind](T, rng, h), .7, { at: p });
+    }
+    for (let k = 0; k < 3; k++) { const hh = rng.range(2.6, 4), p = treeSpot(X, hh, { far: 1.2, steep: true }); if (p) X.drop(T => PROP.bamboo(T, rng, hh), .7, { at: p }); }
+  },
+  jingxing(X) {
+    const { B, rng, H } = X, sea = B.sea, F = B.scx.line, R = B.ter.ranks, ry = Math.atan2(-F.wx, -F.wz);
+    // back to the water: Han Xin's army drawn up on the shelf prep cut for it, the river behind and the pass in front.
+    // u runs along the bank, d inland from the top of it
+    const at = (u, d) => [F.x - F.wz * u - F.wx * d, F.z + F.wx * u - F.wz * d];
+    const put = (T, u, d, s) => { const [x, z] = at(u, d); B.put(T, x, z, { ry: ry + rng.range(-.04, .04), s }); };
+    // the shelf has kept the common props off; free it for the line's own checks, and hold it again below for the trees and rocks still to come
+    X.placed.splice(0, B.scx.sites.length);
+    // a standard behind every other shield, and a watch fire in place of the standard a quarter of the way in from each end
+    const n = Math.round(F.L / .7), u0 = -(n - 1) * .35, nb = Math.max(1, n >> 1), ub = j => (j - (nb - 1) / 2) * 1.4, q = nb >> 2;
+    const fires = nb > 2 ? [ub(q), ub(nb - 1 - q)] : [ub(nb >> 1)];
+    for (const d of R.shields) for (let i = 0; i < n; i++) { const T = new Soup(); PROP.pavise(T, rng, COL.hanR); put(T, u0 + i * .7, d, 1.6); }
+    for (let j = 0; j < nb; j++) { if (fires.includes(ub(j))) continue; const T = new Soup(); PROP.banner(T, rng, COL.hanR, 3.4); put(T, ub(j), R.back); }
+    // the chevaux-de-frise stand only where the ground in front of the shelf is free: the road or a pad may come close there
+    for (let m = Math.floor((F.L + .2) / 2.2), i = 0; i < m; i++) {
+      const u = (i - (m - 1) / 2) * 2.2, ends = [-.9, 0, .9].map(e => at(u + e, R.juma));
+      if (!ends.every(([x, z]) => X.free(x, z, .35, .4) && X.slope(x, z) < .6)) continue;
+      const T = new Soup(); PROP.juma(T, rng, 2.0); put(T, u, R.juma);
+    }
+    // watch fires among the standards light the shields from behind
+    for (const f of fires) {
+      const [x, z] = at(f, R.back), T = new Soup(); PROP.campfire(T, rng); B.put(T, x, z, {});
+      addFire(B, x, H(x, z) + .2, z, .3, .5); B.env.push({ x, y: H(x, z) + 1.6, z, c: 0xff9a50, I: 26, d: 8, flick: 1 });
+    }
+    if (fires.length > 1) { const [x, z] = at(0, R.shields[0]); B.env.push({ x, y: H(x, z) + 1.4, z, c: 0xff9a50, I: 16, d: 7, flick: 1 }); }
+    X.placed.push(...B.scx.sites);
+    // the two thousand red flags Han Xin's riders planted on the heights above the pass
+    for (let k = 0, m = 0; k < 300 && m < 14; k++) {
+      const x = rng.range(-BH + 1.5, 4), z = rng.range(-BH + 1.5, BH - 1.5);
+      if (H(x, z) < 3.6 || !X.free(x, z, .3, .4) || X.slope(x, z) > .5) continue;
+      const T = new Soup(); PROP.banner(T, rng, COL.hanR, 2.6); B.put(T, x, z, { ry: rng() * TAU }); X.placed.push([x, z, .5]); m++;
+    }
+    // Zhao's camp at the mouth of the pass
+    for (let t = 0; t < 60; t++) { const x = B.lay.cave.x + rng.range(3, 8), z = B.zc + rng.sign() * rng.range(3.5, 6); if (campSpot(X, x, z, 1.9)) { campAt(X, x, z, rng() * TAU, { flag: COL.weiB, n: 3 }); X.placed.push([x, z, 2.2]); addFire(B, x, H(x, z) + .2, z, .3, .5); break; } }
+    for (let k = 0; k < 3; k++) { const p = waterSpot(X, 1.0); if (!p) break; const T = new Soup(); PROP.sampan(T, rng); B.put(T, p[0], p[1], { y: sea - .06, ry: rng() * TAU, ao: null }); X.placed.push([p[0], p[1], 1.0]); }
+  },
+  jieting(X) {
+    const { B, rng, H } = X, h = B.scx.hill, y = H(h.x, h.z), inside = (x, z) => B.ter.foot(B.scx, x, z, B.dRoadAt(x, z));
+    // the whole hill was held clear of the common props; from here on only the camp on top needs holding
+    B.scx.sites[0][2] = h.top + h.w + .2;
+    // Ma Su's camp on the flat hilltop round a dry well, cut off from the water below
+    // turn the three tents toward the summit's longest reaches, and size the camp to the shortest of those
+    const reach = k => Math.min(h.rim[(k + 23) % 24], h.rim[k % 24], h.rim[(k + 1) % 24]);
+    let k0 = 0, room = -1; for (let k = 0; k < 8; k++) { const m = Math.min(reach(k), reach(k + 8), reach(k + 16)); if (m > room) { room = m; k0 = k; } }
+    const a0 = k0 / 24 * TAU, T = new Soup();
+    PROP.well(T, rng);
+    for (let k = 0; k < 3; k++) {
+      const a = a0 + k / 3 * TAU, b = a + PI / 3, S = new Soup(), F = new Soup();
+      PROP.tent(S, rng, { door: COL.hanR }); T.merge(S, { p: [Math.cos(a) * 1.9, 0, Math.sin(a) * 1.9], ry: -a + HPI, s: .75 });
+      PROP.banner(F, rng, k ? COL.clothR : COL.hanR, 2.8); T.merge(F, { p: [Math.cos(b) * 1.15, 0, Math.sin(b) * 1.15] });
+    }
+    // laid out for a summit reaching 2.9; a smaller one gets the same camp drawn smaller
+    B.put(T, h.x, h.z, { y, s: clamp((room - .4) / 2.5, .5, 1), ao: [0, .45, .6] });
+    // Zhang He rings the foot with chevaux-de-frise and Wei standards, broken only where the road and the pads pass
+    // a juma's whole footprint, both ends and both rows of stakes, must stand on open level ground
+    const fits = (x, z, tx, tz, l) => {
+      const q = [[x, z]]; for (const u of [-l, l]) for (const v of [-.8, .8]) q.push([x + tx * u - tz * v, z + tz * u + tx * v]);
+      const g = q.map(p => H(p[0], p[1]));
+      return Math.max(...g) - Math.min(...g) < .3 && q.every(p => X.free(p[0], p[1], .1, .2));
+    };
+    // where the strip between foot and road is too narrow for a juma, the line steps out a little or a standard stands in for it
+    const flag = (x, z) => { const F = new Soup(); PROP.banner(F, rng, COL.weiB, 2.6); B.put(F, x, z, { ry: rng() * TAU }); X.placed.push([x, z, .3]); };
+    for (let a = rng() * TAU, end = a + TAU, k = 0; a < end; k++) {
+      const c = Math.cos(a), s = Math.sin(a), len = rng.range(2.0, 2.6);
+      let r0 = 1; while (r0 < h.R + 2 && inside(h.x + c * r0, h.z + s * r0) > -.4) r0 += .1;
+      let r = r0; while (r < r0 + 1.6 && !fits(h.x + c * r, h.z + s * r, -s, c, len / 2)) r += .3;
+      const x = h.x + c * r, z = h.z + s * r;
+      if (r < r0 + 1.6) {
+        const J = new Soup(); PROP.juma(J, rng, len); B.put(J, x, z, { ry: -Math.atan2(c, -s) }); X.placed.push([x, z, .9]);
+        const bx = x + c * .8 - s * (len / 2 + .3), bz = z + s * .8 + c * (len / 2 + .3);
+        if (k % 2 === 0 && X.free(bx, bz, .2, .3)) flag(bx, bz);
+        a += (len + .5) / r;
+      } else {
+        if (X.free(h.x + c * r0, h.z + s * r0, .2, .3)) flag(h.x + c * r0, h.z + s * r0);
+        a += 1.6 / r0;
+      }
+    }
+  },
+});
 
 
 const LT = {
@@ -4722,9 +5397,9 @@ const PX = (() => {
 })();
 
 // Generated by tools/cjk.py from Noto Sans CJK SC at 12 px and 16 px (SIL Open Font License 1.1). Do not edit by hand.
-PX.addWide('。一下与中之事云交亲代令伤俑停僵关兵军出击前升卒即叉发只可台各后启命在地城基塔填壁声夜妖守害射将小尸山岩岭工巨巫已师干建开引弹御快怨恙悬慢戍或战手打拆招拦择按接提搏摄敌无时杀来查格梦楼此母波泥泽洞满火灭灵炮炸点烽熄熔燧片狼玉王环生用甲电瘴白看督石硕秒程空第管箭级缓自至药营虫蛛蝠蟾行裂装诛赤路身转迎近还连迟选途速造铁长门防阴除陵随隘雁雪雷静面音领飞首骨鬼魂魃魈鼓鼠，：',
-  12, '0000000000000000000000007009009006000000000000000000007ff0000000000000000007fe0400400600580440400400400400401001001fe2002003fe0020047f40040040380400407fe4424424424427fe4420400400400400200207fc00c0080300600803005804fe0407fe3fc2443fc0403fc7fe0443fc0440c00003fc0000000007fe0800981082047fe0020400207fe00010c6064920900600601986060400403fe1080907fe0407fe14834c2440c00801141122106fee1021021021020920a20602006009034c6230203fc0080900e002001012014027e6906102fe22222222226224228c1fe2042782186fea922fe2922fe2922922961101fe20027c67ce002fe30227c2102102701fe2002fe2fe6fea002fe2fe2fe2fe2003fe1081080903fe0200207fe06005009830c40200c1f01001fe1081081087fe0001882064027fe4824823fc1001203fc0200207fe0200200402442442442443fc0404424424427fe0020200203fc0200207fe0202242242243fc00410c1087fe0007d24527d24527d24524424cc0481c87081081087fe1081081082086084080400207fe10810829c6264407fe0400400400007de4527d24524527d24924965d06500100007fc20424412810809006006009030c4020482442403fe0c00fc08414823863044c1860003fc2042042042043fc00009010c2064020007fe0040043e42242242243e420400401c0400801082047fe0003fc2042042043fc2040801fc3084900600f070e3fc2042043fc20400c3f02002003fe2002fe2824824824fe0820400203fc2042043fc2003fe5025025fe1020200e01986f60003be4a24a24a23ac0200200400807fe1001102106fe6102102102102fe200250252f4e2722d225225235644004203e20c20a2fe7882882fa2aa2ac3a44ed0951221087fe1081f81f81087fe1082445fb0407fe2042fe2447102282462bc20037ce4404407c2102fe210f7c27c24427c27c344eff0240c27884be79443e7c867e6483c03fc0400407fe0007fe0403fe0003fc2442443fc4004008000407fe11012023e2526dc2a423821826c28220021e26878848857e5185183183246624420400207fe4120107fe0103101100900100700407fe4023fc0403fc0407fe3fc2042043fc1047c44447fe4447c44547d414424444418c11013e54673c1181e41fe70452412410411c020020020220224224222422c210200201c00003fc2042043fc2002002002004004004000000400404424424424424424424427fe0024424427fe0000007fe1001fe7025021fe10220021862872475278077e7047087380180080000007fe0400400400400400400400407fe0000003fe2002003fc2042043fc2002003fe0000007fe04014824834834c4d2c620407fe0007fc0042042043fc2042002022022023fe10017e51057e5525525525521522562104100007fe0400400407fe04004004004004004001077e2122fe21277e57e5102fe210580c7e0007fe1081081087fe1081081083082084080047e40240243e44047e40440440440441c400472412477e45247e75217e1101ff1106102804fe94a24a3fa64aa4a37a34a34a3f820821021037e712a12a122ff21022822c2462821003fe2624a22ac12221e44032450a50a0f81081087fe0403fc0407fe04022450650a0f01fc2041fc1fc2047fe1087fc04032450a0f027e24237eb7ebfeaaa2fe2002fe2642182e60280263fe4104123145944d841841a42a84601c0127fe0107d24544547d80081da62a0461001121c810e13810a7ca44c44c4497d646200c7f00400407fe0400407fe0400400401c020027f20878820820838860820820820863820e27074024027e24834865824e24a28868820027e212f222222cc300e7e24224227e64220422422877e200200200f7c2002002fe60020027e2247182182e731067e2102fe21061021021027ef922102ff324e442682182346c221027e204f242fe210320eff24427821c6e227e242f7e24227e2003fee5025e2502b071e2142fe210f7e27e25277ea042ff24422461c2fe24477c24427c3fee002fe2aa24c2ac71209071011e112ff41341147cc44844c7d64620007fe0400400407fe0600a00a012232243e0047844844ff4847a44a449448478440401c20c1980601986040407fe0401482444420c00000400407fe2441481487fe0d01d034c6460000407fe0d01486061f81f81081f80007fe21023e2247e42183186e66bea4224223e2021087fe31c59cd2b1480fc30c0980700c070025225477e2383567106106fea2426821c2e20900900904924dc4984904904904914d171e0001fc2442242047fe2042642047fe0080384103100fe0924922fe0c40a429829853c54240027e08207e6800a00a61b82a02a24a251e0002fc0440284382c60100fc2103fe4104100006fe0820fec822ba0aa0aa2ba2a24824864482fe0081fe4282fe0aa2aa2d62d649248600004004024224224446806009019030c4020007fe02004014426426806009009830c4023fc0043fc0043fc02024424446809018c6062202202be74277aa4a24a23a34234644203e2202202bf6d0750a1e21021031e31041041004007e0400403fc2042043fc00029449249221023e2e4718718ae727e21037e31047ec1021027e2c26fe742a7e27e2103282a24a603c21027e2c2766b42a5a22c26633c34444483c2122942be708bdaa6c25426e2565644e801e2202202203fe2002003f820820840840800851037e24264257e14237e55214c14c1766400000007fe0400400403fc0400480440407fe0000007fe0400400403fc0400400400407fe000f7e2082102107342762d22107100100100001402403fe4404403fc0400400400407fe0003fe2222223fe2222223fe22242242282c0000007fe4424427fe4424427fe4420400400400407fc4444447fc4447fc44004204203e0203fe2106fe7fe2002fcefc2fc2105fe4100400403fc2042042043fc2042042043fc2040043f83fe0807fe1003fc7fc5041fc1041fc1001fe7d410855c5223fc2043fc3fc2043fc0007fe0800801001fe3025021021021fe1020007fe21023e4427ca4ca4ca49279c4220400807102142327d23527506926042082300403be5422422427be20057e688e7e20820827f0400607fe4025986063fc0400400400407fe2103de5284243fc0443fc2403fe0c234c4402107fe5240407fe5fa2081f82001fc2041fc2103fe5241087fe0003d23d24523d24420cc10027c224528f2e2224b275404c34c4d60a200627825457ef202fe42073e06415ce9c0620400403fc2042043fc2043fc2042043fc2040007fe0801083fc0020403fc0400400407fe1007fe10021023e4a274221279200278200c1087fe1087fe4025fa1081f83fc2042043fc0400403fc4444444443fc04004c0447fe0022082287be6a86c86887fe61c29c3aa44b00827e2007be6a26be6807fe64a37e2ca7ca07e22023c77ebd4b6ab7e74025c35e35e6a209e10027e40010027e604e042042042042042187e21123d265218274e0207fe0a671812c1c211051037e11071017e0407fe0a671816c18221035007e0506902102fe2382343d63d20100400403fc0407fe09029429649219211023079049e4a44f47d811c5a657e5225a2e2203e0401f82081f82081fa20c7f80380681886382087be21051057f5107be10418471810c1040204de2920920926922922f22962105000fe00667824004007e6482482482882885000fe4002fe010010e382542922102102105008fe4202fe0400506fe2102102fe2102105108fe00067e24204207e6402482842862825000fe01045027e0900106fe22822824a38e5814fe01063804c0ff0106fe2102542922307000fe4106fe2100fe0926922fe2382542927000fe0504502fe0900fe60027c28428427c7004fe2087a843e8487c820867e3082182943222421041081101601007fe1201201101081e61002fe10240240240240240240240240240240e7905085fe52062053e5224a27224444c440c7804be52252253e5224a24be5c244244248671051852464363c5105fe51075445249143071057e5106106fe56653c5647ac41843c4c20087be55061e6325de55255e7524564a041e7445245206fe62854657e5aa7aa4aa4aa4ff0007fe4a84a853e56873e52853e52853e0203fc0407fe4427de3dc0003fc0043fc0043fc3fc0407fe4427de3dc0003fc2443fc2443fc1107dc1247fefca00a7bf78a4be7884885b80007fe0407fe4924924f24924f24927fe4020407fe1081087fe0003fc2043fc2042043fc10013e28847e92a02a7aa0aa12a30c1120600007f001201401801801601201000a00a0061081887fe0403fc2043fc2043fc2043fc2041f82081e82287fe4027fa3f82083f82082180403fc2443fc2442443fc0680b41ba32243e0107fe04a07efd225257e5147964b607204e1047d257e6507de6527ec3a43cc3f25010fe1087ea5587fe66267e7e233e3625e65020fe1087c813e7c80087be4a27944942883d442208033c39c2043fc2443d42443542c43dd262000000000000000000000000300300100200000000000000300300000000000000300300',
-  16, '0000000000000000000000000000000000000000300048004400440048003000000000000000000000000000000000007ffe0000000000000000000000000000000000007ffe01000100010001c001700118010c0100010001000100010001000000080008000ffc1800100010001ffc0004000400047fec000c000800f800000180018001803ffc218421842184218421843ffc218401800180018001800180000001000180008000803ffc001800100020004000800300060038006c0043fe018001807ffe01801ff811881ff801803ffc018c7ffe018c3ffc018c01800700000000001ff80000000000007ffe0200060004200c10081818083ffc3e0400040100018000807ffe00000c3018083424242206600240018003c00670381e6002010001803ffc08100c3004207ffe018001807ffe018009b01998118c2184070000400448084418421040307e77f0d040106010201020102010311012101a100e00000080018003c006601d18318e60c200001ffc00180030066003c00180006008800980190013fe32007440504097fe104410c41084108411841304163c140000001ffc100811f0303037fe5666566617fe1666166617fe166616661666166c084008601ffe100033fc320453fc500017fe140217fe106010601060106011e0080017fe100013fc33fc326473fc700037fe33fc326433fc326433fc30003ffe08100810043004203ffc0180018001807ffe018001c0036006301c18700e400200380fe00800080008000ffc08200820082008207ffe000006701818300e400000007ffe4002420206001ff80400088008801ffc008000807ffe00800080008001800180318c318c318c318c3ffc01802184218421842184218421843ffc00040180018001803ffc0180018001807ffe0180318c318c318c318c318c3ffc000c0818081004307ffe000000003f2421243f24212421243f24212421042104271c001003901e107c100c100c100c107ffe0c100c10081008101810301060104010010000807ffe00000c1008201c30125830cc608401807ffe018001800180018000003f7e2166216621663f66216621663f6620662466226e2f60796061600060000000003ffc10081308099808d00c300620024001c0018006601c38700e400001801918110c11003ffe0300020007f806080f18091018a030c061b0071e0c06000000001ffc100c100c100c100c100c1ffc0000000004200c18180c30064000000000007ffe000800081f8810881088108810881f88100810080008000800780200020006200c301818103c3ffc000400001ff810081008100810081ff81008020006000ff8181034306360018007e01c38700e1ff81018101810181ff81018000001fc3f80300030003ffe30003000300027fc240424042404640447fc44040100018000803ffc300430043ffc300030003ffc2c042c042c046c044ffc4c040080018003c00660181877ee00003e7c22442244224422443e5c20400040004000000200020002007ffe040008201820102033fc5020102010201020102017fe000010201020112011267d3a11e213a21722112615261d2c71204102010201fe00101014101213fe7a107a1013d212561254125412581a5877d9043a046e08460000081008107ffe08100ff008100ff008107ffe081011886ff6418201803ffc1188118817fe118879e810f0118c160614f8100019fc39046104010401fc01043020302033fe304079fc310431fc31fc310431fc3904390477fe4098030c020200103efe224022483efe20107e1062fe62107e1001803ffc018001807ffe0000018001807ffe01803ffc000000003ffc3184318431843ffc2004200060004000010001807ffe0c4008c018fe11843164732c548810d01070107010d8170e14021000101e11f020207c202420242025fe44304830387018481cc8348c61064202010001807ffe60066026002000207ffe0020102008200c2004200020002001e0010001807ffe61867ffe018001801ffc01807ffe01801ff8100810081ff81008080c080c3e0c220c3efe220c220c3e4c224c7e2c062c0a0c120c320c420c0e380800086008fe49846acc385808600b8808081bfe280849880888084808080838018001800180018001801188118c318431842186618241820182018001800700000000001ffc10041004100410041ffc1000100010003000300020002000400001800180018001802184218421842184218421842184218421843ffc000400040180218421843ffc000000007ffe04000c0008001ffc3804680408040ffc080410201020105054d8548855665622540055fc540c540854107cf06460003000100000000000003ffc01800180018001800180018001800180018001807ffe0000000000001ffc1000100010001ff810081008100810081ff81000100010001ffe000000007ffe0180099809901990119019b835ac23e641c2018001807ffe0000000000007ff8000800083008300830083ff83008300030003002300230061ffc08000bfe2820282029fe2926292629262926292609260926112c102030202020000000003ffc01800180018001807ffe01800180018001800180018001800180004078400bfc104417fe20447bfc484008404bfc384037fe10402c0063fe400000007ffe043004300430043004307ffe04300c3008300830183030306030003000043f840184018401843f842004200420043f84018401840104010401040f040004788c08c8081809fe792241fe4122412279fe082008200bfe0820082078201200320067dec5121d12111227d26112e51225d225122512251627f02f9020101040104010405bfc5c4454445044504417fe1060106010d01098110c160614020800187c1f4433446244525c0c420c42387e6300058034cc24046416441207e008100c1004203ffc01803ffc018001807ffe0100018014c824042416441247e0000000001ff818081ff818081ff818087ffe0c3019f83e0405882404641647e0100013fc13fc5a045bfc540057fe569217fe100017fc110c1098107013de16060050004c00443ffe20402040204438442c48267822302030206260d2419a430e0040004c00447ffe004000403f442364236823283f30003003727ed2619a010e08200828082408260f20083e08f008127f164114411c4118411a7f3a416e0006000801fc3f80018001803ffc0180018001807ffe018001800180018001800f001000100011fe10187e181018101810181e1878185018101810181018101870f01004107c11c011007d00110011fe11101d1079705130111c1116121012107210100013fe104610467cc610841184131c1c00f1fe110611061106110611fe710610081088108810107ffe1000100010001c0079fc100010001000100013fe7000100013fc108410887c58103011dc13061c2071fc1020102013fe1020102070201020102013fe12027e421242104013fe148c7988710810d81070107811cc73021040102013fe10087888109013fe1040184077fe1188110811d0107010fc6706100011fc11047dfc110411fc100010001bfe78205120113c132012a0147e70001028102613fe10207ffe122613fe12263ffe7226100817fe1108118810887038100017fe13047bfc130413fc13041ffe700457fe10a21694131813981636604202201e2078200860087e08447fc408e408a87e284218421842387e6442c6008200003ffc01000100010001007ffe018003800280068004820c82188270fe4000000800087c08440845fe440844087c8844c84448442844087c08400800080078000838300660018006603818600801807ffe018009901998318c618641820300018001803ffc018019880998099009907ffe03c007e00db01998318c418201800000018001807ffe03c005a00db0199c60064ff008100ff008100ff000007ffe1040104010fc10847dc8125818303c7034dc338651fc51841184118411fc1184081008107ffe1c383e5c6ad64892030007f81c183430036001c003803e00300010201124112410a87ffe107031ac3b26344053fe5088518811d0107813ce12000000046004600460046024602466277824602460246024602462246227e27c3e00000ffc180c1b0810c810087ffe10081208318830c820083ffe0018001000f000203020182003fe02224224322013fc0384028816c81450343024786d8e0b02000033fc0a040204020443fc720012c002c402d81af012c032c224c264c20c7e000037fc1908019800f040e033981646004013fc1040104027fe204060400040000037fe1c02040205fa4402640214f2049204921c9214f2348224026402040e0190319017fe0190000007fe609007fe0492149214d2156a252a24426402040e0000000001800180018019841184110c21086198038002c006600c301818700e00007ffe018001800180098c19881188319001c00340026004301818700e400200003ff800081ff8000800083ff80180118011083188239002400630381e6006104010c0108014fe55025bf251925192119211f21986198c25822582618240fe10c01080108014fe556055605760507e10601060187e3c6024602460406040600100010001fe010001001ff810081008100810081ff80000164c2244622642221040104010fc1588575854305878518e132211fc102019fc2c2027fe402040201020102011fc110455fc550455fc5104510411fc106018b02684228a628a40f81020102013fe160256ca588c5b26507010d811861bfe39842584258441fc4184000010441024122c12fe583058725ed45238126c121c322a2aca2a8867b0447e004010401040104010401ffc1000100010001ff01010301020102010601040100060682039fc1104310449fc0904190419fc29206926491c0918090c19e67302000000003ffc018001800180018001803ffc018001a001900188018c01807ffe000000003ffc018001800180018001803ffc0180018001800180018001807ffe00007bfe103010201060107078f810ac11241322122018207020402000200020000001800980198011803ffc21806180418001801ffc01800180018001807ffe00003ffc3184318431843ffc3184318431843ffc2184218421842184418441bc00003ffc2184218421843ffc2184218421843ffc21840180018001800180018000000100010001003ffc210421043ffc2104210421043ffc21000102018200fe008000c01ffe504057fc510817fe100013fc73fc520433fc20402ffe604040400180010003003ffc300c300c300c300c3ffc300c300c300c300c3ffc300c300c00083ff003003ffc020006007ffe0c000ff818086ff848080ff808080ff8080808000ffc08447f682a382b38496c08861ff810081ff810081ff810081ff81008000000007ffe06000400040008001ffc1804280468044804080408040ffc080400007dfe1020302020fc20843ca464a464a4a4a424a424a424203c4820c6010200203e20782018a418a47fa6192219223d243e24582cd808181018601bc01a0000003ffe7986198619867ffe180018003dfe3e205820d9fe182018201bfe18000000010001807ffe4002400246701818300e20001ff801800180018001807ffe106010403f7e24d844883ffc010401041ffc31003ffc030407040d04313c2100104030403f7e6c9841883ffe20063ffe18181ff8180018001ffc180c1ffc180c10403f7e2498648808100c207ffe00003f2421243f2421243f2421042104271c080013f81088208824984c90789e10c630c43ce4612801381d18732c42c60282100413f81124312425284ffe788013fe20807cfc618401481f78723006ee05820180010001001ffc100c100c1ffc100c100c100c1ffc100c100c100c1ffc100c000000007ffe06000c20083010183ffc0004018001803ffc0180018001807ffe042004207ffe04200840104030fe24867d06184630647e24402402047e04003c042004207ffe04207ffe600260026ff208100ff000001ffc100c100c1ffc100c0180018001803ffc218c218c218c218c3ffc018001800198018c03fc7fc60002101010d010907cfe54905590551054107dfe50381458145c1e94719201120010100011fe10007cfc5484548454fc54007dfe5122152215fe15227d2203fe0102104010f811987ffe57285546551055fe55007d7e517e1500157e3e42467e0242080019fe300060004c0008001bfe30087008500810081008100810081008107800067fa608261f2671260a260c06711c00807ffe02840c4c7c700c300fce08020820082068201bfe0820382049fe080001807ffe02840c4c787008b00f8e0802002031a0092001fe032002207220102013fe1070106810a815a41b2632220020018001801ff80180018001807ffe02601268126c2264666644620c60186011c000607e40427c42c443c87f7808300838486c4f8648fc488448847e8460fc0084018001001ff018101ff0181018121ff4181c18187ff00070019007101c1060f0101010307ffe1020282029fe284048407e4008fe080c1e08787008300818080000c0633e3222022202220222722212221222126213e2162e102038206c0043fe0000000c21f811001100010001fe7110111013101210121012103c106c0043fe0000200037fe10200060004000c071d8134c164614421040104030406c0047fe00000080208037fe11800120032073fc10201020102017fe102010206c2047fe0000000021fc11041104010401fc7100132013101218120c160638006c0047fe00204120212013fe1220002007fe70901090119011121312161e3800660043fe0060206031901b0c0e0601f8706017fe10601168126c1664146238c06c0043fe00000060606037fe186003fc02647264126413fc10f011f8136414602c0043fe00000160616033fc12600460006077fe100013fc12041204120413fc380047fe101030903e9060fe41903d101810181019fe7e301830182818481ecc198611020000080008180830086009c0090008007ffe088008c00840082008300b9c1e06000013fe1806080660066006600660066006600660066006600660066006601c00207c2044204bfe48c048c048c04cfc4484448444845d8441044304460c443800007cfe44864486488648fe4c864486448644fe44864d86410641064306420c00307c2048504888530653fe482048204c2047fe4c2059ac41244222422240e000207c2049fc4820482053fe5880498c4a424cfc4d885ad840704070439e4202001078304afe4a205160507e50a24f3e4922493e49225922412e4680447e400000007d88488848804bfe5000589849044a024ffc4a545a544254425447fe400000003ffe200026d0249824fe2d903f9036fe2490249024fe6490449044fe448000003ffc01807ffe41825ffa41821ff800001ff8000800081ff800083ff8000800003ffc01807ffe41825ffa41821ff800001ff8118811881ff811881ff81008082008607f7c08c87f9008fe7f3600363ffe22363e3622fe3e36223022302e6000007ffe0100010001003ffc2424242427e42424242427e4242424243ffc2004010001803ffc08100c3004207ffe00001ff8100810081ff8100810081ff81008080008fe1410161022fe49c24cd200d23ed202d204d22cd23828182c0cc60182000000007fe000600064006800700030003800260022002000320012001a000e08100c1004207ffe01001ff8100810081ff8100810081ff8100810081ff8100800001ff018101f9018907ffe400240025ffa10181ff810181ff81018101810700000010001003ff8310831083ff8310831083ff80310029006a40cbe188260fe002000207dfc0124012401fc7f24112421fc242024685c6c726e00a201a2033e082008247e204afe4a207e204a3e4a447e6410dc1a881b143fe2280267fe4000081008927e544a544a7c7e444a444a7c7e44187c1a441b442bcc280247fe4000081008107f1008fe7f10001000107efe62467e44006c262834100f387cce008202003c7c20043e7c200420043ffc31003148372831083d48352831283de6200600000000000000000000000000000000000000000000180018000800080030000000000000000000180018000000000000000000000000001800180000000000');
+PX.addWide('。一下与中之事云井交亭亲代令伤俑停偷僵关兵军出击前升卒即叉发只可台各后启命在地城基塔填壁声夜夷妖守害射将小尸山岩岭工巨巫已师干平建开引弹御快怨恙悬慢戍或战手打拆招拦择按接提搏摄敌无时杀来查格梦楼此母波泥泽洞渡满火灭灵炮炸点烽熄熔燧片狼玉王环生用甲电瘴白看督石硕秒程空第管箭级缓自至药营虫蛛蝠蟾行街裂装诛赤路身转迎近还连迟选途速造钓铁长门防阴陉除陵随隘雁雪雷静面音领飞首骨鬼魂魃魈鱼鼓鼠，：',
+  12, '0000000000000000000000007009009006000000000000000000007ff0000000000000000007fe0400400600580440400400400400401001001fe2002003fe0020047f40040040380400407fe4424424424427fe4420400400400400200207fc00c0080300600803005804fe0407fe3fc2443fc0403fc7fe0443fc0440c00003fc0000000007fe0800981082047fe0021081081087fe1081081087fe1081082084080400207fe00010c6064920900600601986060407fe0003fc3fc0007fe4027fe0200200c00400403fe1080907fe0407fe14834c2440c00801141122106fee1021021021020920a20602006009034c6230203fc0080900e002001012014027e6906102fe22222222226224228c1fe2042782186fea922fe2922fe2922922961101fe20027c67ce002fe30227c2102102701102282443fa600eea2aa2ea2ea2aa2a22a61fe2002fe2fe6fea002fe2fe2fe2fe2003fe1081080903fe0200207fe06005009830c40200c1f01001fe1081081087fe0001882064027fe4824823fc1001203fc0200207fe0200200402442442442443fc0404424424427fe0020200203fc0200207fe0202242242243fc00410c1087fe0007d24527d24527d24524424cc0481c87081081087fe1081081082086084080400207fe10810829c6264407fe0400400400007de4527d24524527d24924965d06500100007fc20424412810809006006009030c4020482442403fe0c00fc08414823863044c1860003fc2042042042043fc00009010c2064020007fe0040043e42242242243e420400401c0400801082047fe0003fc2042042043fc2040801fc3084900600f070e3fc2042043fc20400c3f02002003fe2002fe2824824824fe0820400203fc2042043fc2003fe5025025fe1020200e01986f60003be4a24a24a23ac0200200400807fe1001102106fe6102102102102fe200250252f4e2722d225225235644004203e20c20a2fe7882882fa2aa2ac3a44ed0951221087fe1081f81f81087fe1082445fb0407fe2042fe2447102282462bc20037ce4404407c2102fe210f7c27c24427c27c344eff0240c27884be79443e7c867e6483c03fc0400407fe0007fe0403fe0003fc2442443fc4004008000407fe11012023e2526dc2a423821826c2820407fe0403fc0443fc4407fe06209430840620021e26878848857e5185183183246624420400207fe4120107fe0103101100900100700407fe4023fc0403fc0407fe3fc2042043fc1047c44447fe4447c44547d414424444418c11013e54673c1181e41fe70452412410411c020020020220224224222422c210200201c00003fc2042043fc2002002002004004004000000400404424424424424424424427fe0024424427fe0000007fe1001fe7025021fe10220021862872475278077e7047087380180080000007fe0400400400400400400400407fe0000003fe2002003fc2042043fc2002003fe0000007fe04014824834834c4d2c620407fe0007fc0042042043fc2042002022022023fe10017e51057e5525525525521522562104100007fe0400400407fe0400400400400400400007fe0402441480487fe04004004004004001077e2122fe21277e57e5102fe210580c7e0007fe1081081087fe1081081083082084080047e40240243e44047e40440440440441c400472412477e45247e75217e1101ff1106102804fe94a24a3fa64aa4a37a34a34a3f820821021037e712a12a122ff21022822c2462821003fe2624a22ac12221e44032450a50a0f81081087fe0403fc0407fe04022450650a0f01fc2041fc1fc2047fe1087fc04032450a0f027e24237eb7ebfeaaa2fe2002fe2642182e60280263fe4104123145944d841841a42a84601c0127fe0107d24544547d80081da62a0461001121c810e13810a7ca44c44c4497d646200c7f00400407fe0400407fe0400400401c020027f20878820820838860820820820863820e27074024027e24834865824e24a28868820027e212f222222cc300e7e24224227e64220422422877e200200200f7c2002002fe60020027e2247182182e731067e2102fe21061021021027ef922102ff324e442682182346c221027e204f242fe210320eff24427821c6e227e242f7e24227e2003fee5025e2502b071e2142fe210f7e27e25277ea042ff24422461c2fe24477c24427c3fee002fe2aa24c2ac71209071011e112ff41341147cc44844c7d64620007fe0400400407fe0600a00a012232243e0047844844ff4847a44a449448478440401c20c1980601986040407fe0401482444420c00000400407fe2441481487fe0d01d034c6460000407fe0d01486061f81f81081f80007fe21023e2247e42183186e66bea4224223e2021087fe31c59cd2b1480fc30c0980700c070025225477e2383567106106fea2426821c2e20900900904924dc4984904904904914d171e0001fc2442242047fe2042642047fe0080384103100fe0924922fe0c40a429829853c54240027e08207e6800a00a61b82a02a24a251e0002fc0440284382c60100fc2103fe4104100006fe0820fec822ba0aa0aa2ba2a24824866102fe0a40fe6a40a40bc2fe2a451c51c5624482fe0081fe4282fe0aa2aa2d62d649248600004004024224224446806009019030c4020007fe02004014426426806009009830c4023fc0043fc0043fc02024424446809018c6062202202be74277aa4a24a23a34234644203e2202202bf6d0750a1e21021031e31041041004007e0400403fc2042043fc00029449249221023e2e4718718ae727e21037e31047ec1021027e2c26fe742a7e27e2103282a24a603c21027e2c2766b42a5a22c26633c34444483c2122942be708bdaa6c25426e2565644e801e2202202203fe2002003f820820840840800851037e24264257e14237e55214c14c1766400000007fe0400400403fc0400480440407fe0000007fe0400400403fc0400400400407fe000f7e2082102107342762d22107100100100001402403fe4404403fc0400400400407fe0003fe2222223fe2222223fe22242242282c0000007fe4424427fe4424427fe4420400400400407fc4444447fc4447fc44004204203e0203fe2106fe7fe2002fcefc2fc2105fe4100400403fc2042042043fc2042042043fc2040043f83fe0807fe1003fc7fc5041fc1041fc1001fe7d410855c5223fc2043fc3fc2043fc0007fe0800801001fe3025021021021fe1020007fe21023e4427ca4ca4ca49279c4220400807102142327d23527506926042082300403be5422422427be20057e688e7e20820827f0400607fe4025986063fc0400400400407fe2103de5284243fc0443fc2403fe0c234c4402107fe5240407fe5fa2081f82001fc2041fc2103fe5241087fe0003d23d24523d24420cc10027c224528f2e2224b275404c34c4d60a200627825457ef202fe42073e06415ce9c0620400403fc2042043fc2043fc2042043fc2040007fe0801083fc0020403fc0400400407fe1007fe10021023e4a274221279200278200c1087fe1087fe4025fa1081f83fc2042043fc0400403fc4444444443fc04004c0447fe0022082287be6a86c86887fe61c29c3aa44b00827e2007be6a26be6807fe64a37e2ca7ca07e22023c77ebd4b6ab7e74025c35e35e6a209e10027e40010027e604e0420420420420421824024e4f02403ff644a442f42442443f420c7e21123d265218274e0207fe0a671812c1c211051037e11071017e0407fe0a671816c18221035007e0506902102fe2382343d63d20100400403fc0407fe09029429649219211023079049e4a44f47d811c5a657e5225a2e2203e0401f82081f82081fa20c7f80380681886382087be21051057f5107be10418471810c1040204de2920920926922922f22962105000fe00667824004007e6482482482882885000fe4002fe010010e382542922102102105008fe4202fe0400506fe2102102fe2102105108fe00067e24204207e6402482842862825000fe01045027e0900106fe22822824a38e5814fe01063804c0ff0106fe2102542922307000fe4106fe2100fe0926922fe2382542927000fe0504502fe0900fe60027c28428427c7004fe2107a043e8227c21327da10a10210238220c2087a843e8487c820867e3082182943222421041081101601007fe1201201101081e61002fe10240240240240240240240240240240e7905085fe52062053e5224a27224444c440c7804be52252253e5224a24be5c244244248670057e50460853454257e5107104104104ff71051852464363c5105fe51075445249143071057e5106106fe56653c5647ac41843c4c20087be55061e6325de55255e7524564a041e7445245206fe62854657e5aa7aa4aa4aa4ff0007fe4a84a853e56873e52853e52853e0203fc0407fe4427de3dc0003fc0043fc0043fc3fc0407fe4427de3dc0003fc2443fc2443fc1107dc1247fefca00a7bf78a4be7884885b80007fe0407fe4924924f24924f24927fe4020407fe1081087fe0003fc2043fc2042043fc10013e28847e92a02a7aa0aa12a30c1120600007f001201401801801601201000a00a0061081887fe0403fc2043fc2043fc2043fc2041f82081e82287fe4027fa3f82083f82082180403fc2443fc2442443fc0680b41ba32243e0107fe04a07efd225257e5147964b607204e1047d257e6507de6527ec3a43cc3f25010fe1087ea5587fe66267e7e233e3625e65020fe0000801f02107fc2442443fc2443fc0007fe1087c813e7c80087be4a27944942883d442208033c39c2043fc2443d42443542c43dd262000000000000000000000000300300100200000000000000300300000000000000300300',
+  16, '0000000000000000000000000000000000000000300048004400440048003000000000000000000000000000000000007ffe0000000000000000000000000000000000007ffe01000100010001c001700118010c0100010001000100010001000000080008000ffc1800100010001ffc0004000400047fec000c000800f800000180018001803ffc218421842184218421843ffc218401800180018001800180000001000180008000803ffc001800100020004000800300060038006c0043fe018001807ffe01801ff811881ff801803ffc018c7ffe018c3ffc018c01800700000000001ff80000000000007ffe0200060004200c10081818083ffc3e04000404300430043004307ffe04300430043004307ffe0c30083018301030303020300100018000807ffe00000c3018083424242206600240018003c00670381e6002010001807ffe00001ff810081ff800007ffe40025ffa00800080008000800780010001803ffc08100c3004207ffe018001807ffe018009b01998118c2184070000400448084418421040307e77f0d040106010201020102010311012101a100e00000080018003c006601d18318e60c200001ffc00180030066003c00180006008800980190013fe32007440504097fe104410c41084108411841304163c140000001ffc100811f0303037fe5666566617fe1666166617fe166616661666166c084008601ffe100033fc320453fc500017fe140217fe106010601060106011e00840106010b0131837fe3000700477d4345437d4345437d434543444344434cc080017fe100013fc33fc326473fc700037fe33fc326433fc326433fc30003ffe08100810043004203ffc0180018001807ffe018001c0036006301c18700e400200380fe00800080008000ffc08200820082008207ffe000006701818300e400000007ffe4002420206001ff80400088008801ffc008000807ffe00800080008001800180318c318c318c318c3ffc01802184218421842184218421843ffc00040180018001803ffc0180018001807ffe0180318c318c318c318c318c3ffc000c0818081004307ffe000000003f2421243f24212421243f24212421042104271c001003901e107c100c100c100c107ffe0c100c10081008101810301060104010010000807ffe00000c1008201c30125830cc608401807ffe018001800180018000003f7e2166216621663f66216621663f6620662466226e2f60796061600060000000003ffc10081308099808d00c300620024001c0018006601c38700e400001801918110c11003ffe0300020007f806080f18091018a030c061b0071e0c06000000001ffc100c100c100c100c100c1ffc0000000004200c18180c30064000000000007ffe000800081f8810881088108810881f88100810080008000800780200020006200c301818103c3ffc000400001ff810081008100810081ff81008020006000ff8181034306360018007e01c38700e1ff81018101810181ff81018000001fc3f80300030003ffe30003000300027fc240424042404640447fc44040100018000803ffc300430043ffc300030003ffc2c042c042c046c044ffc4c040080018003c00660181877ee00003e7c22442244224422443e5c20400040004000000200020002007ffe040008201820102033fc5020102010201020102017fe000010201020112011267d3a11e213a21722112615261d2c71204102010201fe00101014101213fe7a107a1013d212561254125412581a5877d9043a046e08460000081008107ffe08100ff008100ff008107ffe081011886ff6418201803ffc1188118817fe118879e810f0118c160614f8100019fc39046104010401fc01043020302033fe304079fc310431fc31fc310431fc3904390477fe4098030c020200103efe224022483efe20107e1062fe62107e1001803ffc018001807ffe0000018001807ffe01803ffc000000003ffc3184318431843ffc2004200060004000010001807ffe0c4008c018fe11843164732c548810d01070107010d8170e1402018001807ffe01803ffc018c018c3ffc21003ffe01860384025c0c30781e40061000101e11f020207c202420242025fe44304830387018481cc8348c61064202010001807ffe60066026002000207ffe0020102008200c2004200020002001e0010001807ffe61867ffe018001801ffc01807ffe01801ff8100810081ff81008080c080c3e0c220c3efe220c220c3e4c224c7e2c062c0a0c120c320c420c0e380800086008fe49846acc385808600b8808081bfe280849880888084808080838018001800180018001801188118c318431842186618241820182018001800700000000001ffc10041004100410041ffc1000100010003000300020002000400001800180018001802184218421842184218421842184218421843ffc000400040180218421843ffc000000007ffe04000c0008001ffc3804680408040ffc080410201020105054d8548855665622540055fc540c540854107cf06460003000100000000000003ffc01800180018001800180018001800180018001807ffe0000000000001ffc1000100010001ff810081008100810081ff81000100010001ffe000000007ffe0180099809901990119019b835ac23e641c2018001807ffe0000000000007ff8000800083008300830083ff83008300030003002300230061ffc08000bfe2820282029fe2926292629262926292609260926112c102030202020000000003ffc01800180018001807ffe0180018001800180018001800180018000003ffc0180118811880998099009b001807ffe018001800180018001800180004078400bfc104417fe20447bfc484008404bfc384037fe10402c0063fe400000007ffe043004300430043004307ffe04300c3008300830183030306030003000043f840184018401843f842004200420043f84018401840104010401040f040004788c08c8081809fe792241fe4122412279fe082008200bfe0820082078201200320067dec5121d12111227d26112e51225d225122512251627f02f9020101040104010405bfc5c4454445044504417fe1060106010d01098110c160614020800187c1f4433446244525c0c420c42387e6300058034cc24046416441207e008100c1004203ffc01803ffc018001807ffe0100018014c824042416441247e0000000001ff818081ff818081ff818087ffe0c3019f83e0405882404641647e0100013fc13fc5a045bfc540057fe569217fe100017fc110c1098107013de16060050004c00443ffe20402040204438442c48267822302030206260d2419a430e0040004c00447ffe004000403f442364236823283f30003003727ed2619a010e08200828082408260f20083e08f008127f164114411c4118411a7f3a416e0006000801fc3f80018001803ffc0180018001807ffe018001800180018001800f001000100011fe10187e181018101810181e1878185018101810181018101870f01004107c11c011007d00110011fe11101d1079705130111c1116121012107210100013fe104610467cc610841184131c1c00f1fe110611061106110611fe710610081088108810107ffe1000100010001c0079fc100010001000100013fe7000100013fc108410887c58103011dc13061c2071fc1020102013fe1020102070201020102013fe12027e421242104013fe148c7988710810d81070107811cc73021040102013fe10087888109013fe1040184077fe1188110811d0107010fc6706100011fc11047dfc110411fc100010001bfe78205120113c132012a0147e70001028102613fe10207ffe122613fe12263ffe7226100817fe1108118810887038100017fe13047bfc130413fc13041ffe700457fe10a21694131813981636604202201e2078200860087e08447fc408e408a87e284218421842387e6442c6008200003ffc01000100010001007ffe018003800280068004820c82188270fe4000000800087c08440845fe440844087c8844c84448442844087c08400800080078000838300660018006603818600801807ffe018009901998318c618641820300018001803ffc018019880998099009907ffe03c007e00db01998318c418201800000018001807ffe03c005a00db0199c60064ff008100ff008100ff000007ffe1040104010fc10847dc8125818303c7034dc338651fc51841184118411fc1184081008107ffe1c383e5c6ad64892030007f81c183430036001c003803e00300010201124112410a87ffe107031ac3b26344053fe5088518811d0107813ce12000000046004600460046024602466277824602460246024602462246227e27c3e00000ffc180c1b0810c810087ffe10081208318830c820083ffe0018001000f000203020182003fe02224224322013fc0384028816c81450343024786d8e0b02000033fc0a040204020443fc720012c002c402d81af012c032c224c264c20c7e000037fc1908019800f040e033981646004013fc1040104027fe204060400040000037fe1c02040205fa4402640214f2049204921c9214f2348224026402040e006030201ffe0400048845fe3488148804f8140015fc348424482c3048fc09020190319017fe0190000007fe609007fe0492149214d2156a252a24426402040e0000000001800180018019841184110c21086198038002c006600c301818700e00007ffe018001800180098c19881188319001c00340026004301818700e400200003ff800081ff8000800083ff80180118011083188239002400630381e6006104010c0108014fe55025bf251925192119211f21986198c25822582618240fe10c01080108014fe556055605760507e10601060187e3c6024602460406040600100010001fe010001001ff810081008100810081ff80000164c2244622642221040104010fc1588575854305878518e132211fc102019fc2c2027fe402040201020102011fc110455fc550455fc5104510411fc106018b02684228a628a40f81020102013fe160256ca588c5b26507010d811861bfe39842584258441fc4184000010441024122c12fe583058725ed45238126c121c322a2aca2a8867b0447e004010401040104010401ffc1000100010001ff01010301020102010601040100060682039fc1104310449fc0904190419fc29206926491c0918090c19e67302000000003ffc018001800180018001803ffc018001a001900188018c01807ffe000000003ffc018001800180018001803ffc0180018001800180018001807ffe00007bfe103010201060107078f810ac11241322122018207020402000200020000001800980198011803ffc21806180418001801ffc01800180018001807ffe00003ffc3184318431843ffc3184318431843ffc2184218421842184418441bc00003ffc2184218421843ffc2184218421843ffc21840180018001800180018000000100010001003ffc210421043ffc2104210421043ffc21000102018200fe008000c01ffe504057fc510817fe100013fc73fc520433fc20402ffe604040400180010003003ffc300c300c300c300c3ffc300c300c300c300c3ffc300c300c00083ff003003ffc020006007ffe0c000ff818086ff848080ff808080ff8080808000ffc08447f682a382b38496c08861ff810081ff810081ff810081ff81008000000007ffe06000400040008001ffc1804280468044804080408040ffc080400007dfe1020302020fc20843ca464a464a4a4a424a424a424203c4820c6010200203e20782018a418a47fa6192219223d243e24582cd808181018601bc01a0000003ffe7986198619867ffe180018003dfe3e205820d9fe182018201bfe18000000010001807ffe4002400246701818300e20001ff801800180018001807ffe106010403f7e24d844883ffc010401041ffc31003ffc030407040d04313c2100104030403f7e6c9841883ffe20063ffe18181ff8180018001ffc180c1ffc180c10403f7e2498648808100c207ffe00003f2421243f2421243f2421042104271c080013f81088208824984c90789e10c630c43ce4612801381d18732c42c60282100413f81124312425284ffe788013fe20807cfc618401481f78723006ee05820180010001001ffc100c100c1ffc100c100c100c1ffc100c100c100c1ffc100c000000007ffe06000c20083010183ffc0004018001803ffc0180018001807ffe042004207ffe04200840104030fe24867d06184630647e24402402047e04003c042004207ffe04207ffe600260026ff208100ff000001ffc100c100c1ffc100c0180018001803ffc218c218c218c218c3ffc018001800198018c03fc7fc60002101010d010907cfe54905590551054107dfe50381458145c1e94719201120010100011fe10007cfc5484548454fc54007dfe5122152215fe15227d2203fe0102104010f811987ffe57285546551055fe55007d7e517e1500157e3e42467e0242080019fe300060004c0008001bfe3008700850081008100810081008100810781100311e67c041001900110037fe7104f10437e43104310431243fe43004301c00067fa608261f2671260a260c06711c00807ffe02840c4c7c700c300fce08020820082068201bfe0820382049fe080001807ffe02840c4c787008b00f8e0802002031a0092001fe032002207220102013fe1070106810a815a41b2632220020018001801ff80180018001807ffe02601268126c2264666644620c60186011c000607e40427c42c443c87f7808300838486c4f8648fc488448847e8460fc0084018001001ff018101ff0181018121ff4181c18187ff00070019007101c1060f0101010307ffe1020282029fe284048407e4008fe080c1e08787008300818080000c0633e3222022202220222722212221222126213e2162e102038206c0043fe0000000c21f811001100010001fe7110111013101210121012103c106c0043fe0000200037fe10200060004000c071d8134c164614421040104030406c0047fe00000080208037fe11800120032073fc10201020102017fe102010206c2047fe0000000021fc11041104010401fc7100132013101218120c160638006c0047fe00204120212013fe1220002007fe70901090119011121312161e3800660043fe0060206031901b0c0e0601f8706017fe10601168126c1664146238c06c0043fe00000060606037fe186003fc02647264126413fc10f011f8136414602c0043fe00000160616033fc12600460006077fe100013fc12041204120413fc380047fe104030403e4060fe40823f02190218c218627e321812180618061e041c04103c101030903e9060fe41903d101810181019fe7e301830182818481ecc198611020000080008180830086009c0090008007ffe088008c00840082008300b9c1e06000013fe1806080660066006600660066006600660066006600660066006601c00207c2044204bfe48c048c048c04cfc4484448444845d8441044304460c443800007cfe44864486488648fe4c864486448644fe44864d86410641064306420c00007dfc4c0c48184830507849cc4f02440045fe442058204020402043fe400000307c2048504888530653fe482048204c2047fe4c2059ac41244222422240e000207c2049fc4820482053fe5880498c4a424cfc4d885ad840704070439e4202001078304afe4a205160507e50a24f3e4922493e49225922412e4680447e400000007d88488848804bfe5000589849044a024ffc4a545a544254425447fe400000003ffe200026d0249824fe2d903f9036fe2490249024fe6490449044fe448000003ffc01807ffe41825ffa41821ff800001ff8000800081ff800083ff8000800003ffc01807ffe41825ffa41821ff800001ff8118811881ff811881ff81008082008607f7c08c87f9008fe7f3600363ffe22363e3622fe3e36223022302e6000007ffe0100010001003ffc2424242427e42424242427e4242424243ffc2004010001803ffc08100c3004207ffe00001ff8100810081ff8100810081ff81008080008fe1410161022fe49c24cd200d23ed202d204d22cd23828182c0cc60182000000007fe000600064006800700030003800260022002000320012001a000e08100c1004207ffe01001ff8100810081ff8100810081ff8100810081ff8100800001ff018101f9018907ffe400240025ffa10181ff810181ff81018101810700000010001003ff8310831083ff8310831083ff80310029006a40cbe188260fe002000207dfc0124012401fc7f24112421fc242024685c6c726e00a201a2033e082008247e204afe4a207e204a3e4a447e6410dc1a881b143fe2280267fe4000081008927e544a544a7c7e444a444a7c7e44187c1a441b442bcc280247fe40000000060004000fe0186030407ffc118c118c1ffc118c118c1ffc000000007ffe081008107f1008fe7f10001000107efe62467e44006c262834100f387cce008202003c7c20043e7c200420043ffc31003148372831083d48352831283de6200600000000000000000000000000000000000000000000180018000800080030000000000000000000180018000000000000000000000000001800180000000000');
 
 
 const UI = (() => {

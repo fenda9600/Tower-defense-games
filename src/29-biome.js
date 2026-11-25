@@ -15,7 +15,12 @@ const BIOMES = [
     terrain: {
       sea: -2.1, bank: .8, step: 1.3, rock: 1, flow: .3, freeStream: true,
       lift: (x, z) => 1.5 * smooth(17, 11, Math.max(x, z)),
-      sculpt: (x, z, dr, ds, K) => { const e = Math.max(x, z) + (fbm(x * .16 + 3, z * .16, K.sd + 80, 2) - .5) * 3.2; return -6.2 * smooth(11.8, 15.2, e); },
+      // the cliff keeps a shoulder clear of the road and the tower pads, wide enough for the city wall
+      sculpt: (x, z, dr, ds, K) => {
+        const e = Math.max(x, z) + (fbm(x * .16 + 3, z * .16, K.sd + 80, 2) - .5) * 3.2;
+        let pd = 9; for (const p of K.pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
+        return -6.2 * smooth(11.8, 15.2, e) * smooth(ROAD_HALF + 1.3, ROAD_HALF + 2.3, dr) * smooth(2.4, 3.2, pd);
+      },
     },
     wx: { n: [.08, .05], velA: [.3, -.1, .15], swayA: [.5, .5], sizeA: [.03, .05], colA: [.75, .85, .9, 1], alA: [.45, 0, 0], yA: [-2, 9], velB: [.1, .05, .05], swayB: [1.2, .4], sizeB: [.03, .05], colB: [1.2, 1.5, .5, 0], alB: [.8, 1.2, 0], yB: [0, 3], amb: [.12, .16, .2] },
     mobs: { ghoul: 1.5, knight: 1.6, drummer: 1.4, wraith: 1.2 }, early: { knight: 3, drummer: 5 }, boss: ['giant', 'ogre'], tints: { wisp: [.7, 1.2, 1.1] }, wispHex: 0x90e0c0,
@@ -27,17 +32,42 @@ const BIOMES = [
     col: { stone: 0x5a3a32, stoneD: 0x341f1c, stoneL: 0x7e5244, earth: 0x2e2626, earthD: 0x1c1717, grass: 0x34302a, grassD: 0x24201c, moss: 0x3a3428, road: 0x5e5450, roadD: 0x3c3432, mud: 0x1a1514, bark: 0x15110f, tuftA: 0x4a3c28, tuftB: 0x7a5a34, leaf: 0x243424, leafL: 0x3a4a2c },
     strata: [0x7a2e22, 0x3a1a16, 0x9a3c26, 0x2a1a18, 0xb04a2a, 0x4a2218, 0x8a3424, 0x301816],
     hemi: [0x5c5470, 0x2c140e, 1.12], moon: [0xc0b0d0, 1.25], fill: [0xff5a20, .38], moonPos: [18, 40, -32],
-    clear: [.009, .004, .005], mistAmb: [.1, .05, .04], mist: [-1.0, .6, 1.0, .12], sky: [.024, .008, .004], lift: [.022, .011, .01], sat: .97, expo: 1.02, sprAmb: [.1, .055, .04],
+    clear: [.009, .004, .005], mistAmb: [.1, .05, .04], mist: [-1.0, .6, 1.0, .12], sky: [.024, .036, .07], lift: [.022, .011, .01], sat: .97, expo: 1.02, sprAmb: [.1, .055, .04],
     cover: [.8, .74, 1.0, .6], coverCol: [.1, .088, .086], coverP: [.97, .4, .4, 0],
-    wat: [0, .45, 1.1, 0], watA: [.012, .008, .01], watB: [.2, .1, .06], fall: [0, 1, 1, 0], fallA: [.04, .02, .02], fallB: [.3, .16, .1], spray: 'water', watEdge: 0x120c0c,
+    wat: [0, .6, 1.6, 0], watA: [.014, .022, .04], watB: [.2, .1, .06], fall: [0, 1, 1, 0], fallA: [.04, .02, .02], fallB: [.3, .16, .1], spray: 'water', watEdge: 0x0c1420,
     relief: [1.3, .4, 1.5, 0], puddles: 0, ponds: 0, sway: .7, wind: .9,
     terrain: {
-      sea: -.75, bank: .6, rock: .7, flow: .5, freeStream: true,
+      sea: -.75, bank: .6, rock: .7, flow: .4, freeStream: true, prot: -1.5,
+      // the road winds differently on every board, so the river floods the open ground on the near side wherever the road leaves room
+      prep(K) {
+        const N = 72, at = i => -17.75 + i * .5, free = new Uint8Array(N * N), seen = new Uint8Array(N * N);
+        let m = new Float32Array(N * N), t = new Float32Array(N * N);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const x = at(i), z = at(j);
+          if (x + z < -4 || K.dRoadAt(x, z) < ROAD_HALF + 1.15 || (z < -9 && Math.abs(x - K.kx) < 7) || (x < -10 && Math.abs(z - K.zc) < 5)) continue;
+          if (!K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 2.7)) free[j * N + i] = 1;
+        }
+        for (let s = 0; s < N * N; s++) {
+          if (!free[s] || seen[s]) continue;
+          const cells = [], st = [s]; seen[s] = 1;
+          while (st.length) {
+            const c = st.pop(), i = c % N; cells.push(c);
+            for (const o of [i > 0 ? c - 1 : -1, i < N - 1 ? c + 1 : -1, c - N, c + N]) if (o >= 0 && o < N * N && free[o] && !seen[o]) { seen[o] = 1; st.push(o); }
+          }
+          // a pocket boxed in by the road would only be a pond
+          if (cells.length >= 150) for (const c of cells) m[c] = 1;
+        }
+        for (let pass = 0; pass < 4; pass++) {
+          const dx = pass & 1 ? N : 1;
+          for (let c = 0; c < N * N; c++) { const i = dx === 1 ? c % N : (c - c % N) / N; let s = 0, n = 0; for (let k = -2; k <= 2; k++) if (i + k >= 0 && i + k < N) { s += m[c + k * dx]; n++; } t[c] = s / n; }
+          const u = m; m = t; t = u;
+        }
+        K.river = { m, N };
+      },
       sculpt: (x, z, dr, ds, K) => {
-        const w = (x - z) * .7071 + (fbm(x * .07 + 2, z * .07, K.sd + 81, 2) - .5) * 7;
-        const river = -2.8 * smooth(7.2, 3.2, Math.abs(w + .5));
-        const cliff = 3.4 * smooth(8.2, 10.4, w) * smooth(16, 12, w) * (.7 + .6 * fbm(x * .2, z * .2, K.sd + 84, 2));
-        return river + (cliff > .3 ? Math.round(cliff / 1.15) * 1.15 + smooth(.2, .6, cliff % 1.15) * .2 : cliff);
+        const R = K.river, f = v => clamp((v + 17.75) * 2, 0, R.N - 1.001), fx = f(x), fz = f(z), i = Math.floor(fx), j = Math.floor(fz), u = fx - i, v = fz - j, o = j * R.N + i, m = R.m;
+        const w = (m[o] * (1 - u) + m[o + 1] * u) * (1 - v) + (m[o + R.N] * (1 - u) + m[o + R.N + 1] * u) * v;
+        return -3.2 * smooth(.3, .7, w + (fbm(x * .25, z * .25, K.sd + 81, 2) - .5) * .3);
       },
     },
     wx: { n: [.26, .14], velA: [.3, -.42, .16], swayA: [.5, .7], sizeA: [.035, .07], colA: [.3, .28, .3, 1], alA: [.85, 0, 0], yA: [-3, 14], velB: [.2, .95, .12], swayB: [.7, .9], sizeB: [.03, .05], colB: [2.6, .9, .14, 0], alB: [1, 2.2, .3], yB: [-2, 10], amb: [.5, .3, .26] },
@@ -58,26 +88,57 @@ const BIOMES = [
       dry: true, step: 1.05, rock: 1, prot: -.7, abyss: -2.4,
       sculpt: (x, z, dr, ds, K) => {
         const n = fbm(x * .12 + 5, z * .12, K.sd + 82, 3), m = fbm(x * .31, z * .31 + 4, K.sd + 85, 2);
-        return lerp(-5.2, 5.6 * (.75 + .5 * m), smooth(.52, .7, n)) * smooth(ROAD_HALF + .4, ROAD_HALF + 1.6, dr);
+        // the keep's gate opens onto level ground, not onto a pillar or a drop
+        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7));
+        return lerp(-5.2, 5.6 * (.75 + .5 * m), smooth(.52, .7, n)) * smooth(ROAD_HALF + .4, ROAD_HALF + 1.6, dr) * smooth(2.4, 4.2, dk);
       },
     },
     wx: { n: [.4, .1], velA: [1.6, -.9, .7], swayA: [.4, 1.2], sizeA: [.04, .07], colA: [1, 1.05, 1.12, 1], alA: [.7, 0, .2], yA: [-4, 14], velB: [3.2, -.4, 1.4], swayB: [.3, 1.5], sizeB: [.03, .05], colB: [.9, .95, 1.05, 1], alB: [.4, 0, .7], yB: [-4, 10], amb: [.32, .38, .5] },
     mobs: { wolf: 2.2, gargoyle: 2.2, bat: 1.8, golem: 1.2, toad: 0, slime: .4 }, early: { gargoyle: 3, wolf: 2 }, boss: ['jotun'], tints: { wolf: [1.6, 1.7, 1.9], gargoyle: [.9, 1.0, 1.2], wisp: [.6, .9, 1.4] }, wispHex: 0x90b8ff,
-    trees: [['pine', 12, 2.4, 4.6], ['song', 6, 2.6, 4.2]], stumps: 2, rocks: 30, tufts: 120, webs: 0,
+    trees: [], stumps: 0, rocks: 30, tufts: 120, webs: 0,
   },
   {
     // 夷陵 (222): Liu Bei's camps strung for miles through a wooded gorge, set ablaze by Lu Xun.
     key: 'yiling', name: '夷陵', en: 'Yiling',
     col: { stone: 0x5e6056, stoneD: 0x383a34, stoneL: 0x84867a, earth: 0x3a3424, earthD: 0x242018, grass: 0x34502a, grassD: 0x263a20, moss: 0x3e5a28, road: 0x6a6252, roadD: 0x48423a, mud: 0x2a2418, bark: 0x2a2018, tuftA: 0x405e2a, tuftB: 0x6e7c38, leaf: 0x1c3a1e, leafL: 0x2e5428 },
     strata: [0x5c5444, 0x2e2a22, 0x6a604c, 0x3e3628, 0x7a6c54, 0x34302a, 0x625846, 0x2a261e],
-    hemi: [0x5a6a8a, 0x2a160c, 1.1], moon: [0xb8b8d8, 1.3], fill: [0xff6a28, .34], moonPos: [12, 44, -34],
+    hemi: [0x5a6a8a, 0x2a160c, 1.1], moon: [0xb8b8d8, 1.3], fill: [0xff6a28, .48], moonPos: [12, 44, -34],
     clear: [.008, .005, .006], mistAmb: [.09, .06, .05], mist: [-.3, .6, 1.0, .12], sky: [.02, .01, .006], lift: [.018, .012, .01], sat: .95, expo: 1, sprAmb: [.09, .06, .05],
     cover: [.5, .78, 1.0, .4], coverCol: [.06, .07, .04], coverP: [.95, .35, .4, 0],
     wat: [0, 1, 1, 0], watA: [.014, .014, .016], watB: [.3, .24, .2], fall: [0, 1, 1, 0], fallA: [.04, .03, .03], fallB: [.3, .24, .2], spray: 'water',
-    relief: [1.2, .4, 1.1, 0], puddles: 4, ponds: 1, sway: .8, wind: .9,
+    relief: [1.2, .4, 1.1, 0], puddles: 4, ponds: 0, sway: .8, wind: .9,
     terrain: {
-      rock: .15, prot: .4,
-      sculpt: (x, z, dr, ds, K) => { const n = fbm(x * .09, z * .09, K.sd + 83, 3); return 3.6 * smooth(2.8, 9.5, dr) * (.55 + .9 * n); },
+      rock: .15, prot: -1,
+      ramp: (x, z, dr, K) => 3.6 * smooth(2.8, 9.5, dr) * (.55 + .9 * fbm(x * .09, z * .09, K.sd + 83, 3)),
+      prep(K) {
+        // camp sites strung along both sides of the road a little way up the wooded slopes, spread as evenly as the ground allows.
+        // A camp reaches 1.8 from its centre and must clear the zones the board protects from sculpting (road, stream, pads, keep, cave),
+        // or its shelf would not come out level; and it keeps to the foot of the edge cliffs, not notched into their face
+        const cand = [];
+        for (let z = -15; z <= 15; z += .5) for (let x = -15; x <= 15; x += .5) {
+          const dr = K.dRoadAt(x, z);
+          if (dr < ROAD_HALF + 3.5 || dr > ROAD_HALF + 8.5 || K.dStrAt(x, z) < 5.6 || K.pads.some(p => Math.hypot(x - p.x, z - p.z) < 4.7)) continue;
+          if (Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)) < 5.3 || (x < -8.6 && Math.abs(z - K.zc) < 6.2)) continue;
+          if (K.cliffAt(x, z) > 1.3) continue;
+          cand.push([x, z, dr]);
+        }
+        // nearest the road first, so the camps line it; then, if there are more than nine, keep the nine that spread furthest along it
+        const near = [];
+        for (const c of cand.sort((a, b) => a[2] - b[2])) if (near.every(q => Math.hypot(c[0] - q[0], c[1] - q[1]) >= 3.8)) near.push(c);
+        K.camps = [];
+        while (K.camps.length < Math.min(9, near.length)) {
+          let best = null, far = -1;
+          for (const c of near) { let d = Math.hypot(c[0] - K.kx, c[1] + 15); for (const q of K.camps) d = Math.min(d, Math.hypot(c[0] - q.x, c[1] - q.z)); if (d > far) { far = d; best = c; } }
+          K.camps.push({ x: best[0], z: best[1], y: K.hBase(best[0], best[1]) + K.cliffAt(best[0], best[1]) + this.ramp(best[0], best[1], best[2], K) });
+        }
+        K.sites = K.camps.map(c => [c.x, c.z, 1.9]);
+      },
+      sculpt(x, z, dr, ds, K, h) {
+        // only the nearest camp's shelf counts, so a neighbour's apron never tilts it
+        let near = null, nd = 3; for (const c of K.camps) { const d = Math.hypot(x - c.x, z - c.z); if (d < nd) { nd = d; near = c; } }
+        const q = this.ramp(x, z, dr, K);
+        return near ? lerp(q, near.y - h, smooth(3, 1.9, nd)) : q;
+      },
     },
     wx: { n: [.2, .18], velA: [.3, -.38, .16], swayA: [.5, .7], sizeA: [.035, .065], colA: [.32, .3, .3, 1], alA: [.8, 0, 0], yA: [-2, 12], velB: [.25, 1.1, .12], swayB: [.8, .9], sizeB: [.03, .05], colB: [2.6, 1.0, .18, 0], alB: [1, 2.2, .3], yB: [-1, 9], amb: [.42, .3, .24] },
     mobs: { spider: 2, brood: 1.6, toad: 1.6, wisp: 1.4, bomber: 1.2, slime: .6 }, early: { spider: 2, brood: 6 }, boss: ['queen'], tints: { wisp: [1.5, .7, .25], golem: [1.1, .8, .6] }, wispHex: 0xff9040,
@@ -95,10 +156,85 @@ const BIOMES = [
     relief: [1.3, .3, 1.3, 0], puddles: 0, ponds: 0, sway: 1.1, wind: 1.15, beacon: .8,
     terrain: {
       sea: -1.4, bank: .7, step: 1.25, rock: 1, flow: .6, freeStream: true,
-      sculpt: (x, z, dr, ds, K) => {
-        const pass = 5.8 * smooth(1.5, -5.5, x + (fbm(x * .1, z * .1 + 6, K.sd + 86, 2) - .5) * 5) * smooth(2.2, 4.6, dr);
-        const rv = x + (fbm(x * .09 + 3, z * .09, K.sd + 87, 2) - .5) * 4;
-        return pass - 4.2 * smooth(12.2, 15.2, rv);
+      // Han Xin's line, by distance inland from the top of the bank: standards, two ranks of shields, the chevaux-de-frise.
+      // The standards and shields stand within core of the bank, the chevaux-de-frise within deep; the line is at most cap long
+      ranks: { back: .45, shields: [1.0, 1.6], juma: 2.6, core: 1.9, deep: 3.3, cap: 9.8 },
+      rv: (x, z, K) => x + (fbm(x * .09 + 3, z * .09, K.sd + 87, 2) - .5) * 4,
+      prep(K) {
+        // Pick the straight reach of bank for the line: the shields and standards on ground the board barely shields from sculpting, so
+        // their shelf comes out level, with water carved from the bank on to the board edge or the river, and all of it in the default view.
+        // The chevaux-de-frise only need room for a piece. A reach facing the river on the right is preferred; one on the near edge is the fallback
+        // room: 1 a piece fits, 2 land the sculpt reaches, 4 the same for water, where the stream bed does not matter
+        const R = this.ranks, N = 145, room = new Uint8Array(N * N);
+        for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+          const x = -BH + i * .25, z = -BH + j * .25, dr = K.dRoadAt(x, z), ds = K.dStrAt(x, z);
+          if (Math.abs(x) > BH - .9 || Math.abs(z) > BH - .9 || K.cliffAt(x, z) > .4 || (x < -10 && Math.abs(z - K.zc) < 4.6)) continue;
+          let pd = 1e9; for (const p of K.pads) pd = Math.min(pd, Math.hypot(x - p.x, z - p.z));
+          const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)), open = dr > ROAD_HALF + 2.1 && pd > 3.1 && dk > 3;
+          room[j * N + i] = (dr > 2.2 && pd > 2.55 && dk > .9 && ds > 2.6 ? 1 : 0) | (open && ds > 2.8 ? 2 : 0) | (open ? 4 : 0);
+        }
+        const get = (x, z) => room[clamp(Math.round((z + BH) * 4), 0, N - 1) * N + clamp(Math.round((x + BH) * 4), 0, N - 1)];
+        // the default camera cuts off the near corner and the two side corners
+        const seen = (x, z, m) => x + z < 19.5 + m && Math.abs(x - z) < 27 + m;
+        // a cross-section of the bank at u: 0 if the shields or the water have no room; else 1, plus 2 if the chevaux-de-frise fit too,
+        // 8 if it reaches into the foot of the pass, 16 if it comes near a side of the view. A line turned far from the camera shows its shields edge on
+        const search = (core, pool, face) => {
+          let best = { score: -1e9 };
+          for (const [p0, a0, a1, pen] of [[0, -.8, .8, 0], [HPI, -.8, 0, 1.5]]) for (let a = a0; a <= a1 + 1e-6; a += .2) {
+            const wx = Math.cos(p0 + a), wz = Math.sin(p0 + a), edgeOn = 5 * Math.max(0, .5 - Math.cos(p0 + a - PI / 4));
+            for (let bz = -16; bz <= 16; bz += .5) for (let bx = p0 ? -10 : 6; bx <= 16; bx += .5) {
+              // the line faces the pass the enemy comes out of, not the keep behind it
+              if ((-wx * (-BH - bx) - wz * (K.zc - bz)) / Math.hypot(-BH - bx, K.zc - bz) < face) continue;
+              const sec = u => {
+                const cx = bx - wz * u, cz = bz + wx * u;
+                let f = 1;
+                for (let v = .2; v < R.core; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & core) || !seen(x, z, 0)) return 0; if (x < -1) f |= 8; if (!seen(x, z, -2)) f |= 16; }
+                for (let w = .2; ; w += .4) {
+                  const x = cx + wx * w, z = cz + wz * w;
+                  if (x > BH - .9 || z > BH - .9) { if (w < 1) return 0; break; }
+                  if (!(get(x, z) & 4) || w > 6 || (w < 1 && !seen(x, z, 1))) { if (pool && w > 1.6) break; return 0; }
+                  if (this.rv(x, z, K) > 14.5) break;
+                }
+                for (let v = R.core; v <= R.deep; v += .4) { const x = cx - wx * v, z = cz - wz * v; if (!(get(x, z) & 1) || !seen(x, z, 0)) return f; }
+                return f | 2;
+              };
+              const s0 = sec(0); if (!s0) continue;
+              let k = 0, m = [s0];
+              for (; (k + 1) * .7 <= R.cap; k++) { const s1 = sec((k + 1) * .35), s2 = sec(-(k + 1) * .35); if (!s1 || !s2) break; m.push(s1, s2); }
+              const frac = b => m.filter(s => s & b).length / m.length, L = k * .7;
+              const score = L * (.8 + .2 * frac(2)) - pen - edgeOn - 2 * frac(8) - 2 * frac(16);
+              if (score > best.score) best = { score, L, x: bx, z: bz, wx, wz, pool };
+            }
+          }
+          return best;
+        };
+        // where no reach of bank has a level shelf for even four shields, the line stands on whatever room is left beside the road and pads,
+        // and failing that with only a cut of water behind it that does not reach the river; only a board with no such place at all
+        // lets the line turn away from the pass
+        let F = search(2, false, .3);
+        for (const pool of [false, true]) if (!(F.L >= 2.8)) { const G = search(1, pool, .3); if (G.L > (F.L ?? -1)) F = G; }
+        if (F.L === undefined) F = search(1, true, -1);
+        // the shelf is cut to the ground's own middle height there, so it stays earth-coloured rather than turning to cut rock
+        const hs = [];
+        for (let u = -F.L / 2; u <= F.L / 2 + 1e-6; u += .7) for (let v = 0; v <= R.core; v += .4) { const x = F.x - F.wz * u - F.wx * v, z = F.z + F.wx * u - F.wz * v; hs.push(K.hBase(x, z) + K.cliffAt(x, z)); }
+        F.Y = hs.sort((a, b) => a - b)[hs.length >> 1];
+        K.line = F;
+        K.sites = [];
+        for (let u = -F.L / 2; u <= F.L / 2 + 1e-6; u += 1) K.sites.push([F.x - F.wz * u - F.wx * 1.8, F.z + F.wx * u - F.wz * 1.8, 1.9]);
+      },
+      sculpt(x, z, dr, ds, K, h) {
+        // the pass walls stop short of the ground in front of the keep gate
+        const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5), Math.max(0, z + 8.5));
+        const pass = 5.8 * smooth(1.5, -5.5, x + (fbm(x * .1, z * .1 + 6, K.sd + 86, 2) - .5) * 5) * smooth(2.2, 4.6, dr) * smooth(.5, 3.5, dk);
+        const q = pass - 4.2 * smooth(12.2, 15.2, this.rv(x, z, K));
+        const F = K.line, dx = x - F.x, dz = z - F.z, u = -dx * F.wz + dz * F.wx, v = dx * F.wx + dz * F.wz;
+        const w = smooth(F.L / 2 + 2.4, F.L / 2 + .6, Math.abs(u)) * smooth(-this.ranks.deep - 2, -this.ranks.deep, v) * (F.pool ? smooth(7.5, 6, v) : 1);
+        if (!w) return q;
+        // the line's shelf is level at F.Y and drops into deep water behind it. The board terraces whatever is returned here,
+        // so the result is passed through the inverse of that terracing, or the shelf would come out stepped
+        const st = this.step, tq = Math.abs(q) > .02 ? (Math.floor(q / st) + smooth(.42, .88, q / st - Math.floor(q / st))) * st : q;
+        const Q = lerp(tq, F.Y - (F.Y - this.sea + 1.6) * smooth(0, 1.4, v) - h, w), f = Math.floor(Q / st);
+        return (f + .42 + .46 * (.5 - Math.sin(Math.asin(1 - 2 * (Q / st - f)) / 3))) * st;
       },
     },
     wx: { n: [.1, .2], velA: [.5, -.05, .25], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .82, .62, 1], alA: [.45, 0, 0], yA: [-1, 8], velB: [3.4, -.1, 1.6], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .76, .58, 1], alB: [.36, 0, .9], yB: [-.5, 4.5], amb: [.3, .24, .28] },
@@ -116,20 +252,33 @@ const BIOMES = [
     wat: [0, 1, 1, 0], watA: [.01, .02, .02], watB: [.3, .3, .3], fall: [0, 1, 1, 0], fallA: [.02, .04, .04], fallB: [.2, .3, .3], spray: 'none',
     relief: [1.0, .3, 1.0, 0], puddles: 0, ponds: 0, sway: 1.0, wind: 1.1, cracks: 0,
     terrain: {
-      dry: true, rock: .55, prot: .2,
-      prep(K) {
-        let best = -1, bx = 0, bz = 0;
-        for (let z = -9; z <= 13; z += .5) for (let x = -9; x <= 13; x += .5) {
-          if (x + z > 22 || (Math.abs(x - K.kx) < 7 && z < -7)) continue;
-          let d = K.dRoadAt(x, z) - ROAD_HALF; for (const p of K.pads) d = Math.min(d, Math.hypot(x - p.x, z - p.z) - 1.6);
-          d = Math.min(d, 16.5 - Math.abs(x), 16.5 - Math.abs(z)); if (d > best) { best = d; bx = x; bz = z; }
-        }
-        K.hill = { x: bx, z: bz, r: Math.max(3, best) };
+      dry: true, rock: .08, prot: -.6,
+      // how far (x, z) lies inside the hill's foot: the foot keeps a strip of open ground to the road, the pads and the keep, where the besiegers stand
+      foot(K, x, z, dr) {
+        const h = K.hill; let c = Math.min(dr - ROAD_HALF - 1.0, h.R - Math.hypot(x - h.x, z - h.z));
+        for (const p of K.pads) c = Math.min(c, Math.hypot(x - p.x, z - p.z) - 2.8);
+        return Math.min(c, Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7)) - 2.6);
       },
-      sculpt: (x, z, dr, ds, K) => {
-        const h = K.hill, d = Math.hypot(x - h.x, z - h.z) * (.88 + .3 * fbm(x * .3, z * .3, K.sd + 88, 2)), u = sat(d / (h.r + 1.2));
-        const cone = 5.4 * (1 - smooth(.25, 1, u)), t = cone / 1.35, f = Math.floor(t);
-        return (f + smooth(.55, .95, t - f)) * 1.35 - .35 * smooth(3.4, .6, ds);
+      prep(K) {
+        // the hill stands apart: clear of the road, the pads and the keep, and well off the rock walls along the back and left edges
+        let best = -1, bx = 0, bz = 0;
+        for (let z = -12; z <= 15; z += .5) for (let x = -12; x <= 15; x += .5) {
+          let d = K.dRoadAt(x, z) - ROAD_HALF; for (const p of K.pads) d = Math.min(d, Math.hypot(x - p.x, z - p.z) - 1.6);
+          const dk = Math.hypot(Math.max(0, Math.abs(x - K.kx) - 5.2), Math.max(0, z + 11.7));
+          d = Math.min(d, dk - 1, x + BH - 8, z + BH - 8, BH - 3 - Math.abs(x), BH - 3 - Math.abs(z));
+          if (d > best) { best = d; bx = x; bz = z; }
+        }
+        const w = clamp(best - 3.2, 1.0, 2.4);
+        K.hill = { x: bx, z: bz, R: best + 1.2, w, tiers: w > 1.7 ? 3 : 2, y0: K.hBase(bx, bz) + K.cliffAt(bx, bz) };
+        // the summit's reach in 24 directions, for laying out the camp on it
+        K.hill.rim = Array.from({ length: 24 }, (_, k) => { const c = Math.cos(k / 24 * TAU), s = Math.sin(k / 24 * TAU); let r = 0; while (r < 6 && this.foot(K, bx + c * r, bz + s * r, K.dRoadAt(bx + c * r, bz + s * r)) >= w) r += .1; return r; });
+        K.hill.top = Math.min(...K.hill.rim);
+        K.sites = [[bx, bz, K.hill.R]];
+      },
+      sculpt(x, z, dr, ds, K, h) {
+        const H = K.hill, n = H.tiers, t = n * sat((this.foot(K, x, z, dr) + (fbm(x * .3, z * .3, K.sd + 88, 2) - .5) * .7) / H.w), f = Math.floor(t);
+        // terraces and summit are level in absolute height, so the dry streambed and the ground's own roll don't show through them
+        return lerp(-.35 * smooth(3.4, .6, ds), H.y0 + Math.min(n, f + smooth(.68, .97, t - f)) * 4.8 / n - h, sat(t * 2));
       },
     },
     wx: { n: [.08, .22], velA: [.4, -.05, .2], swayA: [.6, .5], sizeA: [.03, .05], colA: [.95, .82, .62, 1], alA: [.45, 0, 0], yA: [-1, 8], velB: [3.8, -.1, 1.7], swayB: [.25, 1.2], sizeB: [.025, .045], colB: [.9, .76, .58, 1], alB: [.4, 0, .9], yB: [-.5, 4.5], amb: [.3, .25, .26] },

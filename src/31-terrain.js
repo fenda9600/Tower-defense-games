@@ -101,7 +101,17 @@ function buildBoard(seed, index) {
     let y = 1e9; for (let k = 0; k < 24; k++) { const a = k / 12 * TAU, d = r + (k < 12 ? 1.3 : 2.1); y = Math.min(y, hBase(x + Math.cos(a) * d, z + Math.sin(a) * d)); }
     ponds.push({ x, z, r, y: Math.min(y, hBase(x, z)) - .22 });
   }
-  const SCX = { kx, zc, sd, keepY, pads, rng, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), hBase };
+  const cliffAt = (x, z) => {
+    const dcl = x + BH + (fbm(z * .23 + 1.7, x * .11, sd + 9, 2) - .5) * 2.6;
+    let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, -15, z)) * RL[2];
+    const dbr = z + BH + (fbm(x * .23 + 5.1, z * .11, sd + 13, 2) - .5) * 2.4;
+    const c2 = smooth(4.4, 1.0, dbr) * (1.8 + 2.2 * fbm(x * .2 + 9, z * .2, sd + 15, 2)) * smooth(5.4, 7.6, Math.abs(x - kx)) * RL[2];
+    c = Math.max(c, c2) + 1.5 * smooth(11, 1, Math.hypot(x + BH, z + BH)) * smooth(7, 2.5, Math.min(x + BH, z + BH));
+    if (c > .02) { const v = c / 1.2, f = Math.floor(v); c = (f + smooth(.45, .9, v - f)) * 1.2; }
+    if (x < -12.2) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(-12.2, -13.2, x);
+    return c;
+  };
+  const SCX = { kx, zc, sd, keepY, pads, rng, dRoadAt: (x, z) => dfAt(dRoad, x, z), dStrAt: (x, z) => dfAt(dStr, x, z), hBase, cliffAt };
   if (TER.prep) TER.prep(SCX);
   const SEA = TER.sea;
   const pondD = (q, x, z) => Math.hypot(x - q.x, z - q.z) * (.82 + .36 * vnoise(x * .55 + q.x, z * .55 + q.z, sd + 60));
@@ -121,6 +131,7 @@ function buildBoard(seed, index) {
     for (const q of ponds) { const d = pondD(q, x, z); if (d < q.r + 1.5) h = lerp(h, q.y - .45, smooth(q.r + 1.5, q.r * .4, d)); }
     const dkx = Math.max(0, Math.abs(x - kx) - 5.2), dkz = Math.max(0, z + 11.7), dk = Math.hypot(dkx, dkz);
     if (dk < 1.8) h = lerp(h, keepY, smooth(1.8, .2, dk));
+    const c = cliffAt(x, z);
     let q = 0;
     if (TER.sculpt) {
       // Battle terrain: carve or raise everything away from the road, the tower pads, the keep, the cave mouth and the stream.
@@ -128,19 +139,13 @@ function buildBoard(seed, index) {
       const pr = TER.prot || 0;
       let prot = Math.max(smooth(ROAD_HALF + 2.6 + pr, ROAD_HALF + .55, dr), smooth(3.3 + pr * .5, 2.45, pd), smooth(3.4, .6, dk));
       if (x < -10.4) prot = Math.max(prot, smooth(4.4, 2.6, Math.abs(z - zc)) * smooth(-10.4, -12.4, x));
-      q = TER.sculpt(x, z, dr, ds, SCX);
+      // the ground as it would stand without the sculpt, edge cliffs included, for terrain that levels to an absolute height
+      q = TER.sculpt(x, z, dr, ds, SCX, h + c);
       if (!TER.dry && (!TER.freeStream || q > 0)) prot = Math.max(prot, smooth(3.8, 2.4, ds));
       q *= 1 - prot;
       if (TER.step && Math.abs(q) > .02) { const st = TER.step, v = q / st, f = Math.floor(v); q = (f + smooth(.42, .88, v - f)) * st; }
       h += q;
     }
-    const dcl = x + BH + (fbm(z * .23 + 1.7, x * .11, sd + 9, 2) - .5) * 2.6;
-    let c = smooth(5.0, 1.3, dcl) * (3.4 + 2.6 * fbm(x * .21, z * .21, sd + 11, 2) + 1.4 * smooth(4, -15, z)) * RL[2];
-    const dbr = z + BH + (fbm(x * .23 + 5.1, z * .11, sd + 13, 2) - .5) * 2.4;
-    const c2 = smooth(4.4, 1.0, dbr) * (1.8 + 2.2 * fbm(x * .2 + 9, z * .2, sd + 15, 2)) * smooth(5.4, 7.6, Math.abs(x - kx)) * RL[2];
-    c = Math.max(c, c2) + 1.5 * smooth(11, 1, Math.hypot(x + BH, z + BH)) * smooth(7, 2.5, Math.min(x + BH, z + BH));
-    if (c > .02) { const v = c / 1.2, f = Math.floor(v); c = (f + smooth(.45, .9, v - f)) * 1.2; }
-    if (x < -12.2) c *= 1 - smooth(2.6, 1.6, Math.abs(z - zc)) * smooth(-12.2, -13.2, x);
     _cl = Math.max(c, Math.abs(q) * (TER.rock === undefined ? 1 : TER.rock)); return h + c;
   };
 

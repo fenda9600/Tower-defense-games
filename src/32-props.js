@@ -369,7 +369,7 @@ function buildCave(B) {
 }
 
 function scatterProps(B) {
-  const rng = B.rng, placed = [], H = B.heightAt;
+  const rng = B.rng, placed = (B.scx.sites || []).slice(), H = B.heightAt;
   const free = (x, z, r, roadMin = .6) => {
     if (Math.abs(x) > BH - .7 - r || Math.abs(z) > BH - .7 - r) return false;
     if (B.dRoadAt(x, z) < ROAD_HALF + roadMin + r) return false;
@@ -451,6 +451,7 @@ function scatterProps(B) {
     const x = rng.range(-BH + .8, BH - .8), z = rng.range(-BH + .8, BH - .8);
     if (B.dRoadAt(x, z) < ROAD_HALF + .35 || waterD(x, z) < 1.1 || slope(x, z) > .5) continue;
     if (Math.abs(x - B.kx) < 5.4 && z < -11.6) continue;
+    if (B.ter.abyss !== undefined && H(x, z) < B.ter.abyss) continue;
     const T = new Soup(); PROP.tuft(T, rng); B.put(T, x, z, { ao: null, s: rng.range(.8, 1.5) });
   }
   for (let k = 0; k < 60; k++) {
