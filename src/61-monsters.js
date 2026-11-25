@@ -1,6 +1,6 @@
 
 const MON = {
-  // Every unit here fought in a real Chinese war; the notes in README.md give the source for each.
+  // Every unit here fought in a Han, Tang or Song era war; README.md gives the source for each.
   skel: { name: '步卒', en: 'Foot soldier', hp: 34, spd: 1.35, rad: .27, mass: 1, bounty: 6, lives: 1, hitH: .75, top: 1.45, dmg: 6, atkT: .95, scale: 1, death: 'man', blade: true },
   rat: { name: '斥候', en: 'Scout', hp: 13, spd: 2.65, rad: .2, mass: .45, bounty: 3, lives: 1, hitH: .62, top: 1.25, dmg: 3, atkT: .6, scale: .85, death: 'man', cat: 'swarm', blade: true },
   slime: { name: '冲车', en: 'Battering ram', hp: 95, spd: .82, rad: .42, mass: 2.2, bounty: 9, lives: 1, hitH: .8, top: 1.75, dmg: 8, atkT: 1.2, scale: 1, death: 'wood', cart: 'ram', gait: 2.1, split: ['slimelet', 2] },
@@ -11,22 +11,22 @@ const MON = {
   spider: { name: '轻兵', en: 'Skirmisher', hp: 20, spd: 2.25, rad: .24, mass: .4, bounty: 3, lives: 1, hitH: .62, top: 1.3, dmg: 4, atkT: .6, scale: .9, slip: true, death: 'man', cat: 'swarm', blade: true },
   scarab: { name: '填壕卒', en: 'Ditch filler', hp: 9, spd: 2.5, rad: .17, mass: .3, bounty: 1, lives: 1, hitH: .55, top: 1.15, dmg: 2, atkT: .6, scale: .8, slip: true, death: 'man', cat: 'swarm' },
   wolf: { name: '轻骑', en: 'Light horseman', hp: 38, spd: 2.7, rad: .32, mass: .9, bounty: 7, lives: 1, hitH: 1.0, top: 2.0, dmg: 12, atkT: .7, scale: .9, death: 'horse', gait: 3.2, cat: 'swarm', blade: true },
-  bomber: { name: '掘子军', en: 'Sapper', hp: 38, spd: 1.55, rad: .27, mass: 1, bounty: 8, lives: 2, hitH: .75, top: 1.55, dmg: 0, atkT: 1, scale: 1, explode: { r: 1.7, dmg: 46, men: 30 }, death: 'man' },
+  bomber: { name: '猛火油兵', en: 'Fire-oil thrower', hp: 38, spd: 1.55, rad: .27, mass: 1, bounty: 8, lives: 2, hitH: .75, top: 1.55, dmg: 0, atkT: 1, scale: 1, explode: { r: 1.7, dmg: 46, men: 30 }, death: 'man' },
   wraith: { name: '伏兵', en: 'Ambusher', hp: 58, spd: 1.3, rad: .28, mass: 1, bounty: 11, lives: 1, hitH: .7, top: 1.45, dmg: 0, atkT: 1, scale: 1, ghost: [1.7, 3.0], death: 'man' },
-  toad: { name: '藤牌手', en: 'Rattan shieldman', hp: 78, spd: 1.0, rad: .34, mass: 1.8, bounty: 9, lives: 1, hitH: .6, top: 1.35, dmg: 9, atkT: 1.0, scale: 1, hop: [1.2, 2.5], death: 'man', blade: true },
-  wisp: { name: '神火飞鸦', en: 'Fire crow rocket', hp: 7, spd: 2.2, rad: .14, mass: .1, bounty: 2, lives: 1, hitH: 0, top: .3, dmg: 0, atkT: 1, scale: 1, fly: true, flyKit: 'crow', death: 'wisp', cat: 'air', alt: [1.3, 2.3], flap: 6, glow: 8 },
+  toad: { name: '跳荡兵', en: 'Tang shock trooper', hp: 78, spd: 1.0, rad: .34, mass: 1.8, bounty: 9, lives: 1, hitH: .6, top: 1.35, dmg: 9, atkT: 1.0, scale: 1, hop: [1.2, 2.5], death: 'man', blade: true },
+  wisp: { name: '竹火鹞', en: 'Bamboo fire kite', hp: 7, spd: 2.2, rad: .14, mass: .1, bounty: 2, lives: 1, hitH: 0, top: .3, dmg: 0, atkT: 1, scale: 1, fly: true, flyKit: 'crow', death: 'wisp', cat: 'air', alt: [1.3, 2.3], flap: 6, glow: 8 },
   drummer: { name: '战鼓手', en: 'War drummer', hp: 92, spd: 1.15, rad: .3, mass: 1.6, bounty: 14, lives: 1, hitH: .8, top: 2.35, dmg: 6, atkT: 1, scale: 1.05, aura: [3.4, .3], death: 'man' },
-  gargoyle: { name: '火龙出水', en: 'Fire dragon rocket', hp: 52, spd: 1.45, rad: .32, mass: 1.2, bounty: 13, lives: 1, hitH: 0, top: .6, dmg: 0, atkT: 1, scale: 1.15, fly: true, flyKit: 'dragon', armor: .72, death: 'rocket', cat: 'air', alt: [2.4, 3.1], flap: 9 },
+  gargoyle: { name: '铁嘴火鹞', en: 'Iron-beaked fire kite', hp: 52, spd: 1.45, rad: .32, mass: 1.2, bounty: 13, lives: 1, hitH: 0, top: .6, dmg: 0, atkT: 1, scale: 1.15, fly: true, flyKit: 'dragon', armor: .72, death: 'rocket', cat: 'air', alt: [2.4, 3.1], flap: 9 },
   necro: { name: '督战校尉', en: 'Battle officer', hp: 105, spd: .85, rad: .3, mass: 1.6, bounty: 18, lives: 1, hitH: .8, top: 2.2, dmg: 5, atkT: 1.2, scale: 1.08, summon: { type: 'skel', n: 2, every: 7.5, max: 3, hp: .6 }, death: 'man' },
   mummy: { name: '轒辒车', en: 'Tortoise cart', hp: 135, spd: .9, rad: .36, mass: 2, bounty: 14, lives: 1, hitH: .7, top: 1.45, dmg: 12, atkT: 1.1, scale: 1, cart: 'tortoise', gait: 2.1, split: ['scarab', 3], death: 'wood' },
   brute: { name: '狼牙棒手', en: 'Mace bearer', hp: 360, spd: .82, rad: .5, mass: 8, bounty: 30, lives: 2, hitH: 1.0, top: 2.05, dmg: 24, atkT: 1.4, scale: 1.4, regen: .035, death: 'man', cat: 'armor' },
-  golem: { name: '具装甲骑', en: 'Armoured lancer', hp: 470, spd: .62, rad: .5, mass: 9, bounty: 34, lives: 2, hitH: 1.05, top: 2.3, dmg: 26, atkT: 1.5, scale: 1.05, armor: .35, slowRes: .5, bard: true, death: 'horse', gait: 3.2, cat: 'armor' },
+  golem: { name: '铁鹞子', en: 'Western Xia iron hawk', hp: 470, spd: .62, rad: .5, mass: 9, bounty: 34, lives: 2, hitH: 1.05, top: 2.3, dmg: 26, atkT: 1.5, scale: 1.05, armor: .35, slowRes: .5, bard: true, death: 'horse', gait: 3.2, cat: 'armor' },
   brood: { name: '战象', en: 'War elephant', hp: 230, spd: .92, rad: .58, mass: 5, bounty: 24, lives: 2, hitH: 1.3, top: 2.6, dmg: 14, atkT: 1.0, scale: 1, split: ['spider', 5], death: 'beast', gait: 2.6 },
   giant: { name: '辽军大将', en: 'Liao general', hp: 1250, spd: .88, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.0, top: 3.9, dmg: 46, atkT: 1.7, scale: 2.6, boss: true, death: 'man', blade: true, cat: 'armor' },
   ogre: { name: '突厥可汗', en: 'Turkic khagan', hp: 1400, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 2.0, top: 3.9, dmg: 52, atkT: 1.8, scale: 2.6, boss: true, death: 'man', blade: true, cat: 'armor' },
-  jotun: { name: '巴牙喇重骑', en: 'Manchu guard cuirassier', hp: 1150, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 1.9, top: 4.2, dmg: 52, atkT: 1.8, scale: 1.85, boss: true, bard: true, gait: 3.2, stomp: { every: 10, r: 5.2, stun: 1.8 }, death: 'horse', blade: true, cat: 'armor' },
-  queen: { name: '燧象', en: 'Fire-tailed elephant', hp: 1150, spd: .85, rad: 1.1, mass: 40, bounty: 200, lives: 5, hitH: 2.0, top: 4.2, dmg: 40, atkT: 1.5, scale: 1.65, boss: true, gait: 2.6, summon: { type: 'spider', n: 2, every: 8, max: 99, hp: 1 }, death: 'beast', cat: 'armor' },
-  colossus: { name: '临冲楼车', en: 'Siege tower', hp: 1250, spd: .7, rad: 1.05, mass: 60, bounty: 200, lives: 5, hitH: 2.2, top: 6.0, dmg: 60, atkT: 2.0, scale: 1.45, boss: true, armor: .85, slowRes: .3, enrage: [.3, 1.25], cart: 'tower', gait: 2.1, death: 'wood', cat: 'armor' },
+  jotun: { name: '铁浮屠', en: 'Jin iron pagoda', hp: 1150, spd: .8, rad: 1.0, mass: 46, bounty: 200, lives: 5, hitH: 1.9, top: 4.2, dmg: 52, atkT: 1.8, scale: 1.85, boss: true, bard: true, gait: 3.2, stomp: { every: 10, r: 5.2, stun: 1.8 }, death: 'horse', blade: true, cat: 'armor' },
+  queen: { name: '南汉象阵', en: 'Southern Han elephant corps', hp: 1150, spd: .85, rad: 1.1, mass: 40, bounty: 200, lives: 5, hitH: 2.0, top: 4.2, dmg: 40, atkT: 1.5, scale: 1.65, boss: true, gait: 2.6, summon: { type: 'spider', n: 2, every: 8, max: 99, hp: 1 }, death: 'beast', cat: 'armor' },
+  colossus: { name: '云车', en: 'Cloud tower', hp: 1250, spd: .7, rad: 1.05, mass: 60, bounty: 200, lives: 5, hitH: 2.2, top: 6.0, dmg: 60, atkT: 2.0, scale: 1.45, boss: true, armor: .85, slowRes: .3, enrage: [.3, 1.25], cart: 'tower', gait: 2.1, death: 'wood', cat: 'armor' },
   king: { name: '匈奴单于', en: 'Xiongnu chanyu', hp: 1250, spd: .86, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.0, top: 3.9, dmg: 46, atkT: 1.7, scale: 2.6, boss: true, summon: { type: 'wolf', n: 3, every: 9, max: 99, hp: 1 }, death: 'man', blade: true, cat: 'armor' },
 };
 
@@ -159,18 +159,25 @@ function drawMonster(m, t) {
   if (ty === 'wisp' || ty === 'gargoyle') { rocketTrail(m, ty === 'wisp' ? 'crow' : 'dragon'); m.lx = m.x; m.ly = m.y; m.lz = m.z; }
   else if (ty === 'bat') { const p = _tv.set(0, -.18, .02).applyMatrix4(M); FX.add.push(p.x, p.y, p.z, .22, .22, 0, 0, 3.2, 1.5, .4, tw, 0, 0, 0, 0); if (rnd() < .3) fxPart(p.x, p.y, p.z, rr(-.2, .2), rr(-.3, .1), rr(-.2, .2), rr(.3, .6), .04, 2.6, 1.1, .2, { drag: 1 }); }
   else if (ty === 'wraith') { if (m.eth && rnd() < .35) fxSmoke(m.x + rr(-.3, .3), m.y + rr(.1, 1.1), m.z + rr(-.3, .3), rr(-.3, .3), rr(.1, .4), rr(-.3, .3), rr(.7, 1.2), .3, .45, .2, .2, .19, .5, { drag: 1.5, rise: .1 }); }
-  else if (ty === 'queen') { const p = RIGOUT.torch; FX.add.push(p.x, p.y, p.z, 1.0, 1.0, 0, 0, 3.4, 1.6, .4, tw, 0, 0, 0, 0); FX.add.push(p.x, p.y, p.z, 3.2, 3.2, 0, 0, 1, .45, .12, .35 * tw, 2, 0, 0, 0); if (rnd() < .8) fxPart(p.x + rr(-.1, .1), p.y, p.z + rr(-.1, .1), rr(-.3, .3), rr(.6, 1.6), rr(-.3, .3), rr(.4, .9), rr(.06, .1), 2.8, 1.1, .2, { drag: .5, wob: 1, rise: .4 }); m.lx = p.x; m.ly = p.y + .3; m.lz = p.z; }
   else if (ty === 'colossus' && rnd() < (m.rage ? .6 : .04)) fxPart(m.x + rr(-.7, .7), m.y + rr(.6, 4), m.z + rr(-.7, .7), rr(-.3, .3), rr(.6, 1.8), rr(-.3, .3), rr(.6, 1.2), rr(.05, .08), 2.6, .9, .15, { drag: .3, wob: 1, rise: .3 });
   if (m.torch && m.flame) { const p = RIGOUT.torch; m.flame.x = p.x; m.flame.y = p.y; m.flame.z = p.z; m.lx = p.x; m.ly = p.y + .2; m.lz = p.z; }
   if (m.vis || m.fly) G.hbars.push({ x: m.x, y: m.y + m.def.top * sc / m.def.scale + .22, z: m.z, f: sat(m.hp / m.maxHp), boss: !!m.def.boss, man: false, name: m.def.boss ? m.def.name : null });
 }
 
+function dressFootman(f) {
+  // Qin: studded lamellar, topknot and the bronze ge. Han: iron lamellar, ring-pommel sword and shield. Tang: bright-light armour and the mo dao. Song: full infantry armour and the horse-cutting sword.
+  const I = KIT.item, lv = f.tower ? f.tower.lvl : 0; f.wScale = 1; f.hat = null; f.back = null; f.skirt = null; f.helm = false;
+  if (lv === 0) { f.weapon = f.torch ? I.blade : I.ge; f.shield = null; f.back = I.qinJia; f.hat = I.qinBun; }
+  else if (lv === 1) { f.weapon = I.blade; f.shield = f.torch ? null : I.shieldH; f.helm = true; }
+  else if (lv === 2) { f.weapon = f.torch ? I.blade : I.modao; f.shield = null; f.back = I.mingguang; f.hat = I.tangHelm; }
+  else { f.weapon = f.torch ? I.blade : I.zhanma; f.wScale = 1.1; f.shield = null; f.back = I.buren; f.skirt = I.burenSkirt; f.helm = true; }
+}
 function spawnFootman(tower) {
   const d = tower.def, lvl = tower.lvl, door = tower.w(tower.mounts.door, {});
   const used = tower.men.map(f => f.slot); let slot = 0; while (used.includes(slot)) slot++;
   const f = {
     isMan: true, tower, slot, x: door.x, y: door.y, z: door.z, yaw: tower.yaw, ph: 0, mv: 0, atk: -1, flinch: 0, flash: 0, hp: d.hp[lvl], maxHp: d.hp[lvl], dmg: d.dmg[lvl],
-    rad: .26, mass: 7, s: tower.pad.s, lat: 0, onRoad: false, state: 'march', target: null, cd: rr(.2, .6), torch: slot === 0, gone: false, dead: false, vf: 0, scale: .9 + lvl * .05,
+    rad: .26, mass: 7, s: tower.pad.s, lat: 0, onRoad: false, state: 'march', target: null, cd: rr(.2, .6), torch: slot === 0, gone: false, dead: false, vf: 0, scale: .9 + lvl * .04,
     struck: false, alive: true, lI: slot === 0 ? 32 : 0, lx: 0, ly: 0, lz: 0, lseed: rnd() * 9, flame: null, leave: false, lvlUp: false, weapon: null, shield: null, age: 0, foes: 0,
   };
   if (f.torch) f.flame = addFlame({ x: door.x, y: -50, z: door.z, size: .34, embers: .45, glow: .8 });
@@ -178,7 +185,7 @@ function spawnFootman(tower) {
 }
 function killFootman(f, dx, dz) {
   f.dead = true; f.alive = false; f.gone = true; if (f.flame) { fxEmbers(f.flame.x, f.flame.y, f.flame.z, 6, .1); removeFlame(f.flame); f.flame = null; }
-  f.weapon = KIT.item.blade; if (!f.torch) f.shield = KIT.item.shieldH;
+  dressFootman(f);
   shatter(e => rigHuman(KIT.foot, SPEC.foot, e), f, [(dx || 0) * 1.6, .8, (dz || 0) * 1.6], { spread: .9, life: .8 });
   fxDust(f.x, f.y + .1, f.z, 3, .5, { a: .35 }); sfx('footmanDie', f.x, f.z, .8);
 }
@@ -189,7 +196,7 @@ function slotPos(f, out) {
 const _fp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
 function footmanThink(f, dt) {
   const B = G.B, tw = f.tower; f.age += dt;
-  if (f.lvlUp) { f.lvlUp = false; const d = tw.def, r = f.hp / f.maxHp; f.maxHp = d.hp[tw.lvl]; f.hp = f.maxHp * Math.max(r, .6); f.dmg = d.dmg[tw.lvl]; f.scale = .9 + tw.lvl * .05; }
+  if (f.lvlUp) { f.lvlUp = false; const d = tw.def, r = f.hp / f.maxHp; f.maxHp = d.hp[tw.lvl]; f.hp = f.maxHp * Math.max(r, .6); f.dmg = d.dmg[tw.lvl]; f.scale = .9 + tw.lvl * .04; }
   if (!tw.alive) f.leave = true;
   let gx, gz, face = null, speed = 2.1, fighting = false;
   const rally = slotPos(f, _fp), rs = tw.pad.s;
@@ -241,7 +248,7 @@ function strike(a, b, dmg, byMan) {
   }
 }
 function drawFootman(f) {
-  f.weapon = KIT.item.blade; f.shield = f.torch ? null : KIT.item.shieldH; f.wScale = 1;
+  dressFootman(f);
   rigHuman(KIT.foot, SPEC.foot, f);
   if (f.torch && f.flame) { const p = RIGOUT.torch; f.flame.x = p.x; f.flame.y = p.y; f.flame.z = p.z; f.lx = p.x; f.ly = p.y + .2; f.lz = p.z; }
   if (f.hp < f.maxHp) G.hbars.push({ x: f.x, y: f.y + 1.55 * f.scale, z: f.z, f: sat(f.hp / f.maxHp), boss: false, man: true });

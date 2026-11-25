@@ -93,6 +93,41 @@ function initArmy() {
     S.cone(.035, .14, 0, 1.68, -.2, COL.steel, { n: 4, l: L_METAL }); S.ico(.05, 0, 1.58, -.2, C(0x8a1a14), { d: 0, sc: [1, 1.5, 1] });
   }, 8, { rad: .3, shadow: false });
 
+
+  // The garrison by era: Han lamellar and ring-pommel sword, Tang bright-light armour and the mo dao, Song infantry armour and the horse-cutting sword.
+  const brz = mulC(COL.brass, 1.1), irn = mulC(COL.iron, 1.25), irL = COL.ironL, redT = C(0x8a1c16);
+  // Qin: the terracotta army's lamellar vest with studded plates, a topknot on the right, and the bronze dagger-axe (ge).
+  const lea = C(0x3a2a20), stud = mulC(COL.brass, .9), bz = C(0x8a6a3a);
+  I.qinJia = new PartBatch(S => {
+    S.box(.32, .3, .24, 0, .19, 0, lea, { l: L_CLOTH, rough: .7 }); for (const y of [.08, .16, .24]) for (const x of [-.11, -.04, .04, .11]) { S.box(.025, .025, .02, x, y, .125, stud, { l: L_METAL, jit: 0 }); S.box(.025, .025, .02, x, y, -.125, stud, { l: L_METAL, jit: 0 }); }
+    for (const sg of [-1, 1]) S.box(.13, .1, .2, sg * .22, .4, 0, lea, { l: L_CLOTH }); S.box(.34, .04, .25, 0, .03, 0, C(0x8a1c16), { l: L_CLOTH });
+  }, 40, { rad: .2, shadow: false });
+  I.qinBun = new PartBatch(S => { const hair = mulC(COL.black, 2.2); S.box(.2, .05, .2, 0, .2, 0, hair, { l: L_CLOTH }); S.sph(.06, .07, .27, -.02, hair, { w: 6, h: 4, smooth: false }); S.box(.05, .02, .05, .07, .3, -.02, C(0xa8241c), { l: L_CLOTH }); }, 40, { rad: .2, shadow: false });
+  I.ge = new PartBatch(S => { S.seg([0, -.5, 0], [0, 1.1, 0], .02, .018, C(0x4a3020), { l: L_WOOD, n: 4 }); S.box(.02, .05, .26, 0, 1.0, .12, bz, { l: L_METAL, rough: .35 }); S.box(.02, .1, .03, 0, .96, .24, bz, { l: L_METAL, rough: .35, r: [.5, 0, 0] }); S.cone(.03, .12, 0, 1.16, 0, bz, { n: 4, l: L_METAL }); }, 40, { rad: .05, shadow: false });
+  I.mingguang = new PartBatch(S => {
+    S.box(.33, .3, .245, 0, .2, 0, irn, { l: L_METAL, rough: .5 }); for (const y of [.1, .17, .24]) S.box(.335, .012, .25, 0, y, 0, irL, { l: L_METAL, jit: 0 });
+    for (const sg of [-1, 1]) { S.cyl(.07, .02, sg * .085, .29, .13, brz, { n: 10, r: [HPI, 0, 0], l: L_METAL, rough: .25, emis: .04 }); S.cyl(.035, .022, sg * .085, .29, .136, mulC(brz, 1.3), { n: 8, r: [HPI, 0, 0], l: L_METAL, rough: .2, emis: .06 }); }
+    S.cyl(.06, .02, 0, .1, .13, brz, { n: 10, r: [HPI, 0, 0], l: L_METAL, rough: .25 });
+    for (const sg of [-1, 1]) { S.box(.17, .06, .23, sg * .23, .45, 0, irn, { l: L_METAL }); S.box(.15, .12, .21, sg * .26, .37, 0, mulC(irn, .9), { l: L_METAL }); S.box(.06, .06, .02, sg * .26, .42, .11, brz, { l: L_METAL }); }
+    S.box(.36, .05, .25, 0, .03, 0, redT, { l: L_CLOTH });
+  }, 40, { rad: .2, shadow: false });
+  I.tangHelm = new PartBatch(S => {
+    S.add(gDome(8, 3), { s: [.16, .15, .17], p: [0, .2, 0], c: irn, l: L_METAL, rough: .45 }); S.cyl(.17, .03, 0, .2, 0, brz, { n: 8, l: L_METAL });
+    for (const sg of [-1, 1]) S.box(.04, .14, .2, sg * .17, .12, -.01, irn, { l: L_METAL, r: [0, 0, sg * -.25] }); S.box(.28, .12, .05, 0, .1, -.15, irn, { l: L_METAL, r: [.3, 0, 0] });
+    S.box(.05, .06, .02, 0, .27, .16, brz, { l: L_METAL }); S.cyl(.016, .14, 0, .4, 0, brz, { n: 4, l: L_METAL }); S.ico(.05, 0, .48, -.01, redT, { d: 0, sc: [1, 1.4, 1] });
+  }, 40, { rad: .2, shadow: false });
+  I.buren = new PartBatch(S => {
+    // Song infantry armour: lamellar from throat to knee, broad shoulder guards, a neck guard
+    S.box(.38, .44, .27, 0, .22, 0, irn, { l: L_METAL, rough: .55 }); for (let y = .04; y < .44; y += .055) S.box(.385, .012, .275, 0, y, 0, irL, { l: L_METAL, jit: 0 });
+    for (const x of [-.09, 0, .09]) S.box(.01, .42, .277, x, .22, 0, mulC(irn, .6), { jit: 0 });
+    for (const sg of [-1, 1]) { S.box(.2, .07, .26, sg * .24, .46, 0, irn, { l: L_METAL }); for (const y of [.38, .31]) S.box(.18, .06, .24, sg * (.27 + (.38 - y)), y, 0, mulC(irn, .92), { l: L_METAL, r: [0, 0, sg * .35] }); }
+    S.box(.24, .1, .24, 0, .48, 0, mulC(irn, .9), { l: L_METAL }); S.box(.4, .05, .28, 0, .02, 0, redT, { l: L_CLOTH });
+  }, 40, { rad: .2, shadow: false });
+  I.burenSkirt = new PartBatch(S => { for (const sg of [-1, 1]) { S.box(.18, .36, .06, sg * .09, -.17, .12, irn, { l: L_METAL, rough: .55 }); S.box(.18, .36, .06, sg * .09, -.17, -.12, irn, { l: L_METAL, rough: .55 }); for (let y = -.32; y < 0; y += .06) { S.box(.185, .012, .065, sg * .09, y, .12, irL, { l: L_METAL, jit: 0 }); S.box(.185, .012, .065, sg * .09, y, -.12, irL, { l: L_METAL, jit: 0 }); } } }, 40, { rad: .2, shadow: false });
+  I.modao = new PartBatch(S => { const st2 = mulC(COL.steel, 1.15); S.seg([0, -.45, 0], [0, .55, 0], .024, .022, C(0x3a1512), { l: L_WOOD, n: 4 }); S.box(.1, .03, .05, 0, .56, 0, COL.brass, { l: L_METAL }); S.box(.02, .6, .08, 0, .88, 0, st2, { l: L_METAL, rough: .3 }); S.cone(.045, .12, 0, 1.24, 0, st2, { n: 4, l: L_METAL, rough: .3 }); }, 40, { rad: .05, shadow: false });
+  I.zhanma = new PartBatch(S => { const st2 = mulC(COL.steel, 1.15); S.box(.04, .38, .04, 0, -.05, 0, C(0x3a1512), {}); S.box(.1, .03, .06, 0, .15, 0, COL.iron, { l: L_METAL }); let p = [0, .16, 0]; for (let i = 1; i <= 4; i++) { const u = i / 4, q = [0, .16 + u * .7, -.05 * u * u]; S.box(.02, .19, .075, 0, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2, st2, { l: L_METAL, rough: .3 }); p = q; } }, 40, { rad: .05, shadow: false });
+  I.xbow = new PartBatch(S => { const wd2 = C(0x5a3e24); S.box(.04, .05, .5, 0, 0, .05, wd2, { l: L_WOOD }); S.box(.05, .06, .06, 0, -.02, -.12, COL.brass, { l: L_METAL }); let p = [0, 0, .28]; for (const sg of [-1, 1]) { p = [0, 0, .28]; for (let i = 1; i <= 3; i++) { const u = i / 3, q = [sg * u * .3, 0, .28 - u * u * .08]; S.seg(p, q, .02, .016, wd2, { n: 4, l: L_WOOD }); p = q; } S.seg([sg * .3, 0, .2], [0, .02, .02], .005, .005, COL.bone, { n: 3 }); } }, 40, { rad: .1, shadow: false });
+
   // Horses. The plain one carries light riders; the barded one carries the armoured lancers.
   const coat = C(0x5a3a24), coatD = C(0x3a2618), mane = C(0x1a1410), hoof = C(0x1c1814);
   const horseBody = (S, bard) => {
@@ -182,22 +217,21 @@ function initArmy() {
     body: new PartBatch(S => { S.ico(.1, 0, 0, 0, fea, { sc: [.85, .8, 1.4], d: 1 }); S.ico(.07, 0, .05, .14, C(0x2a4a3a), { d: 1 }); S.cone(.02, .06, 0, .04, .22, C(0xc8a040), { n: 4, r: [HPI, 0, 0] }); S.box(.02, .02, .02, .035, .07, .17, C(0xb02a1c), { jit: 0 }); S.box(.06, .02, .26, 0, .0, -.22, feaD, { r: [.2, 0, 0] }); S.box(.05, .02, .2, .03, .0, -.2, fea, { r: [.2, .2, 0] }); S.seg([0, -.06, 0], [0, -.16, .02], .006, .006, COL.rope, { n: 3 }); S.ico(.04, 0, -.18, .02, C(0x5a4028), { d: 0 }); }, 50, { rad: .1 }),
     wing: new PartBatch(S => { const c = fea, c2 = feaD, pts = [[0, 0, .08], [.18, .02, .07], [.36, .0, .0], [.3, 0, -.06], [.2, 0, -.07], [.1, 0, -.09], [0, 0, -.06]]; for (let i = 1; i < pts.length - 1; i++) { S.tri(pts[0], pts[i + 1], pts[i], i & 1 ? c : c2, L_PLAIN, .9); S.tri(pts[0], pts[i], pts[i + 1], i & 1 ? c : c2, L_PLAIN, .9); } }, 100, { rad: .1 }),
   };
-  // The divine fire crow of the Ming manuals: a paper crow on a bamboo frame, four rockets under its wings.
-  const paper = C(0x2a2622), bam = C(0x8a7a4a);
+  // Bamboo fire kite (zhu huo yao) of the Song manual: a bamboo cage bird pasted with paper, its belly full of powder and a straw tail alight.
+  const bam = C(0x9a8a52), bamD = C(0x6a5a32), straw = C(0xb09a58), paper = C(0xc8bc98);
   KIT.crow = {
-    body: new PartBatch(S => { S.ico(.08, 0, 0, 0, paper, { sc: [.9, .8, 1.6], d: 1 }); S.ico(.06, 0, .03, .14, paper, { d: 1 }); S.cone(.025, .08, 0, .02, .22, C(0x3a3020), { n: 4, r: [HPI, 0, 0] }); S.box(.12, .015, .14, 0, 0, -.18, paper, {}); S.seg([0, -.02, -.12], [0, -.02, .14], .012, .012, bam, { n: 3 }); for (const sg of [-1, 1]) { S.cyl(.022, .16, sg * .1, -.05, -.02, C(0x8a1a14), { n: 5, r: [HPI, 0, 0] }); S.cyl(.024, .02, sg * .1, -.05, -.1, COL.black, { n: 5, r: [HPI, 0, 0] }); } }, 60, { rad: .1 }),
-    wing: new PartBatch(S => { const pts = [[0, 0, .06], [.2, 0, .04], [.3, 0, -.04], [.16, 0, -.08], [0, 0, -.06]]; for (let i = 1; i < pts.length - 1; i++) { S.tri(pts[0], pts[i + 1], pts[i], paper, L_PLAIN, .9); S.tri(pts[0], pts[i], pts[i + 1], paper, L_PLAIN, .9); } S.seg([0, .005, .04], [.3, .005, -.04], .006, .006, bam, { n: 3 }); }, 120, { rad: .1 }),
+    body: new PartBatch(S => { S.ico(.1, 0, 0, 0, paper, { sc: [.9, .8, 1.5], d: 1 }); for (const z of [-.08, 0, .08]) S.add(gTorus(8, .08, 3), { s: [.09, .08, .1], p: [0, 0, z], r: [0, 0, 0], c: bamD, l: L_WOOD }); S.ico(.06, 0, .03, .15, paper, { d: 1 }); S.cone(.025, .07, 0, .02, .22, bamD, { n: 4, r: [HPI, 0, 0] }); for (let k = -1; k <= 1; k++) S.seg([0, 0, -.12], [k * .06, -.02, -.34], .016, .008, straw, { n: 3 }); }, 60, { rad: .1 }),
+    wing: new PartBatch(S => { const pts = [[0, 0, .06], [.2, 0, .04], [.3, 0, -.04], [.16, 0, -.08], [0, 0, -.06]]; for (let i = 1; i < pts.length - 1; i++) { S.tri(pts[0], pts[i + 1], pts[i], paper, L_PLAIN, .9); S.tri(pts[0], pts[i], pts[i + 1], paper, L_PLAIN, .9); } S.seg([0, .005, .04], [.3, .005, -.04], .006, .006, bam, { n: 3 }); S.seg([0, .005, -.02], [.24, .005, -.06], .005, .005, bam, { n: 3 }); }, 120, { rad: .1 }),
   };
-  // Fire dragon out of the water: a bamboo tube with a wooden dragon head and tail, carried by four booster rockets.
-  const dr = C(0x7a2a1c), drD = C(0x4a1a12), g2 = mulC(COL.gold, .8);
+  // Iron-beaked fire kite (tie zui huo yao) of the Song manual: a wooden bird with an iron beak, powder packed in a straw tail.
+  const wdB = C(0x6a4a2c), wdBD = C(0x4a3220);
   KIT.dragon = {
     body: new PartBatch(S => {
-      S.cyl(.08, .9, 0, 0, 0, bam, { n: 8, r: [HPI, 0, 0], l: L_WOOD }); for (const z of [-.3, -.1, .1, .3]) S.cyl(.085, .03, 0, 0, z, mulC(bam, .7), { n: 8, r: [HPI, 0, 0] });
-      S.box(.16, .14, .22, 0, .02, .52, dr, {}); S.box(.14, .05, .16, 0, -.06, .6, drD, {}); for (const sg of [-1, 1]) { S.cone(.025, .16, sg * .05, .12, .44, g2, { n: 4, r: [-.8, 0, 0], l: L_METAL }); S.box(.025, .025, .02, sg * .06, .06, .62, C(0xffd040), { emis: .4, jit: 0 }); }
-      S.box(.04, .1, .24, 0, .08, -.52, drD, { r: [.3, 0, 0] }); S.box(.2, .02, .14, 0, .04, -.58, dr, {});
-      for (const sg of [-1, 1]) for (const z of [-.25, .25]) { S.cyl(.03, .22, sg * .11, -.07, z, C(0x8a1a14), { n: 5, r: [HPI, 0, 0] }); S.cyl(.032, .02, sg * .11, -.07, z - .11, COL.black, { n: 5, r: [HPI, 0, 0] }); }
+      S.ico(.14, 0, 0, 0, wdB, { sc: [.95, .85, 2.2], d: 1 }); S.ico(.1, 0, .04, .3, wdB, { d: 1 }); for (const z of [-.15, .05]) S.add(gTorus(8, .06, 3), { s: [.135, .12, .1], p: [0, 0, z], c: COL.iron, l: L_METAL });
+      S.cone(.06, .22, 0, .02, .48, mulC(COL.iron, 1.3), { n: 5, r: [HPI, 0, 0], l: L_METAL, rough: .35 }); for (const sg of [-1, 1]) S.box(.025, .025, .02, sg * .06, .08, .38, C(0xffd040), { emis: .3, jit: 0 });
+      for (let k = -2; k <= 2; k++) S.seg([0, 0, -.25], [k * .07, -.03 + Math.abs(k) * .01, -.62], .03, .014, straw, { n: 3 });
     }, 24, { rad: .2 }),
-    wing: new PartBatch(S => { S.tri([0, 0, .12], [.16, 0, -.04], [0, 0, -.1], drD, L_PLAIN, .9); S.tri([0, 0, .12], [0, 0, -.1], [.16, 0, -.04], drD, L_PLAIN, .9); }, 48, { rad: .1 }),
+    wing: new PartBatch(S => { S.tri([0, 0, .14], [.3, 0, -.02], [0, 0, -.14], wdBD, L_PLAIN, .9); S.tri([0, 0, .14], [0, 0, -.14], [.3, 0, -.02], wdBD, L_PLAIN, .9); S.seg([0, .01, .1], [.3, .01, -.02], .01, .008, wdB, { n: 3 }); }, 48, { rad: .1 }),
   };
 }
 
@@ -239,12 +273,12 @@ function rigCart(m) {
 function rigFlyer(m) {
   const k = m.def.flyKit, K = KIT[k];
   if (k === 'bird') return rigBat(m, K, .06, .03);
-  // rockets do not beat their wings: the fins only tremble in the blast
+  // the fire kites glide: their wings only tremble
   const save = m.ph; m.ph = Math.sin(save * 4) * .08 - .9; const M = rigBat(m, K, k === 'dragon' ? .08 : .05, 0); m.ph = save; return M;
 }
 function rocketTrail(m, k) {
   // exhaust from the rocket tubes, pointing back along the flight
-  const d = Math.hypot(m.vx, m.vz) || 1, bx = -m.vx / d, bz = -m.vz / d, r = k === 'dragon' ? .6 : .25, s = m.scale;
+  const d = Math.hypot(m.vx, m.vz) || 1, bx = -m.vx / d, bz = -m.vz / d, r = k === 'dragon' ? .7 : .35, s = m.scale;
   const x = m.x + bx * r * s, z = m.z + bz * r * s, y = m.y - .05 * s;
   FX.add.push(x, y, z, .45 * s, .45 * s, 0, 0, 3.2, 1.6, .4, .9, 0, 0, 0, 0); FX.add.push(x, y, z, 1.3 * s, 1.3 * s, 0, 0, 1, .45, .12, .3, 2, 0, 0, 0);
   if (rnd() < .7) fxSmoke(x, y, z, bx * rr(.5, 1.2), rr(.1, .4), bz * rr(.5, 1.2), rr(.6, 1.1), .1 * s + .05, .25, .26, .25, .24, .4, { drag: 1.5, rise: .2 });

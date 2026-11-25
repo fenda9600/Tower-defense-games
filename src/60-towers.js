@@ -4,10 +4,10 @@ const G = {
   towers: [], mons: [], men: [], arrows: [], shells: [], stuck: [], hbars: [], phase: 'play',
 };
 const TOWER = {
-  archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['连发火箭，射速快。', '可射飞行之敌。'] },
-  bombard: { name: '火炮台', short: '火炮', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['装填慢，炮弹炸裂一片。', '只打地面之敌。'] },
-  spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [40, 52, 66], desc: ['床弩齐发，一箭贯数敌，', '中者迟滞，可射飞敌。'] },
-  guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 90, 150], range: [3.4, 3.7, 4.0], n: [2, 3, 3], hp: [62, 90, 135], dmg: [7, 10, 15], rate: [7, 6, 5], air: false, ground: true, light: [55, 70, 90], desc: ['戍卒出营拦路，', '与敌近身搏杀。'] },
+  archer: { name: '箭楼', short: '箭楼', icon: 'archer', cost: [70, 90, 140], range: [6.2, 6.8, 7.4], dmg: [9, 11, 14], rate: [.85, .78, .7], n: [1, 2, 3], air: true, ground: true, light: [80, 105, 140], desc: ['汉 · 望楼弓手：居高放火箭，', '射速快，可射飞行之敌。'], tiers: [['汉 · 望楼弓手', '汉代烽燧望楼，弓手居高放火箭。'], ['唐 · 强弩手', '唐军弩手分番迭射，箭不绝声。'], ['宋 · 神臂弓', '宋神臂弓射三百四十步，可穿重甲。']] },
+  bombard: { name: '砲车台', short: '砲车', icon: 'bombard', cost: [120, 130, 190], range: [7.4, 8.0, 8.6], minRange: 2.3, dmg: [36, 60, 98], splash: [1.55, 1.8, 2.1], rate: [2.9, 2.7, 2.5], air: false, ground: true, light: [50, 62, 80], desc: ['汉 · 发石机：装填慢，', '落石砸伤一片，只打地面。'], tiers: [['汉 · 发石机', '汉代以机发石，重十二斤，行二百步。'], ['唐 · 抛车', '唐军攻辽东，抛车飞大石过三百步。'], ['宋 · 霹雳火砲', '宋《武经总要》霹雳火球，以砲抛出。']] },
+  spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [110, 120, 180], range: [5.5, 6.0, 6.5], dmg: [17, 25, 35], jumps: [3, 4, 6], rate: [2.3, 2.1, 1.9], slow: [.36, .42, .48], slowT: [1.3, 1.5, 1.7], air: true, ground: true, light: [40, 52, 66], desc: ['汉 · 大黄弩：一发贯数敌，', '中者迟滞，可射飞敌。'], tiers: [['汉 · 大黄弩', '李广以大黄弩射杀匈奴裨将。'], ['唐 · 车弩', '唐《通典》车弩以绞轴张弦，中垒即摧。'], ['宋 · 三弓床弩', '宋三弓床弩七十人张发，射三百步。']] },
+  guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [70, 80, 100, 150], range: [3.3, 3.5, 3.8, 4.0], n: [2, 2, 3, 3], hp: [50, 66, 95, 135], dmg: [6, 8, 11, 15], rate: [7.5, 7, 6, 5], air: false, ground: true, light: [50, 58, 72, 90], desc: ['秦 · 锐士：出营拦路，', '与敌近身搏杀。'], tiers: [['秦 · 锐士', '秦兵俑所见：铆钉札甲、右侧发髻，持青铜戈。'], ['汉 · 戍卒', '汉代边郡戍卒，铁札甲、环首刀与盾。'], ['唐 · 陌刀手', '唐陌刀手披明光铠，列阵如墙破骑。'], ['宋 · 步人甲', '宋步人甲重约二十九公斤，斩马刀破骑。']] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
 
@@ -224,7 +224,7 @@ class Tower {
   get range() { return this.def.range[this.lvl]; }
   w(l, out) { out.x = this.x + l[0] * this.cs + l[2] * this.sn; out.y = this.y + l[1]; out.z = this.z - l[0] * this.sn + l[2] * this.cs; return out; }
   begin() {
-    const bp = blueprint(this.kind, this.lvl); this.bp = bp; this.mounts = bp.mounts; this.bt = 0; this.state = this.lvl ? 'upgrade' : 'build';
+    const bp = blueprint(this.kind, this.kind === 'guard' ? Math.max(0, this.lvl - 1) : this.lvl); this.bp = bp; this.mounts = bp.mounts; this.bt = 0; this.state = this.lvl ? 'upgrade' : 'build';
     this.clearModel(true);
     const n = bp.pieces.length, gap = Math.min(.2, 1.45 / n);
     bp.pieces.forEach((p, i) => {
@@ -253,25 +253,32 @@ class Tower {
     if (mt.flame2) { const p = this.w(mt.flame2, {}); this.flame2 = addFlame({ x: p.x, y: p.y, z: p.z, size: mt.flameSize, on: 0 }); }
     if (mt.lightAt) { const p = this.w(mt.lightAt, {}); this.em.x = p.x; this.em.y = p.y; this.em.z = p.z; this.em.r = .45; this.em.g = .72; this.em.b = 1; }
     this.em.I = d.light[lvl]; this.em.range = this.kind === 'archer' ? 12 : 10.5;
-    if (this.kind === 'archer') mt.archers.forEach((a, i) => this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + i * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }));
+    if (this.kind === 'archer') mt.archers.forEach((a, i) => this.archers.push({ l: a, yaw: this.yaw, draw: 0, cool: .4 + i * .3, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, xbow: lvl >= 1, helm: lvl === 2, draw: 0, pitch: 0, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: 0, flash: 0 } }));
     if (this.kind === 'bombard') this.makeGun();
     if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
+    if (lvl > 0) { const tr = d.tiers[lvl]; UI.banner(d.name + ' · ' + tr[0], 3.6, false, tr[1]); }
     this.state = 'active'; this.appear = 0;
     fxDust(this.x, this.y + .2, this.z, 10, 1.3, { speed: 2.2 });
     sfx('buildDone', this.x, this.z, 1);
     if (this.flame) fxEmbers(this.flame.x, this.flame.y, this.flame.z, 10, .2);
   }
   makeGun() {
-    const mt = this.mounts, L = mt.gunLen, r = mt.gunR, S = new Soup(), br = this.lvl === 2 ? mulC(COL.brass, .8) : COL.bronze;
-    S.cyl(.42, .12, 0, .06, 0, COL.woodD, { n: 8, l: L_WOOD }); for (const sg of [-1, 1]) { S.box(.09, .34, .62, sg * (r + .07), .26, 0, COL.wood, { l: L_WOOD }); S.cyl(.17, .07, sg * (r + .16), .17, -.12, COL.woodD, { n: 8, r: [0, 0, HPI], l: L_WOOD }); }
+    // A traction trebuchet on a turning base: one pole for the Han stone thrower, a bigger frame for the Tang throwing cart, bundled poles and a fire ball for the Song thunderbolt trebuchet.
+    const mt = this.mounts, lvl = this.lvl, S = new Soup(), wd = COL.woodD, w = COL.wood, fh = [1.05, 1.25, 1.4][lvl], fw = [.34, .4, .46][lvl];
+    S.cyl(.5, .12, 0, .06, 0, wd, { n: 8, l: L_WOOD });
+    for (const sg of [-1, 1]) { S.seg([sg * fw, .1, -.32], [sg * fw, fh, 0], .05, .045, w, { n: 5, l: L_WOOD }); S.seg([sg * fw, .1, .32], [sg * fw, fh, 0], .05, .045, w, { n: 5, l: L_WOOD }); S.box(.08, .06, .7, sg * fw, .14, 0, wd, { l: L_WOOD }); }
+    S.cyl(.045, fw * 2 + .14, 0, fh, 0, COL.iron, { n: 6, r: [0, 0, HPI], l: L_METAL });
+    for (let k = 0; k < 3 + lvl; k++) { const x = (k - (2 + lvl) / 2) * .12; S.seg([x, .12, .55], [x * .3, fh - .05, .3], .006, .006, COL.rope, { n: 3 }); }
     this.carriage = new THREE.Mesh(S.build(), MAT.world); this.carriage.castShadow = this.carriage.receiveShadow = true; this.carriage.position.set(mt.gun[0], mt.gun[1], mt.gun[2]); this.group.add(this.carriage);
-    const Bq = new Soup(), o = () => ({ n: 8, l: L_METAL, r: [HPI, 0, 0], rough: .42 });
-    Bq.cyl(r, L, 0, 0, L / 2 - .28, br, Object.assign(o(), { rt: .8 })); Bq.cyl(r * 1.16, .12, 0, 0, L - .3, br, o()); Bq.cyl(r * .62, .03, 0, 0, L - .235, COL.black, Object.assign(o(), { jit: 0 }));
-    for (const z of [-.2, L * .25, L * .55]) Bq.cyl(r * 1.1 - z * .03, .07, 0, 0, z, z > 0 && z < L * .5 ? COL.lacq : mulC(br, .8), o());
-    Bq.sph(r * .9, 0, 0, -.3, br, { l: L_METAL, w: 6, h: 4, smooth: false, rough: .42 }); Bq.sph(r * .32, 0, 0, -.3 - r * .9, mulC(br, .8), { l: L_METAL, w: 5, h: 3, smooth: false });
-    this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, .4, 0); this.barrel.rotation.x = -.42; this.carriage.add(this.barrel);
-    this.gunYaw = this.yaw;
+    const Bq = new Soup(), L = [1.5, 1.8, 2.0][lvl], poles = [1, 2, 3][lvl];
+    for (let k = 0; k < poles; k++) { const x = (k - (poles - 1) / 2) * .07; Bq.seg([x, -.45, 0], [x * .5, L, 0], .05, .03, k === 1 ? mulC(w, 1.1) : w, { n: 5, l: L_WOOD }); }
+    for (const y of [.2, .6, 1.0]) Bq.cyl(.07 + poles * .015, .05, 0, y, 0, COL.rope, { n: 6 });
+    Bq.box(.22, .14, .14, 0, -.5, 0, wd, { l: L_WOOD }); Bq.seg([0, L, 0], [0, L - .35, .12], .008, .008, COL.rope, { n: 3 });
+    if (lvl === 2) { Bq.sph(.11, 0, L - .38, .14, mulC(COL.black, 4), { w: 6, h: 4, smooth: false }); Bq.ico(.03, 0, L - .26, .16, COL.ember, { d: 0, emis: .8 }); }
+    else Bq.rock(.1, 0, L - .38, .14, COL.stone, {});
+    this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, fh, 0); this.barrel.rotation.x = -2.1; this.carriage.add(this.barrel);
+    this.armL = L; this.gunYaw = this.yaw;
   }
   makeBow() {
     // a bed crossbow on a turning post: one bow at the first level, two and then three bows (the san gong chuang nu) above
@@ -295,7 +302,8 @@ class Tower {
     this.string = new THREE.Mesh(St.build(), MAT.world); this.string.position.set(0, 0, tipZ); this.barrel.add(this.string); this.string0 = tipZ;
     this.gunYaw = this.yaw;
   }
-  upgrade() { if (this.lvl >= 2 || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
+  get maxLvl() { return this.def.tiers.length - 1; }
+  upgrade() { if (this.lvl >= this.maxLvl || this.state !== 'active') return false; this.lvl++; this.spent += this.def.cost[this.lvl]; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
   sell() {
     this.alive = false; this.em.alive = false; this.em.on = 0; LT.emitters[this.idx] = null; this.pad.tower = null;
     for (let i = 0; i < 14; i++) { _tm.compose(_tv.set(this.x + rr(-.7, .7), this.y + rr(.3, 2.4), this.z + rr(-.7, .7)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(1, 1, 1)); addDebris(this.kind === 'archer' || this.kind === 'guard' ? KIT.plank : KIT.rubble, _tm, null, rr(-2, 2), rr(1, 4), rr(-2, 2), rr(3, 9), rr(2, 3.5)); }
@@ -353,27 +361,23 @@ class Tower {
   }
   updBombard(dt, d, lvl) {
     const tgt = findTarget(this.x, this.z, d.range[lvl], false, true, d.minRange);
-    this.recoil = Math.max(0, this.recoil - dt * 1.6);
+    this.recoil = Math.max(0, this.recoil - dt * 1.4);
     let aligned = false;
     if (tgt) {
       const dist = Math.hypot(tgt.x - this.x, tgt.z - this.z), T = clamp(dist / 7.2, .75, 1.45), q = aimPoint(tgt, T, _ap2);
       const want = Math.atan2(q.x - this.x, q.z - this.z); this.gunYaw = angDamp(this.gunYaw, want, 5, dt); aligned = Math.abs(angDiff(this.gunYaw, want)) < .12;
       if (aligned && this.cool <= 0) {
         this.cool = d.rate[lvl] * rr(.95, 1.08); this.recoil = 1;
-        this.carriage.updateMatrixWorld(true); const mz = _tv.set(0, 0, this.mounts.gunLen - .2).applyMatrix4(this.barrel.matrixWorld);
-        const gy = G.B.heightAt(q.x, q.z);
-        G.shells.push({ x0: mz.x, y0: mz.y, z0: mz.z, tx: q.x, ty: Math.max(gy, q.y - tgt.hitH) + .05, tz: q.z, t: 0, T, dmg: d.dmg[lvl], splash: d.splash[lvl], tower: this, x: mz.x, y: mz.y, z: mz.z, sm: 0, arc: 1.5 + dist * .2 });
-        const dx = Math.sin(this.gunYaw), dz = Math.cos(this.gunYaw);
-        lightFlash(mz.x, mz.y + .2, mz.z, 0xffc880, 420, .16, 15);
-        fxTimed(5, mz.x + dx * .2, mz.y + .1, mz.z + dz * .2, 1.9, 1.9, 4, 3, 1.6, 1, .1); fxTimed(3, mz.x + dx * .3, mz.y + .12, mz.z + dz * .3, .9, .9, 4, 3.2, 2.2, 1, .2, { grow: .8 });
-        for (let i = 0; i < 6; i++) fxSmoke(mz.x + dx * .3, mz.y + .1, mz.z + dz * .3, dx * rr(1, 3.4) + rr(-.5, .5), rr(.3, 1.2), dz * rr(1, 3.4) + rr(-.5, .5), rr(1.2, 2.4), rr(.35, .6), .9, .3, .29, .28, .5, { drag: 2.2, rise: .2 });
-        fxSparks(mz.x + dx * .2, mz.y, mz.z + dz * .2, 8, 5, 3, 1.8, .6, { lo: 0, hi: .6 });
-        sfx('cannon', this.x, this.z, 1, lvl / 2); FX.shake = Math.min(1, FX.shake + .12);
+        this.barrel.rotation.x = .5; this.carriage.updateMatrixWorld(true); const mz = _tv.set(0, this.armL, 0).applyMatrix4(this.barrel.matrixWorld);
+        const gy = G.B.heightAt(q.x, q.z), fire = lvl === 2;
+        G.shells.push({ x0: mz.x, y0: mz.y, z0: mz.z, tx: q.x, ty: Math.max(gy, q.y - tgt.hitH) + .05, tz: q.z, t: 0, T, dmg: d.dmg[lvl], splash: d.splash[lvl], tower: this, x: mz.x, y: mz.y, z: mz.z, sm: 0, arc: 2.2 + dist * .25, fire });
+        fxDust(this.x, this.y + .3, this.z, 3, .7, { speed: 1.4, a: .35 });
+        sfx('bossStep', this.x, this.z, .7, .2); sfx('zap', this.x, this.z, .4, 1);
       }
     } else this.gunYaw = angDamp(this.gunYaw, this.yaw + Math.sin(G.t * .3 + this.idx) * .7, 1.2, dt);
     this.carriage.rotation.y = this.gunYaw - this.yaw;
-    const k = this.recoil; this.barrel.position.z = -.3 * k * k; this.barrel.rotation.x = -.42 - .1 * k * k;
-    if (this.cool > 0 && this.cool < 1.2 && rnd() < dt * 5) { this.carriage.updateMatrixWorld(true); const mz = _tv.set(0, 0, this.mounts.gunLen - .2).applyMatrix4(this.barrel.matrixWorld); fxSmoke(mz.x, mz.y, mz.z, rr(-.1, .1), rr(.3, .6), rr(-.1, .1), 1.2, .18, .35, .3, .3, .3, .22, { drag: 1 }); }
+    // the throw: the long arm whips up and over, then the crew haul it back down
+    const u = 1 - this.recoil; this.barrel.rotation.x = this.recoil <= 0 ? -2.1 : u < .18 ? lerp(-2.1, .5, easeIn(u / .18)) : lerp(.5, -2.1, easeInOut((u - .18) / .82));
   }
   updSpire(dt, d, lvl) {
     const tgt = findTarget(this.x, this.z, d.range[lvl], true, true);
@@ -449,17 +453,17 @@ function updateProjectiles(dt) {
   for (let i = Sh.length - 1; i >= 0; i--) {
     const s = Sh[i]; s.t += dt; const u = Math.min(1, s.t / s.T);
     s.x = lerp(s.x0, s.tx, u); s.z = lerp(s.z0, s.tz, u); s.y = lerp(s.y0, s.ty, u) + s.arc * 4 * u * (1 - u);
-    _tm.compose(_tv.set(s.x, s.y, s.z), _tq.setFromAxisAngle(_tz, s.t * 9), _ts.set(1, 1, 1)); KIT.shell.put(_tm, 0, null);
-    FX.add.push(s.x, s.y + .1, s.z, .3, .3, 0, 0, 3.2, 1.5, .3, 1, 0, 0, 0, 0);
-    s.sm += dt * 30; while (s.sm > 1) { s.sm -= 1; fxSmoke(s.x, s.y, s.z, rr(-.1, .1), rr(0, .2), rr(-.1, .1), rr(.5, .9), .16, .3, .26, .25, .25, .32, { drag: 1 }); if (rnd() < .5) fxPart(s.x, s.y, s.z, rr(-.5, .5), rr(-.2, .5), rr(-.5, .5), .4, .05, 2.5, 1.1, .2, { grav: 2 }); }
-    if (u >= 1) { swapRemove(Sh, i); explodeAt(s.tx, s.ty, s.tz, s.dmg, s.splash, s.tower); }
+    _tm.compose(_tv.set(s.x, s.y, s.z), _tq.setFromAxisAngle(_tz, s.t * 9), _ts.set(1, 1, 1)); (s.fire ? KIT.shell : KIT.stoneShot).put(_tm, 0, null);
+    if (s.fire) FX.add.push(s.x, s.y + .1, s.z, .3, .3, 0, 0, 3.2, 1.5, .3, 1, 0, 0, 0, 0);
+    if (s.fire) s.sm += dt * 30; while (s.sm > 1) { s.sm -= 1; fxSmoke(s.x, s.y, s.z, rr(-.1, .1), rr(0, .2), rr(-.1, .1), rr(.5, .9), .16, .3, .26, .25, .25, .32, { drag: 1 }); if (rnd() < .5) fxPart(s.x, s.y, s.z, rr(-.5, .5), rr(-.2, .5), rr(-.5, .5), .4, .05, 2.5, 1.1, .2, { grav: 2 }); }
+    if (u >= 1) { swapRemove(Sh, i); explodeAt(s.tx, s.ty, s.tz, s.dmg, s.splash, s.tower, !s.fire); }
   }
 }
-function explodeAt(x, y, z, dmg, splash, tower) {
+function explodeAt(x, y, z, dmg, splash, tower, stone) {
   const sc = splash / 1.7;
-  fxExplosion(x, y, z, sc);
+  if (stone) { fxDust(x, y + .1, z, 12, splash * .8, { speed: 3.2 }); FX.shake = Math.min(1, FX.shake + .1); sfx('hammer', x, z, 1, .1); sfx('bossStep', x, z, .6, .5); }
+  else { fxExplosion(x, y, z, sc); sfx('explode', x, z, 1, clamp(sc - .6, 0, 1)); }
   FX.decals.add(G.B.heightAt, x, z, splash * 1.2, .016, .013, .011, .85, 45);
-  sfx('explode', x, z, 1, clamp(sc - .6, 0, 1));
   for (const m of G.mons) {
     if (m.dead || m.hp <= 0 || m.fly || !m.vis) continue;
     const d = Math.hypot(m.x - x, m.z - z); if (d > splash + m.rad) continue;

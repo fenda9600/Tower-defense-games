@@ -145,14 +145,14 @@ function initKits() {
     S.box(.31, .17, .05, 0, .075, -.175, ir, { l: L_METAL, rough: .55 }); for (const sg of [-1, 1]) S.box(.045, .18, .2, sg * .178, .075, -.04, ir, { l: L_METAL, rough: .55 });
     for (const y of [.03, .09, .14]) { S.box(.315, .012, .055, 0, y, -.176, irL, { l: L_METAL, jit: 0 }); for (const sg of [-1, 1]) S.box(.05, .012, .205, sg * .179, y, -.04, irL, { l: L_METAL, jit: 0 }); }
     S.box(.06, .07, .03, 0, .21, .19, COL.brass, { l: L_METAL, rough: .4 }); S.cyl(.022, .1, 0, .41, 0, COL.brass, { n: 5, l: L_METAL }); S.ico(.062, 0, .49, -.025, C(0x7a1a14), { d: 0, sc: [1, 1.3, 1.5] });
-  }, 60, { rad: .16, shadow: false });
+  }, 140, { rad: .16, shadow: false });
   E.plate = new PartBatch(S => {
     const ir = mulC(iron, 1.1), irL = COL.ironL;
     S.box(.36, .34, .26, 0, .26, 0, ir, { l: L_METAL, rough: .5 }); for (const y of [.14, .21, .28, .35]) S.box(.366, .014, .266, 0, y, 0, irL, { l: L_METAL, rough: .45, jit: 0 });
     for (const x of [-.09, 0, .09]) S.box(.012, .3, .268, x, .26, 0, mulC(ir, .6), { jit: 0 }); S.cyl(.07, .02, 0, .3, .137, COL.brass, { n: 8, r: [HPI, 0, 0], l: L_METAL, rough: .35 });
     for (const sg of [-1, 1]) { S.box(.16, .05, .21, sg * .22, .455, 0, ir, { l: L_METAL, rough: .5 }); S.box(.14, .1, .19, sg * .255, .39, 0, mulC(ir, .9), { l: L_METAL, rough: .5 }); S.box(.165, .012, .215, sg * .22, .43, 0, irL, { l: L_METAL, jit: 0 }); }
     S.box(.37, .055, .27, 0, .1, 0, C(0x5a1a16), { l: L_CLOTH });
-  }, 60, { rad: .2, shadow: false });
+  }, 120, { rad: .2, shadow: false });
   E.bow = new PartBatch(S => { let p = [0, -.36, 0]; for (let i = 1; i <= 6; i++) { const t = i / 6 * 2 - 1, q = [0, t * .36, (1 - t * t) * .12]; S.seg(p, q, .016, .016, COL.woodL, { n: 4, l: L_WOOD }); p = q; } S.seg([0, -.36, 0], [0, .36, 0], .005, .005, COL.bone, { n: 3, jit: 0 }); }, 40, { rad: .1, shadow: false });
   E.club = new PartBatch(S => { S.seg([0, -.12, 0], [0, .62, 0], .045, .11, COL.wood, { l: L_WOOD, n: 6 }); S.cyl(.12, .1, 0, .6, 0, iron, { n: 6, l: L_METAL }); for (let a = 0; a < 6; a++) S.cone(.03, .12, Math.cos(a * 1.05) * .13, .45 + (a % 2) * .14, Math.sin(a * 1.05) * .13, COL.ironL, { n: 4, l: L_METAL, r: [Math.sin(a * 1.05) * 1.57, 0, -Math.cos(a * 1.05) * 1.57] }); }, 10, { rad: .1 });
   E.guandao = new PartBatch(S => {
@@ -188,6 +188,7 @@ function initKits() {
   };
   KIT.arrow = new PartBatch(S => { S.box(.022, .022, .5, 0, 0, 0, COL.woodL, { jit: 0 }); S.cone(.035, .09, 0, 0, .29, COL.ember, { n: 4, r: [HPI, 0, 0], emis: .9, jit: 0 }); for (const r of [0, HPI]) S.box(.07, .006, .1, 0, 0, -.2, COL.bone, { r: [0, 0, r], jit: 0 }); }, 120, { shadow: false });
   KIT.shell = new PartBatch(S => { S.sph(.12, 0, 0, 0, mulC(COL.iron, .8), { l: L_METAL, w: 7, h: 5, smooth: false, rough: .5 }); S.box(.04, .04, .04, 0, .12, 0, COL.ember, { emis: 1, jit: 0 }); }, 24, {});
+  KIT.stoneShot = new PartBatch(S => { S.rock(.13, 0, 0, 0, COL.stone, {}); }, 24, {});
   KIT.coin = new PartBatch(S => { S.cyl(.075, .022, 0, 0, 0, COL.gold, { n: 8, l: L_METAL, rough: .35, emis: .16, jit: 0 }); S.cyl(.05, .026, 0, 0, 0, mulC(COL.gold, 1.3), { n: 8, l: L_METAL, rough: .3, emis: .2, jit: 0 }); }, 160, { shadow: false, rad: .05 });
   KIT.goo = new PartBatch(S => { S.ico(.08, 0, 0, 0, COL.slime, { d: 1, rough: .3, emis: .08 }); }, 200, { shadow: false, rad: .06 });
   KIT.rubble = new PartBatch(S => { S.rock(.14, 0, 0, 0, COL.stone, {}); }, 160, { rad: .1 });
@@ -243,11 +244,11 @@ function rigHuman(kit, sp, e) {
   if (e.weapon) { const M8 = xf(_M[8], M7, 0, -sp.lArm, 0, bladeA - psiR, 0, 0, e.wScale || 1, e.wScale || 1, e.wScale || 1); e.weapon.put(M8, fl, null); RIGOUT.tip.set(0, .6, 0).applyMatrix4(M8); }
   if (e.shield) { const M9 = xf(_M[9], M5, .04, -sp.lArm * .6, .06, -psiL + .05, .25, 0); e.shield.put(M9, fl, e.shieldTint || null); }
   if (e.torch) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, .25 - psiL, 0, 0); I.torch.put(M9, 0, null); RIGOUT.torch.set(0, .46, 0).applyMatrix4(M9); }
-  if (e.bow) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, HPI + .0, 0, 0); I.bow.put(M9, fl, null); }
+  if (e.bow) { if (e.xbow) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, -psiL, 0, 0); I.xbow.put(M9, fl, null); } else { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, HPI + .0, 0, 0); I.bow.put(M9, fl, null); } }
   if (e.helm) I.helm.put(M3, fl, null);
   if (e.plate) I.plate.put(M2, fl, null);
   if (e.hood) I.hood.put(M3, fl, null); if (e.robe) I.robe.put(M2, fl, null); if (e.drum) I.drum.put(M2, fl, null); if (e.standard) I.standard.put(M2, 0, null);
-  if (e.hat) e.hat.put(M3, fl, null); if (e.back) e.back.put(M2, fl, null);
+  if (e.hat) e.hat.put(M3, fl, null); if (e.back) e.back.put(M2, fl, null); if (e.skirt) e.skirt.put(M1, fl, null);
   if (e.keg) I.keg.put(M2, fl, null); if (e.wraps) { I.wraps.put(M2, fl, null); I.wrapHead.put(M3, fl, null); } if (e.crown) I.crown.put(M3, fl, null); if (e.jhat) I.jhat.put(M3, fl, null); if (e.general) { I.genHelm.put(M3, fl, null); I.genBack.put(M2, fl, null); }
   const kL = e.stiff || e.ride ? 0 : Math.max(0, cw) * 1.0 * mv, kR = e.stiff || e.ride ? 0 : Math.max(0, -cw) * 1.0 * mv;
   // a rider's thighs go forward and out around the saddle, his shins hang

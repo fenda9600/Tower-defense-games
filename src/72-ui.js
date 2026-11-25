@@ -10,7 +10,7 @@ const UI = (() => {
   U.proj = proj;
   U.playerActive = () => U.manual;
   U.setManual = on => { U.manual = !!on; if (!on) { U.menu = null; U.armed = null; } };
-  U.banner = (text, dur, big) => { U.msg = { text, t: 0, dur, big }; };
+  U.banner = (text, dur, big, sub) => { U.msg = { text, t: 0, dur, big, sub }; };
   U.ping = (x, y, z, byPlayer) => { fxTimed(4, x, y + .12, z, 5, 5, byPlayer ? 1.0 : 1.5, byPlayer ? 1.4 : 1.1, byPlayer ? 1.8 : .5, .7, .55, { ground: true }); };
   U.closeMenu = () => { U.menu = null; U.armed = null; };
   U.coinFrom = (x, y, z, value) => {
@@ -199,7 +199,7 @@ const UI = (() => {
     }
     if (U.msg) {
       const m = U.msg; m.t += R.frameDt; const a = sat(Math.min(m.t * 3, (m.dur - m.t) * 2));
-      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = PX.measure(m.text, sc) * sc + pad * 4, h = PX.LINE * sc + pad * 2; c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); c.globalAlpha = 1; }
+      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
     }
     if (U.menu && G.phase === 'play') {
       const m = U.menu, p = proj(m.pad.x, m.pad.y + (m.tower ? Math.min(3.6, m.tower.mounts.top) : 1.2), m.pad.z), a = sat(m.t * 8), mp = 6 * s;
@@ -231,14 +231,17 @@ const UI = (() => {
         const ls = lines(lit || fk), ty = by + bh + 4 * s;
         text(ls[0], px + mp, ty, lit || fk ? COLR.tx : COLR.dim); text(ls[1], px + mp, ty + LH + s, COLR.dim); if (ls[2]) text(ls[2], px + mp, ty + LH * 2 + s, COLR.dim);
       } else {
-        const t = m.tower, d = t.def, maxed = t.lvl >= 2, upc = maxed ? 0 : d.cost[t.lvl + 1], can = !maxed && G.gold >= upc && t.state === 'active', refund = Math.round(t.spent * .6);
+        const t = m.tower, d = t.def, maxed = t.lvl >= t.maxLvl, nT = t.maxLvl + 1, upc = maxed ? 0 : d.cost[t.lvl + 1], can = !maxed && G.gold >= upc && t.state === 'active', refund = Math.round(t.spent * .6);
         const ul = maxed ? '已满级' : '升级 ' + upc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
         const st = t.kind === 'guard' ? '戍卒 ' + d.n[t.lvl] + ' · 生命 ' + d.hp[t.lvl] : '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + d.dmg[t.lvl];
-        const wP = Math.max(bw3 * 2 + 3 * s, tw(d.name) + 26 * s, tw(st)) + mp * 2, hP = mp * 2 + LH * 2 + 5 * s + bh, [px, py] = place(wP, hP);
+        // the era of this level, and what the next level brings
+        const cur = d.tiers[t.lvl][0], nx = maxed ? null : d.tiers[t.lvl + 1], l1 = nx ? '升级为 ' + nx[0] : d.tiers[t.lvl][1], l2 = nx ? nx[1] : '';
+        const wP = Math.max(bw3 * 2 + 3 * s, tw(d.name) + 26 * s, tw(st), tw(cur), tw(l1), tw(l2)) + mp * 2, hP = mp * 2 + LH * 5 + 9 * s + bh, [px, py] = place(wP, hP);
         plate(px, py, wP, hP); text(d.name, px + mp, py + mp - s, COLR.amber);
-        for (let i = 0; i < 3; i++) PX.icon(c, i <= t.lvl ? 'star' : 'starEmpty', px + wP - mp - (3 - i) * 6 * s, py + mp, s);
-        text(st, px + mp, py + mp + LH + s, COLR.dim);
-        const by = py + mp + LH * 2 + 5 * s, bwf = Math.floor((wP - mp * 2 - 3 * s) / 2);
+        for (let i = 0; i < nT; i++) PX.icon(c, i <= t.lvl ? 'star' : 'starEmpty', px + wP - mp - (nT - i) * 6 * s, py + mp, s);
+        text(cur, px + mp, py + mp + LH + s, COLR.tx); text(st, px + mp, py + mp + LH * 2 + s, COLR.dim);
+        text(l1, px + mp, py + mp + LH * 3 + 4 * s, nx ? COLR.amber : COLR.dim); if (l2) text(l2, px + mp, py + mp + LH * 4 + 4 * s, COLR.dim);
+        const by = py + mp + LH * 5 + 9 * s, bwf = Math.floor((wP - mp * 2 - 3 * s) / 2);
         let r = button(px + mp, by, bwf, bh, 'up', can, () => doUpgrade(t), null);
         PX.icon(c, 'upgrade', px + mp + 4 * s, by + 3 * s + r.dy, s, can ? 1 : .4); text(ul, px + mp + 4 * s + iw9 + 3 * s, by + 3 * s + r.dy, can ? COLR.tx : (maxed ? COLR.dim : COLR.red));
         r = button(px + mp + bwf + 3 * s, by, bwf, bh, 'sell', true, () => doSell(t), null);
