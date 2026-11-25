@@ -282,7 +282,7 @@ function buildKeep(B) {
       else { for (let j = 0; j < 3; j++) if (rng() < .7) mas(TG, rng.range(.3, .55), rng.range(.2, .6), .9, x + rng.range(-.4, .4), hh + .15, wz); if (hh < 1.8) for (let j = 0; j < 3; j++) TG.rock(rng.range(.2, .42), x + rng.range(-.6, .6), .12, wz + rng.range(.3, 1.3), mc()); }
     }
   };
-  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, true);
+  wall(-5.3, -1.7, 3.0, false); wall(1.7, 5.3, 3.0, false);
   // gate platform
   const gh = 3.7, gw = 1.75, gz = -.8, gd = 1.7;
   for (const s of [-1, 1]) { mas(TG, gw - 1.05, gh, gd, s * (1.05 + (gw - 1.05) / 2), gh / 2, gz, st, { jit: .03 }); mas(TG, gw - .95, .6, gd + .2, s * (1.05 + (gw - 1.05) / 2 + .05), .3, gz, sdk); mas(TG, .26, 1.5, gd + .04, s * 1.12, .75, gz, sl); }
@@ -347,6 +347,8 @@ function buildKeep(B) {
   B.structs.push({ soup: new Soup().merge(TT, { p: [kx, ky, oz], ao: [0, 1.4, .65] }), cx: kx + bx, cy: ky, cz: oz + bz, kind: 'beaconTower' });
   B.beacon = { x: kx + bx, y: ky + bh + 1.45, z: oz + bz };
   B.gate = { x: kx, y: ky, z: -11.4 };
+  // where the wall garrison stands: the two men flanking the gate first, then outward along the east wall walk
+  B.wallSlots = [2.15, -2.0, 2.75, 3.35, 3.95, 4.55, 5.15, -5.05].map(x => ({ x: kx + x, y: ky + 3.14, z: oz + wz + .1 }));
 }
 
 function buildCave(B) {

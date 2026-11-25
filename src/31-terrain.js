@@ -372,7 +372,7 @@ function finalizeBoard(B) {
     const sa = (a, b) => { for (let i = 0; i < a.length; i++) { const t = a[i]; a[i] = b[i]; b[i] = t; } };
     sa(B.px, B.pz); sa(B.tx, B.tz);
     for (const p of B.pads) sw(p); for (const f of B.fires) sw(f); for (const g of B.glows) sw(g); for (const q of B.ponds) sw(q); for (const e of B.env) sw(e);
-    sw(B.beacon); sw(B.gate); sw(B.cave); if (B.fallAt) { sw(B.fallAt); const t = B.fallAt.ox; B.fallAt.ox = B.fallAt.oz; B.fallAt.oz = t; }
+    sw(B.beacon); sw(B.gate); sw(B.cave); for (const q of B.wallSlots) sw(q); if (B.fallAt) { sw(B.fallAt); const t = B.fallAt.ox; B.fallAt.ox = B.fallAt.oz; B.fallAt.oz = t; }
     const h0 = B.heightAt; B.heightAt = (x, z) => h0(z, x);
     const d0 = B.dRoadAt; B.dRoadAt = (x, z) => d0(z, x);
     for (const sp of B.SP) { const t = sp[0]; sp[0] = sp[1]; sp[1] = t; }

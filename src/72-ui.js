@@ -2,7 +2,7 @@
 const UI = (() => {
   const U = {
     ctx: null, s: 3, insetTop: 0, goldShown: 0, hurt: 0, coins: [], msg: null, hover: null, menu: null, armed: null, idle: 99, mx: -1, my: -1, inside: false,
-    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
+    btns: [], hotBtn: null, press: null, gp: { sel: -1, t: 0, prev: [] , active: false }, goldBump: 0, deny: 0, hintT: 0, titleT: 0, rangeMesh: null, padMesh: null, soundRect: null, cmdRect: null, wallRects: [], wallBox: null, manual: false, moved: 99, focus: 0, slainBump: 0, lastSlain: 0,
   };
   const COLR = { bg: 'rgba(9,11,17,0.86)', bg2: 'rgba(24,27,38,0.94)', bd: '#5d4c35', bdHi: '#e8b04a', tx: '#efe4cd', dim: '#a79e8a', amber: '#e8b04a', ember: '#ff8a3c', cold: '#8fc7ff', red: '#e5553c', dark: '#0b0d14', ok: '#9fd08a' };
   const _pv = new THREE.Vector3(), _o = new THREE.Vector3(), _d = new THREE.Vector3();
@@ -53,6 +53,8 @@ const UI = (() => {
       else if (k === 'x' || k === 'X' || k === 'Delete' || k === 'Backspace') { const t = U.menu && U.menu.tower; if (t) { touchInput(); doSell(t); } }
       else if (k === 'm' || k === 'M') { AU.setMuted(!AU.muted); }
       else if (k === 'c' || k === 'C') { toggleCommand(); }
+      else if (k === 'r' || k === 'R') { doReinforce(); }
+      else if (k === 'g' || k === 'G') { doWallUp(); }
     });
   }
   function audioGesture() { if (!AU.ready) AU.unlock(); }
@@ -61,6 +63,8 @@ const UI = (() => {
   function deny() { U.deny = 1; sfx('uiDeny', CAM.x, CAM.z, .6); }
   function doBuild(pad, kind) { touchInput(); if (buildTower(pad, kind, true)) { sfx('uiClick', pad.x, pad.z, .8); U.menu = null; U.armed = null; return true; } deny(); return false; }
   function doUpgrade(t) { if (upgradeTower(t, true)) { sfx('uiClick', t.x, t.z, .8); U.menu = null; return true; } deny(); return false; }
+  function doReinforce() { touchInput(); if (wallReinforce(true)) { sfx('uiClick', CAM.x, CAM.z, .8); return true; } deny(); return false; }
+  function doWallUp() { touchInput(); if (wallUpgrade(true)) { sfx('uiClick', CAM.x, CAM.z, .8); return true; } deny(); return false; }
   function doSell(t) { if (sellTower(t)) { U.menu = null; return true; } return false; }
   function pickKind(kind) {
     touchInput();
@@ -86,6 +90,7 @@ const UI = (() => {
     const sr = U.soundRect; if (sr && U.mx >= sr.x && U.mx <= sr.x + sr.w && U.my >= sr.y && U.my <= sr.y + sr.h) { if (AU.ready && sr.armed) AU.setMuted(!AU.muted); sr.armed = true; return; }
     const cr = U.cmdRect; if (cr && U.mx >= cr.x && U.mx <= cr.x + cr.w && U.my >= cr.y && U.my <= cr.y + cr.h) { toggleCommand(); return; }
     if (U.hotBtn) { touchInput(); U.press = U.hotBtn.id; U.hotBtn.fn(); return; }
+    for (const r of U.wallRects) if (U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h) { r.fn(); return; }
     const h = pickPad(U.mx, U.my);
     if (h) {
       touchInput();
@@ -118,6 +123,7 @@ const UI = (() => {
     if (hit(0)) { touchInput(); audioGesture(); st.active = true; if (st.sel < 0) st.sel = 0; if (U.menu) { const bt = U.btns[U.menu.focus]; if (bt) bt.fn(); } else { const pad = G.B.pads[st.sel]; U.menu = { pad, tower: pad.tower, t: 0, focus: 0 }; sfx('uiHover', pad.x, pad.z, .9); } }
     if (hit(1)) { U.closeMenu(); touchInput(); }
     if (hit(2)) { const pad = st.sel >= 0 ? G.B.pads[st.sel] : null; if (pad && pad.tower) { touchInput(); doUpgrade(pad.tower); } }
+    if (hit(4)) doReinforce(); if (hit(5)) doWallUp();
     if (hit(3) || hit(9)) { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); }
     for (let i = 0; i < 16; i++) st.prev[i] = b(i);
   }
@@ -139,7 +145,7 @@ const UI = (() => {
       let range = 0; if (tgt.tower) range = tgt.tower.range; else { const kind = (U.menu && U.hotBtn && U.hotBtn.kind) || U.armed || (U.menu && U.btns[U.menu.focus] && U.gp.active && U.btns[U.menu.focus].kind) || 'archer'; range = TOWER[kind].range[0]; }
       setRing(U.rangeMesh, pad.x, pad.z, range, .07); U.rangeMesh.material.opacity = .34;
     } else { U.padMesh.visible = false; U.rangeMesh.visible = false; }
-    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot)) ? 'pointer' : 'default';
+    R.canvas.style.cursor = (U.hotBtn || U.hover || (U.soundRect && U.soundRect.hot) || (U.cmdRect && U.cmdRect.hot) || U.wallRects.some(r => r.hot)) ? 'pointer' : 'default';
   }
 
   function draw() {
@@ -168,7 +174,7 @@ const UI = (() => {
     const wn = '第 ' + Math.max(1, waveNumber()) + ' 波';
     let sub, frac = -1;
     if (G.phase === 'play') { if (!G.spawning && !G.bossWave && G.nextIn > 0) { sub = '下一波 ' + Math.ceil(G.nextIn) + ' 秒'; frac = 1 - G.nextIn / 6.5; } else { const n = G.mons.length + G.queue.length; sub = '来敌 ' + n; } }
-    else sub = G.phase === 'defeat' ? '烽火已熄' : G.phase === 'clear' ? '首领已诛' : '转战下一关';
+    else sub = G.phase === 'defeat' ? '关城失守' : G.phase === 'clear' ? '首领已诛' : '转战下一关';
     const bw = PX.iconSize('banner')[0] * s, wW = Math.max(bw + 3 * s + tw(wn), tw(sub), tw('下一波 00 秒')) + pad * 2 + 4 * s, hW = LH * 2 + pad * 2 + s;
     const you = U.playerActive(), ct = you ? '亲自督战' : '军师代守', cs = you ? '点此交还军师' : '点击塔基即可接管';
     const ic = you ? 'hand' : 'helm', icw = PX.iconSize(ic)[0] * s, cW = Math.max(icw + 3 * s + tw(ct), tw(cs)) + pad * 2 + 2 * s, xc = W - cW - 5 * s, g3 = 3 * s;
@@ -190,7 +196,25 @@ const UI = (() => {
       const hotS = U.inside && U.mx >= xs && U.mx <= xs + w && U.my >= ys && U.my <= ys + h;
       plate(xs, ys, w, h, hotS ? { bd: COLR.bdHi, bg: COLR.bg2 } : {}); PX.icon(c, icn, xs + pad, ys + pad - s, s, AU.ready ? 1 : .8); text(lbl, xs + pad + iw2 + 3 * s, ys + pad - s, AU.ready ? COLR.dim : COLR.tx);
       U.soundRect = { x: xs, y: ys, w, h, hot: hotS, armed: U.soundRect ? U.soundRect.armed || AU.ready : false }; }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · R 增兵 · 空格提前迎敌', w = tw(l) + pad * 2, h = LH + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); c.globalAlpha = 1; } } }
+    // the wall: its garrison, the reinforce skill and the garrison upgrade
+    U.wallRects.length = 0; U.wallBox = null;
+    if (G.phase === 'play' && G.wall && U.titleT >= 7) {
+      const Wl = G.wall, lv = Wl.lvl, maxed = lv >= WALL.tiers.length - 1, full = Wl.n >= WALL.max, upc = maxed ? 0 : WALL.cost[lv + 1];
+      const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = '城防 ' + G.lives + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + WALL.dmg[lv];
+      const la = full ? '守军已满' : 'R 增兵 ' + WALL.addCost, lu = maxed ? '已满级' : 'G 升级 ' + upc;
+      const bh = LH + 4 * s, w = Math.max(tw(t1), tw(t2), (Math.max(tw(la), tw(lu)) + 8 * s) * 2 + 3 * s) + pad * 2, h = LH * 2 + bh + pad * 2 + 3 * s;
+      const xp = Math.round(W / 2 - w / 2), sr = U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
+      plate(xp, yp, w, h, Wl.siegeN ? { bd: COLR.ember } : {}); U.wallBox = { x: xp, y: yp, w, h };
+      text(t1, xp + pad, yp + pad - s, COLR.amber); text(t2, xp + pad, yp + pad + LH, Wl.siegeN ? COLR.ember : COLR.dim);
+      const by = yp + pad + LH * 2 + 2 * s, bw2 = Math.floor((w - pad * 2 - 3 * s) / 2);
+      [[la, !full && G.gold >= WALL.addCost, full, doReinforce], [lu, !maxed && G.gold >= upc, maxed, doWallUp]].forEach(([l, can, done, fn], i) => {
+        const bx = xp + pad + i * (bw2 + 3 * s), over = U.inside && !U.gp.active && U.mx >= bx && U.mx <= bx + bw2 && U.my >= by && U.my <= by + bh;
+        plate(bx, by, bw2, bh, { bg: over ? COLR.bg2 : 'rgba(16,18,27,0.96)', bd: over ? COLR.bdHi : (can ? COLR.bd : '#3a342c'), hi: over ? 'rgba(232,176,74,0.18)' : null });
+        text(l, bx + Math.round(bw2 / 2), by + 2 * s, can ? COLR.tx : done ? COLR.dim : COLR.red, { align: 'c' });
+        U.wallRects.push({ x: bx, y: by, w: bw2, h: bh, fn, hot: over });
+      });
+    }
     for (let i = U.coins.length - 1; i >= 0; i--) {
       const q = U.coins[i]; q.t += R.frameDt; const u = sat(q.t / q.T), e = u * u * (3 - 2 * u), a = 1 - e;
       const px = a * a * q.sx + 2 * a * e * q.cx + e * e * goldPos.x, py = a * a * q.sy + 2 * a * e * q.cy + e * e * goldPos.y;

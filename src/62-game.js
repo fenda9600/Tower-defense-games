@@ -40,7 +40,7 @@ function buildWave(k, level) {
   return q;
 }
 function startWave() {
-  G.k = G.k % 5 + 1; G.queue = buildWave(G.k, G.level); G.waveT = 0; G.spawning = true; G.bossWave = G.k === 5; G.waveKills = 0; G.waveLeaks = 0; G.bossDown = false; G.trickle = 6; G.trickleN = 0;
+  G.k = G.k % 5 + 1; G.queue = buildWave(G.k, G.level); G.waveT = 0; G.spawning = true; G.bossWave = G.k === 5; G.waveKills = 0; G.waveLeaks = 0; G.wall.cried = false; G.bossDown = false; G.trickle = 6; G.trickleN = 0;
   sfx(G.bossWave ? 'hornBoss' : 'horn', G.B.cave.x, G.B.cave.z, 1.1);
   UI.banner(G.bossWave ? '第 ' + waveNumber() + ' 波 · ' + MON[bossType()].name : '第 ' + waveNumber() + ' 波', G.bossWave ? 3.6 : 2.2, G.bossWave);
 }
@@ -69,7 +69,7 @@ function updateWaves(dt) {
     }
   } else if (G.bossWave) {
     G.clearT += dt;
-    if (!G.mons.some(m => !m.dead) || G.clearT > 40) { setPhase('clear'); }
+    if (!G.mons.some(m => !m.dead) || (G.clearT > 40 && !G.wall.siegeN)) { setPhase('clear'); }
   } else {
     G.nextIn -= dt;
     if (G.nextIn <= 0) startWave();
@@ -97,7 +97,7 @@ function sellTower(t) {
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
-const AI = { think: .15, wait: 0, last: '' };
+const AI = { think: .15, wait: 0, last: '', wall: [8, .15, .35, .06] };
 function aiThink(dt) {
   if (G.phase !== 'play' || UI.playerActive()) return;
   AI.think -= dt; if (AI.think > 0) return; AI.think = .5;
@@ -132,6 +132,10 @@ function aiThink(dt) {
     if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05;
     opts.push({ sc, cost: c, act: 'up', t });
   }
+  // the wall: reinforce when the storming party is more than the garrison can shoot down, upgrade once it is well manned
+  { const W = G.wall, threat = sat(W.siegeHp / (wallDps() * AI.wall[0]) / 2), hurt = 1 - G.lives / G.maxLives, late = sat((N - 3) / 4);
+    if (W.n < WALL.max) opts.push({ sc: AI.wall[1] + late * AI.wall[2] + threat * 1.1 + hurt * 1.3 + gatePress * .3 - (W.n - WALL.start) * AI.wall[3], cost: WALL.addCost, act: 'wallAdd' });
+    if (W.lvl < WALL.tiers.length - 1) { const c = WALL.cost[W.lvl + 1]; opts.push({ sc: (AI.wall[1] + late * AI.wall[2] + threat * .8 + hurt * 1.1) * (.4 + W.n / 5) * (empty.length === 0 ? 1.4 : 1) * (170 / c), cost: c, act: 'wallUp' }); } }
   if (!opts.length) return;
   opts.sort((a, b) => b.sc - a.sc);
   let pick = opts[0];
@@ -141,14 +145,14 @@ function aiThink(dt) {
     if (!aff) return; pick = aff;
   }
   AI.wait = 0;
-  if (pick.act === 'build') buildTower(pick.pad, pick.kind, false); else upgradeTower(pick.t, false);
+  if (pick.act === 'build') buildTower(pick.pad, pick.kind, false); else if (pick.act === 'wallAdd') wallReinforce(false); else if (pick.act === 'wallUp') wallUpgrade(false); else upgradeTower(pick.t, false);
   AI.think = N < 3 ? .12 : .8;
 }
 
 function setPhase(p) {
   G.phase = p; G.phaseT = 0;
   if (p === 'clear') { G.advance = true; UI.banner('关隘无恙', 3.2, false); UI.closeMenu(); }
-  if (p === 'defeat') { UI.banner('烽火熄灭', 4.2, true); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
+  if (p === 'defeat') { UI.banner('关城失守', 4.2, true, '烽火熄灭'); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
   if (p === 'crumble') startCrumble();
   if (p === 'rise') startRise();
 }
@@ -187,7 +191,7 @@ function activateBoard(B, lit) {
 }
 function beginBattle(first) {
   const B = G.B;
-  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0;
+  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall();
   const n = 4 + Math.min(3, G.level);
   for (let i = 0; i < n; i++) spawnMonster(i === n - 1 && G.level > 0 ? 'knight' : 'skel', { s: B.cave.s + 2.2 + i * 1.15, lat: rr(-.7, .7), hpMul: 1 + .22 * G.level });
   G.phase = 'play'; G.phaseT = 0;

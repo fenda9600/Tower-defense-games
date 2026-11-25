@@ -256,7 +256,7 @@ function drawFootman(f) {
 
 const _units = [];
 function updateUnits(dt) {
-  const B = G.B, mons = G.mons, men = G.men, L = B.L, maxLatBase = ROAD_HALF + .04;
+  const B = G.B, mons = G.mons, men = G.men, L = B.L, maxLatBase = ROAD_HALF + .04, gateS = L - .35;
   for (let i = men.length - 1; i >= 0; i--) { const f = men[i]; if (f.gone) { swapRemove(men, i); continue; } footmanThink(f, dt); if (f.gone) swapRemove(men, i); }
   _units.length = 0;
   for (const m of mons) { m.haste = 0; if (!m.dead && !m.fly && !m.def.ghost) _units.push(m); }
@@ -303,7 +303,7 @@ function updateUnits(dt) {
     if (def.boss) {
       if (!m.foe) for (const f of men) if (!f.dead && f.onRoad && f.s > m.s - .3 && f.s - m.s < 1.9 && Math.abs(f.lat - m.lat) < 1.4) { m.foe = f; break; }
       if (m.foe) v *= .55;
-    } else if (m.foe) v = 0;
+    } else if (m.foe || m.siege) v = 0;
     else if (!def.ghost) for (let j = 0; j < nu; j++) {
       const o = U[j]; if (o === m || (def.slip && o.isMan)) continue; const ds = o.s - m.s; if (ds <= 0 || ds > 1.7 + m.rad + o.rad) continue;
       if (Math.abs(o.lat - m.lat) > (m.rad + o.rad) * .92) continue;
@@ -311,7 +311,10 @@ function updateUnits(dt) {
       if (lim < v) { v = lim; obstacle = o; og = gap; }
     }
     if (!m.foe && obstacle && obstacle.isMan && og < .3 && obstacle.foes < 2) m.foe = obstacle;
-    if (obstacle && v < want * .55 && !m.foe) {
+    // the column closes up behind those already at the wall and joins the assault
+    if (!m.siege && obstacle && obstacle.siege && og < .3 && m.s > gateS - SIEGE.depth) joinSiege(m);
+    if (m.dead) continue;
+    if (obstacle && v < want * .55 && !m.foe && !m.siege) {
       if (m.laneT === undefined || m.laneT <= 0) {
         m.laneT = .35; const first = rnd() < .5 ? 1 : -1;
         for (const d of [first * .5, -first * .5, first * 1.0, -first * 1.0]) {
@@ -321,7 +324,7 @@ function updateUnits(dt) {
         }
       } else m.laneT -= dt;
     } else if (!obstacle) m.lane = damp(m.lane, m.home, .25, dt);
-    m.vf = v; m.spdNow = damp(m.spdNow, want * (m.foe ? (def.boss ? .55 : 0) : 1), 3, dt);
+    m.vf = v; m.spdNow = damp(m.spdNow, want * (m.siege ? 0 : m.foe ? (def.boss ? .55 : 0) : 1), 3, dt);
     const kd = Math.exp(-7 * dt); m.s += (v - m.ks * 0) * dt + m.ks * dt; m.lat += m.kl * dt; m.ks *= kd; m.kl *= kd;
     m.lat += clamp(m.lane - m.lat, -1.3 * dt, 1.3 * dt); m.lat = clamp(m.lat, -maxLat, maxLat); m.s = Math.max(.3, m.s);
     const moved = v * dt;
@@ -331,11 +334,11 @@ function updateUnits(dt) {
     m.cd -= dt;
     if (m.atk >= 0) {
       m.atk += dt / def.atkT * 1.7;
-      if (m.atk >= .5 && !m.struck) { m.struck = true; const f = m.foe; if (f && !f.dead && Math.hypot(f.x - m.x, f.z - m.z) < m.rad + f.rad + (def.boss ? 1.4 : .8)) strike(m, f, def.dmg * G.dmgMul, false); }
+      if (m.atk >= .5 && !m.struck) { m.struck = true; const f = m.foe; if (f && !f.dead && Math.hypot(f.x - m.x, f.z - m.z) < m.rad + f.rad + (def.boss ? 1.4 : .8)) strike(m, f, def.dmg * G.dmgMul, false); else if (m.siege && !f) siegeStrike(m); }
       if (m.atk >= 1) { m.atk = -1; m.cd = def.atkT * rr(.35, .5); }
-    } else if (m.foe && m.cd <= 0) { m.atk = 0; m.struck = false; if (def.boss) sfx('roar', m.x, m.z, .5, .7); }
+    } else if ((m.foe || m.siege) && m.cd <= 0) { m.atk = 0; m.struck = false; if (def.boss && (m.foe || rnd() < .3)) sfx('roar', m.x, m.z, .5, .7); }
     if (def.boss && v > .05) { const st = Math.floor(m.ph / PI); if (st !== m.step) { m.step = st; const p = pathAt(B, m.s, _ap), sd = (st & 1) ? 1 : -1; const fxp = m.x - p.tz * sd * .5, fzp = m.z + p.tx * sd * .5; fxDust(fxp, m.y + .05, fzp, 7, 1.0, { speed: 2.2 }); FX.shake = Math.min(1.1, FX.shake + .4); sfx('bossStep', m.x, m.z, 1, .6); FX.decals.add(B.heightAt, fxp, fzp, .55, .02, .017, .015, .5, 9); } }
-    if (m.s >= L - .35) { leak(m); continue; }
+    if (m.s >= gateS) { m.s = gateS; if (!m.siege) { joinSiege(m); if (m.dead) continue; } }
   }
   for (const u of U) if (u.isMan) u.foes = 0;
   for (const m of mons) if (!m.dead && m.foe) m.foe.foes++;
@@ -352,7 +355,7 @@ function updateUnits(dt) {
   for (const m of mons) {
     if (m.dead || m.fly) continue;
     const dx = m.x - m._x0, dz = m.z - m._z0, maxLat = Math.max(0, maxLatBase - m.rad * .7);
-    if (dx || dz) { m.s = Math.max(.3, m.s + clamp(dx * m._tx + dz * m._tz, -.12, .12)); m.lat = clamp(m.lat + (-dx * m._tz + dz * m._tx), -maxLat, maxLat); }
+    if (dx || dz) { m.s = clamp(m.s + clamp(dx * m._tx + dz * m._tz, -.12, .12), .3, gateS); m.lat = clamp(m.lat + (-dx * m._tz + dz * m._tx), -maxLat, maxLat); }
     const p = pathAt(B, m.s, _ap); m.x = p.x - p.tz * m.lat; m.z = p.z + p.tx * m.lat;
     let yaw = Math.atan2(p.tx, p.tz); if (m.foe) yaw = Math.atan2(m.foe.x - m.x, m.foe.z - m.z);
     m.yaw = angDamp(m.yaw, yaw, m.def.boss ? 4 : 9, dt);
@@ -372,7 +375,7 @@ function updateBat(m, dt) {
 }
 function leak(m) {
   const B = G.B, n = m.def.lives;
-  G.lives = Math.max(0, G.lives - n); G.leaks++; G.waveLeaks++; G.leakTypes[m.type] = (G.leakTypes[m.type] || 0) + n;
+  G.lives = Math.max(0, G.lives - n); G.leaks++; G.waveLeaks += n; G.leakTypes[m.type] = (G.leakTypes[m.type] || 0) + n;
   LT.beaconGutter = 1; UI.hurt = 1;
   if (m.fly) { fxSparks(m.x, m.y, m.z, 14, 5, 3, 1.4, .4); fxSmoke(m.x, m.y, m.z, 0, 1, 0, 1.2, .5, .8, .2, .2, .2, .6); }
   else { for (let i = 0; i < 6; i++) fxSmoke(m.x + rr(-.3, .3), m.y + rr(.2, 1), m.z + rr(-.3, .3), rr(-.4, .4), rr(.2, .8), rr(-.4, .4), rr(.6, 1.2), .5, .7, .05, .05, .07, .7, { drag: 2 }); }
