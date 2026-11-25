@@ -22,7 +22,7 @@ function waveMenu(k, level) {
 function bossType() { const b = G.B.bio.boss; return b[Math.floor(G.level / BIOMES.length) % b.length]; }
 function buildWave(k, level) {
   const q = [], boss = k === 5, lv = 1 + .15 * level, ez = campaignEase(level);
-  let budget = (34 + 25 * (k - 1)) * lv * G.press * (boss ? .7 : 1) * ez[0], heavy = 0, air = budget * .2;
+  let budget = (34 + 25 * (k - 1)) * lv * G.press * (boss ? FOE.muster.budget : 1) * ez[0] - foeVanCost(k, level), heavy = 0, air = budget * .2;
   const hpMul = (1 + .13 * (k - 1)) * (1 + .22 * level) * (.85 + .15 * G.press) * ez[1];
   const menu = waveMenu(k, level), tot = menu.reduce((a, b) => a + b[1], 0);
   let t = .6;
@@ -45,6 +45,7 @@ function startWave() {
   G.k = G.k % 5 + 1; G.queue = buildWave(G.k, G.level); G.waveT = 0; G.spawning = true; G.bossWave = G.k === 5; G.waveKills = 0; G.waveLeaks = 0; G.wall.cried = false; G.bossDown = false; G.trickle = 6; G.trickleN = 0;
   sfx(G.bossWave ? 'hornBoss' : 'horn', G.B.cave.x, G.B.cave.z, 1.1);
   UI.banner(G.bossWave ? '第 ' + waveNumber() + ' 波 · ' + MON[bossType()].name : '第 ' + waveNumber() + ' 波', G.bossWave ? 3.6 : 2.2, G.bossWave, G.bossWave ? raidWarn(bossType()) : undefined);
+  foeWave(); // the vanguard, the muster before a general assault, a flank raid (65-foe.js)
 }
 function endWave() {
   const l = G.waveLeaks;
@@ -60,13 +61,13 @@ function updateWaves(dt) {
     G.waveT += dt;
     while (G.queue.length && G.queue[0].t <= G.waveT) {
       if (G.mons.length > 84) break;
-      const e = G.queue.shift(); spawnMonster(e.type, { hpMul: e.hpMul });
+      const e = G.queue.shift(); foeSpawn(e);
     }
     if (!G.queue.length) {
       G.bossAlive = G.mons.some(m => m.def.boss && !m.dead);
       if (G.bossWave && G.bossAlive) {
         G.trickle -= dt;
-        if (G.trickle <= 0 && G.trickleN < 9) { G.trickleN++; G.trickle = rr(3.2, 4.6); const tm = waveMenu(5, G.level).filter(e => ROSTER[e[0]][0] < 13), ty = tm[Math.floor(rnd() * tm.length)][0], n = Math.max(1, Math.min(5, Math.round(8 / ROSTER[ty][0]))), hpMul = (1 + .5) * (1 + .22 * G.level) * campaignEase(G.level)[1]; for (let i = 0; i < n; i++) G.queue.push({ t: G.waveT + i * .4, type: ty, hpMul }); }
+        if (G.trickle <= 0 && G.trickleN < FOE.call.trickle) { G.trickleN++; G.trickle = rr(3.2, 4.6); const tm = waveMenu(5, G.level).filter(e => ROSTER[e[0]][0] < 13), ty = tm[Math.floor(rnd() * tm.length)][0], n = Math.max(1, Math.min(5, Math.round(8 / ROSTER[ty][0]))), hpMul = (1 + .5) * (1 + .22 * G.level) * campaignEase(G.level)[1]; for (let i = 0; i < n; i++) G.queue.push({ t: G.waveT + i * .4, type: ty, hpMul }); }
       } else { G.spawning = false; endWave(); G.nextIn = G.bossWave ? -1 : 6.5; G.clearT = 0; }
     }
   } else if (G.bossWave) {
@@ -198,7 +199,7 @@ function activateBoard(B, lit) {
 }
 function beginBattle(first) {
   const B = G.B;
-  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall(); RAID.shots.length = 0; RAID.ruined = RAID.rebuilt = 0;
+  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall(); RAID.shots.length = 0; RAID.ruined = RAID.rebuilt = 0; foeReset();
   const n = 4 + Math.min(3, G.level);
   for (let i = 0; i < n; i++) spawnMonster(i === n - 1 && G.level > 0 ? 'knight' : 'skel', { s: B.cave.s + 2.2 + i * 1.15, lat: rr(-.7, .7), hpMul: 1 + .22 * G.level });
   G.phase = 'play'; G.phaseT = 0;

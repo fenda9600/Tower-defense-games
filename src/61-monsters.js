@@ -205,10 +205,10 @@ function footmanThink(f, dt) {
   const rally = slotPos(f, _fp), rs = tw.pad.s;
   if (f.leave) { f.gone = true; f.alive = false; if (f.flame) { removeFlame(f.flame); f.flame = null; } fxDust(f.x, f.y + .3, f.z, 4, .6); return; }
   let m = f.target;
-  if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > 3.0 || m.dying || m.wallSt)) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
+  if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > 3.0 || m.dying || (m.wallSt && !m.rove))) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
   if (!m && f.state !== 'march') {
     let best = null, bd = 1e9;
-    for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost || q.wallSt) continue; if (Math.abs(q.s - rs) > 2.5) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
+    for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost || (q.wallSt && !q.rove)) continue; if (Math.abs(q.s - rs) > 2.5) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
     if (best) { m = f.target = best; best.men++; }
   }
   if (m) {
@@ -246,7 +246,7 @@ function strike(a, b, dmg, byMan) {
     for (const f of hitList) {
       f.hp -= dmg; f.flash = 1; f.flinch = 1;
       if (!f.torch && rnd() < .65) { fxSparks(f.x - dx / l * .2, my, f.z - dz / l * .2, 5, 3.2, 3, 2.3, 1.3, { size: .055, grav: 7 }); if (f === b) sfx('clash', mx, mz, .6, rnd()); } else if (f === b) sfx('slash', mx, mz, .55, rnd());
-      if (f.hp <= 0) killFootman(f, dx / l, dz / l);
+      if (f.hp <= 0) { killFootman(f, dx / l, dz / l); foeKill(a); }
     }
   }
 }
@@ -278,7 +278,7 @@ function updateUnits(dt) {
       if (m.dying <= 0) finishBoss(m); continue;
     }
     if (def.ladder && !m.wallSt && m.s > gateS - 4.5) tryLadder(m);
-    if (m.wallSt) { updateStormer(m, dt); continue; }
+    if (m.wallSt) { if (m.rove) updateRover(m, dt); else updateStormer(m, dt); continue; }
     if (m.foe && (m.foe.dead || m.foe.gone)) m.foe = null;
     if (def.explode && m.foe) { m.hp = 0; killMonster(m, 'blast', 0, 0, null); continue; }
     if (def.regen && m.hp < m.maxHp && G.t - m.hitAt > 2.2) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * def.regen * dt);
@@ -305,6 +305,7 @@ function updateUnits(dt) {
     if (def.enrage && m.hp < m.maxHp * def.enrage[0]) { want *= def.enrage[1]; if (!m.rage) { m.rage = true; sfx('roar', m.x, m.z, 1, .9); fxEmbers(m.x, m.y + 2, m.z, 40, 1.2); FX.shake = Math.min(1.2, FX.shake + .6); } }
     if (def.hop) { if (!m.foe) m.hop = (m.hop + dt * def.hop[0] * (1 - m.slowF * .6)) % 1; hopMul = (m.hop > .22 && m.hop < .62) ? def.hop[1] : .1; }
     let v = want * hopMul, obstacle = null, og = 9;
+    { const fk = foeThink(m, dt); if (m.wallSt) continue; v *= fk; } // vanguard, muster and the chief's call (65-foe.js)
     if (def.boss) {
       if (!m.foe) for (const f of men) if (!f.dead && f.onRoad && f.s > m.s - .3 && f.s - m.s < 1.9 && Math.abs(f.lat - m.lat) < 1.4) { m.foe = f; break; }
       if (m.foe) { v *= .55; if (m.raid) raidEnd(m); } else v *= raidThink(m, dt);
@@ -339,7 +340,7 @@ function updateUnits(dt) {
     m.cd -= dt;
     if (m.atk >= 0) {
       m.atk += dt / def.atkT * 1.7;
-      if (m.atk >= .5 && !m.struck) { m.struck = true; const f = m.foe; if (f && !f.dead && Math.hypot(f.x - m.x, f.z - m.z) < m.rad + f.rad + (def.boss ? 1.4 : .8)) strike(m, f, def.dmg * G.dmgMul, false); else if (m.siege && !f) siegeStrike(m); else if (m.raid && !f) raidStrike(m); }
+      if (m.atk >= .5 && !m.struck) { m.struck = true; const f = m.foe; if (f && !f.dead && Math.hypot(f.x - m.x, f.z - m.z) < m.rad + f.rad + (def.boss ? 1.4 : .8)) strike(m, f, def.dmg * G.dmgMul * (m.pow || 1), false); else if (m.siege && !f) siegeStrike(m); else if (m.raid && !f) raidStrike(m); }
       if (m.atk >= 1) { m.atk = -1; m.cd = def.atkT * rr(.35, .5); }
     } else if ((m.foe || m.siege || m.raid) && m.cd <= 0) { m.atk = 0; m.struck = false; if (def.boss && (m.foe || rnd() < .3)) sfx('roar', m.x, m.z, .5, .7); }
     if (def.boss && v > .05) { const st = Math.floor(m.ph / PI); if (st !== m.step) { m.step = st; const p = pathAt(B, m.s, _ap), sd = (st & 1) ? 1 : -1; const fxp = m.x - p.tz * sd * .5, fzp = m.z + p.tx * sd * .5; fxDust(fxp, m.y + .05, fzp, 7, 1.0, { speed: 2.2 }); FX.shake = Math.min(1.1, FX.shake + .4); sfx('bossStep', m.x, m.z, 1, .6); FX.decals.add(B.heightAt, fxp, fzp, .55, .02, .017, .015, .5, 9); } }

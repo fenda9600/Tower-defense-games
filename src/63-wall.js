@@ -145,7 +145,7 @@ function updateStormer(m, dt) {
       if (!a.foe || a.foe.dead) a.foe = m; m.yaw = angDamp(m.yaw, Math.atan2(a.sl.x - m.x, a.sl.z - m.z), 10, dt);
       if (m.atk >= 0) {
         m.atk += dt / def.atkT * 1.7;
-        if (m.atk >= .5 && !m.struck) { m.struck = true; a.hp -= Math.max(3, def.dmg) * G.dmgMul * SIEGE.melee; a.e.flash = 1; a.e.flinch = 1; fxSparks(a.sl.x, a.sl.y + .9, a.sl.z, 4, 3, 3, 2.3, 1.3, { size: .055, grav: 7 }); sfx(rnd() < .5 ? 'clash' : 'slash', m.x, m.z, .6, rnd()); if (a.hp <= 0) { killWallMan(a, -W.fx, -W.fz); m.wfoe = null; } }
+        if (m.atk >= .5 && !m.struck) { m.struck = true; a.hp -= Math.max(3, def.dmg) * G.dmgMul * SIEGE.melee * (m.pow || 1); a.e.flash = 1; a.e.flinch = 1; fxSparks(a.sl.x, a.sl.y + .9, a.sl.z, 4, 3, 3, 2.3, 1.3, { size: .055, grav: 7 }); sfx(rnd() < .5 ? 'clash' : 'slash', m.x, m.z, .6, rnd()); if (a.hp <= 0) { killWallMan(a, -W.fx, -W.fz); m.wfoe = null; foeKill(m); } }
         if (m.atk >= 1) { m.atk = -1; m.cd = def.atkT * rr(.35, .5); }
       } else if (m.cd <= 0) { m.atk = 0; m.struck = false; }
     }
