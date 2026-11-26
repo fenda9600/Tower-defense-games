@@ -457,6 +457,6 @@ const HERO = (() => {
       else if (e.key === 'Escape' && H.open) { closePanel(); e.stopPropagation(); }
     }, true);
   }
-  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, status, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
+  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, status, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf, costOf, fxText });
   return H;
 })();
