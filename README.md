@@ -4,6 +4,10 @@
 
 本分支 `zh-war-theme` 把原版 [Cinderwatch](https://kevintngo.github.io/cinderwatch/) 的场景、建筑、单位、界面与音效整体换成了中式战争风格，玩法与数值未动。
 
+[![60 秒介绍视频：点击播放](media/intro-60s.jpg)](media/intro-60s.mp4)
+
+60 秒介绍视频（点上图播放）：主界面、十处战场、按朝代升级的工事，以及中等、困难两档的火器。画面与声音都是游戏实机逐帧录制。
+
 ![雁门关：白骨将军攻到关前](media/screenshot-zh.jpg)
 
 ## 改了什么
