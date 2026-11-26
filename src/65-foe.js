@@ -32,7 +32,7 @@ Object.assign(MON, {
 RIGS.picked = m => { m.weapon = KIT.item.dao; m.hat = KIT.item.ironCap; return rigHuman(KIT.foe, SPEC.foot, m); };
 RIGS.lanzi = m => { m.weapon = KIT.item.saber; m.hat = KIT.item.furHat; m.riderKit = KIT.hu; return rigHorse(m); };
 SIEGE.climb.picked = 1.2; GATE.weight.lanzi = 1.2; STORM_SC.rove = 1.5;
-GATE.weight.huihui = 1.5; GATE.weight.tammachi = 1.5;
+GATE.weight.huihui = 1.5; GATE.weight.tammachi = 1.5; GATE.weight.dunche = 4; GATE.weight.sibing = 1.4; SIEGE.climb.sibing = 2.8;
 
 function foeReset() { const st = FOE.st; st.muster = false; st.musterAt = st.releaseAt = -1; st.sneak = null; st.ruins = st.sneaks = st.calls = st.promos = st.van = 0; st.bossAt = 0; }
 
@@ -56,6 +56,8 @@ function foeWave() {
     if (b) { b.t = V.lead + M.span * M.bossAt; b.hold = true; }
     st.musterAt = V.lead; st.releaseAt = V.lead + M.span + M.wait;
   } else for (const e of q) e.t += V.lead;
+  // the men who march behind a mantlet cart
+  for (const e of q.slice()) { const es = MON[e.type].escort; if (es && fielded(es[0])) for (let i = 0; i < es[1]; i++) q.push({ t: e.t + .5 + i * .45, type: es[0], hpMul: e.hpMul, hold: e.hold }); }
   van.forEach((type, i) => q.push({ t: .3 + i * .55, type, hpMul, van: true }));
   q.sort((a, b) => a.t - b.t); st.van += van.length;
   const nP = van.filter(t => t === 'picked').length, nL = van.length - nP, who = (nL ? MON.lanzi.name + ' ' + nL + ' · ' : '') + MON.picked.name + ' ' + nP;
@@ -267,6 +269,7 @@ const _fq = new THREE.Quaternion(), _fup = new THREE.Vector3(0, 1, 0), _fv = new
 // Once a step: the clock of the muster and of the flank raid, and the pennants of promoted men.
 function foeUpdate(dt) {
   const st = FOE.st, B = G.B, M = FOE.muster;
+  MANTLET.live = 0; for (const m of G.mons) if (m.def.mantlet && !m.dead) MANTLET.live++;
   if (G.phase !== 'play') { st.muster = false; st.sneak = null; return; }
   if (G.spawning && G.bossWave && st.musterAt >= 0) {
     if (!st.muster && G.waveT >= st.musterAt && G.waveT < st.releaseAt) {

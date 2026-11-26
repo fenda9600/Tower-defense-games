@@ -33,8 +33,13 @@ const MON = {
 // The troops the harder grades bring (26-diff.js): Yuan and Ming in the middle grade, the Ming-Qing wars in the hard one.
 // lob: a counterweight trebuchet halts once a work or the gate is within range and throws its stones, then marches on. engine: footmen sally out against it.
 // charge: a heavy horseman closing on a footman quickens to pace and lands his first blow at blow times its weight.
+// mantlet: shots from ahead (arrows, bolts, and gun balls less what they pierce) do front times their damage to the cart and cover times to men
+// up to depth behind it within width of its line. mail: a second coat of armour that takes everything but arrows (see armor) and gunpowder down to mail.
+// escort: men who march behind the cart, drawn from the column's own budget.
 Object.assign(MON, {
   huihui: { name: '回回砲', en: 'Counterweight trebuchet', hp: 420, spd: .5, rad: .58, mass: 14, bounty: 26, lives: 2, hitH: 1.0, top: 3.6, dmg: 6, atkT: 1.4, scale: 1, cart: 'huihui', gait: 1.6, death: 'wood', cat: 'armor', engine: true, split: ['slimelet', 3], lob: { range: 7.8, dmg: 30, gate: 36, every: 5.5, stones: 5, T: 1.7 } },
+  dunche: { name: '楯车', en: 'Mantlet cart', hp: 300, spd: .7, rad: .55, mass: 9, bounty: 18, lives: 2, hitH: .8, top: 2.3, dmg: 8, atkT: 1.2, scale: 1, cart: 'dunche', gait: 2.1, death: 'wood', cat: 'armor', split: ['skel', 2], mantlet: { front: .12, cover: .3, depth: 3.4, width: 1.15, arc: -.2 }, escort: ['sibing', 2] },
+  sibing: { name: '重甲死兵', en: 'Armoured vanguard', hp: 230, spd: .82, rad: .31, mass: 3, bounty: 15, lives: 1, hitH: .8, top: 1.75, dmg: 14, atkT: 1.2, scale: 1.12, armor: .3, mail: .6, death: 'man', blade: true, cat: 'armor' },
   tammachi: { name: '探马赤军', en: 'Tammachi horse', hp: 150, spd: 2.3, rad: .34, mass: 2.6, bounty: 15, lives: 2, hitH: 1.05, top: 2.25, dmg: 13, atkT: .9, scale: .95, armor: .45, bard: true, death: 'horse', gait: 3.2, cat: 'armor', blade: true, charge: { reach: 3.4, pace: 1.45, blow: 2.5, rest: 6 } },
 });
 
@@ -66,12 +71,25 @@ function hitMonster(m, dmg, kind, dx, dz, tower, pierce = 0) {
   if (m.eth) { if (kind === 'arrow' || kind === 'sword') { if (rnd() < .5) fxTimed(0, m.x + rr(-.2, .2), m.y + m.hitH + rr(-.2, .3), m.z + rr(-.2, .2), .5, .5, .5, .9, 1.8, .7, .18); return false; } dmg *= .5; }
   if (kind === 'arrow' && m.def.armor) { dmg *= m.def.armor; if (rnd() < .6) { fxSparks(m.x, m.y + m.hitH, m.z, 3, 3, 2.4, 2.2, 1.6, { size: .05 }); } }
   if (kind === 'ball' && m.def.armor) dmg *= lerp(m.def.armor, 1, pierce);
+  if (m.def.mail && kind !== 'arrow' && kind !== 'ball' && kind !== 'shot') dmg *= m.def.mail;
+  if (MANTLET.live && (kind === 'arrow' || kind === 'bolt' || kind === 'ball')) dmg *= mantletK(m, kind, dx, dz, pierce);
   m.hp -= dmg; m.flash = 1; m.flinch = m.def.boss ? Math.max(m.flinch, .25) : 1; m.hitAt = G.t;
   const kb = (kind === 'blast' ? 2.6 : kind === 'sword' ? 1.3 : kind === 'arrow' ? .7 : .2) / Math.sqrt(m.mass);
   if (!m.fly && (dx || dz)) { const p = pathAt(G.B, m.s, _ap); m.ks += (dx * p.tx + dz * p.tz) * kb; m.kl += (-dx * p.tz + dz * p.tx) * kb; }
   if (tower) { tower.dealt += dmg; tower.recent += dmg; }
   if (m.hp <= 0) { killMonster(m, kind, dx, dz, tower); return true; }
   return false;
+}
+// The mantlet carts on the field (counted once a step in foeUpdate) and what they take off a shot at m coming the way dx, dz.
+const MANTLET = { live: 0 };
+function mantletK(m, kind, dx, dz, pierce) {
+  const l = Math.hypot(dx, dz); if (!l) return 1; const ux = dx / l, uz = dz / l; let k = 1;
+  for (const c of G.mons) {
+    const M = c.def.mantlet; if (!M || c.dead || c.hp <= 0 || c.wallSt || ux * Math.sin(c.yaw) + uz * Math.cos(c.yaw) > M.arc) continue;
+    if (c === m) k = Math.min(k, M.front); else if (!m.fly && !m.wallSt && c.s > m.s && c.s - m.s < M.depth && Math.abs(c.lat - m.lat) < M.width) k = Math.min(k, M.cover);
+  }
+  if (k < 1) { const c = m.def.mantlet ? m : null; fxSparks(m.x - ux * (c ? .6 : .3), m.y + m.hitH, m.z - uz * (c ? .6 : .3), 2, 2, 2.4, 2, 1.4, { size: .045 }); }
+  return kind === 'ball' ? lerp(k, 1, pierce) : k;
 }
 function dropCoins(x, y, z, bounty, n) {
   G.gold += bounty; const each = bounty / n;
@@ -158,6 +176,8 @@ const RIGS = {
   jotun(m) { m.weapon = KIT.item.spear; m.wScale = 1.2; m.helm = true; m.plate = true; m.riderKit = KIT.chief; return rigHorse(m); },
   tammachi(m) { if (!KIT.gun) gradeKits(); m.weapon = KIT.item.spear; m.wScale = 1.15; m.plate = true; m.helm = false; m.hat = KIT.item.mgHelm; m.riderKit = KIT.hu; m.horseTint = [1.35, 1.25, 1.15]; return rigHorse(m); },
   huihui: m => rigHuihui(m),
+  dunche: m => rigDunche(m),
+  sibing(m) { if (!KIT.gun) gradeKits(); m.weapon = KIT.item.spear; m.wScale = 1.1; m.plate = true; m.back = KIT.item.sbJia; m.skirt = KIT.item.sbSkirt; m.hat = KIT.item.jinHelm; return rigHuman(KIT.foe, SPEC.foot, m); },
   brood: rigElephant, queen: rigElephant,
   slime: rigCart, mummy: rigCart, colossus: rigCart,
   bat: rigFlyer, wisp: rigFlyer, gargoyle: rigFlyer,

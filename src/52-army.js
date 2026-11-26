@@ -267,12 +267,39 @@ function gradeKits() {
     S.cyl(.1, .9, 0, .62, -.95, timD, { n: 6, r: [0, 0, HPI], l: L_WOOD }); for (const sg of [-1, 1]) S.box(.06, .3, .06, sg * .46, .55, -.95, tim, { l: L_WOOD });
     S.box(.3, .08, .8, 0, .5, .75, tim, { l: L_WOOD }); S.rock(.16, 0, .64, .9, COL.stone, {});
   }, 16, { rad: .9 });
+  // the Jurchen heavy foot: an iron helmet with a spike and a mail curtain, a second coat of lamellar over the first, and long tassets
+  const irH = mulC(COL.iron, 1.25), irHL = COL.ironL, lea = C(0x4a3020);
+  I.jinHelm = new PartBatch(S => { S.add(gDome(8, 3), { s: [.165, .17, .17], p: [0, .21, 0], c: irH, l: L_METAL, rough: .45 }); S.cone(.025, .16, 0, .45, 0, irHL, { n: 4, l: L_METAL }); S.cyl(.18, .03, 0, .21, 0, irHL, { n: 8, l: L_METAL }); for (const y of [.15, .09, .03]) S.cyl(.19 - (.21 - y) * .1, .05, 0, y, -.02, mulC(irH, .85), { n: 8, l: L_METAL, rough: .55, open: true }); S.box(.22, .04, .03, 0, .13, .17, irHL, { l: L_METAL }); }, 60, { rad: .2, shadow: false });
+  I.sbJia = new PartBatch(S => { S.box(.4, .38, .3, 0, .22, 0, irH, { l: L_METAL, rough: .5 }); for (let y = .06; y < .42; y += .05) S.box(.405, .012, .305, 0, y, 0, irHL, { l: L_METAL, jit: 0 }); for (const sg of [-1, 1]) { S.box(.22, .1, .3, sg * .26, .44, 0, irH, { l: L_METAL }); S.box(.2, .12, .27, sg * .3, .34, 0, mulC(irH, .9), { l: L_METAL, r: [0, 0, sg * .3] }); } S.box(.42, .06, .31, 0, .02, 0, lea, { l: L_CLOTH }); S.box(.12, .12, .02, 0, .28, .16, COL.brass, { l: L_METAL }); }, 60, { rad: .2, shadow: false });
+  I.sbSkirt = new PartBatch(S => { for (const sg of [-1, 1]) for (const zs of [-1, 1]) { S.box(.2, .42, .05, sg * .1, -.2, zs * .13, irH, { l: L_METAL, rough: .55 }); for (let y = -.38; y < 0; y += .07) S.box(.205, .012, .055, sg * .1, y, zs * .13, irHL, { l: L_METAL, jit: 0 }); } }, 60, { rad: .2, shadow: false });
+  // the mantlet cart: a low bed on four wheels behind a tall shield of planks faced with hide and iron strips, loopholes and a slanted top
+  KIT.dunche = new PartBatch(S => {
+    for (const sg of [-1, 1]) S.box(.1, .1, 1.5, sg * .5, .32, -.1, timD, { l: L_WOOD }); for (const z of [-.75, 0, .55]) S.box(1.1, .08, .1, 0, .34, z, timD, { l: L_WOOD });
+    const hide = C(0x7a5a3a), hideD = C(0x5a4028);
+    for (let i = 0; i < 7; i++) { const x = -.72 + i * .24; S.box(.23, 1.55, .1, x, 1.05, .68, i & 1 ? hide : hideD, { l: L_PLAIN }); }
+    for (const y of [.45, 1.0, 1.55]) S.box(1.72, .07, .03, 0, y, .74, ironB, { l: L_METAL }); for (const x of [-.55, 0, .55]) S.box(.06, 1.5, .03, x, 1.05, .745, mulC(ironB, .9), { l: L_METAL });
+    for (const x of [-.36, .36]) S.box(.14, .08, .04, x, 1.25, .755, COL.black, { jit: 0 });
+    S.box(1.76, .08, .5, 0, 1.86, .5, timD, { l: L_WOOD, r: [-.45, 0, 0] });
+    for (const sg of [-1, 1]) S.seg([sg * .6, .38, -.6], [sg * .6, 1.5, .62], .045, .045, tim, { n: 4, l: L_WOOD });
+    for (const sg of [-1, 1]) S.seg([sg * .42, .4, -.85], [sg * .42, .95, -1.2], .035, .03, tim, { n: 4, l: L_WOOD });
+    for (const sg of [-1, 1]) for (const x of [-.45, -.15, .15, .45]) S.cone(.03, .18, x, 1.9 + sg * 0, .75, ironB, { n: 4, l: L_METAL });
+  }, 20, { rad: .9 });
   KIT.ball = new PartBatch(S => { S.sph(.15, 0, 0, 0, mulC(COL.iron, .7), { l: L_METAL, w: 7, h: 5, smooth: false, rough: .5 }); }, 24, { rad: .15 });
   KIT.hhArm = new PartBatch(S => {
     S.seg([0, -.85, 0], [0, 2.6, 0], .08, .045, tim, { n: 6, l: L_WOOD }); for (const y of [-.4, .6, 1.4]) S.cyl(.1, .06, 0, y, 0, COL.rope, { n: 6 });
     S.box(.62, .55, .55, 0, -1.08, 0, timD, { l: L_WOOD }); for (const y of [-.9, -1.26]) S.box(.64, .05, .57, 0, y, 0, ironB, { l: L_METAL }); S.box(.5, .1, .45, 0, -.79, 0, COL.stoneD, { l: L_ROCK });
     S.seg([0, 2.6, 0], [0, 2.0, .25], .012, .012, COL.rope, { n: 3 }); S.box(.12, .1, .1, 0, 2.0, .25, C(0x5a4028), {});
   }, 16, { rad: 1.4 });
+}
+function rigDunche(m) {
+  if (!KIT.dunche) gradeKits();
+  const s = m.scale || 1, fl = m.flash || 0, ph = m.ph, M0 = xf(_M[14], null, m.x, m.y + .02, m.z, -(m.flinch || 0) * .05, m.yaw, Math.sin(ph * 1.3) * .015 * m.mv, s, s, s);
+  KIT.dunche.put(M0, fl, m.tint);
+  let i = 15; for (const sg of [-1, 1]) for (const z of [-.6, .45]) KIT.wheel.put(xf(_M[i++], M0, sg * .6, .3, z, ph * 1.6, 0, 0), fl, m.tint);
+  // two men lean into the push bars behind it
+  const P = m.pushers || (m.pushers = [0, 1].map(k => ({ scale: .95, ph: k * 1.7, mv: 1, atk: -1, shamble: true, weapon: null, tint: null, x: 0, y: 0, z: 0, yaw: 0, flash: 0 })));
+  for (let k = 0; k < 2; k++) { const e = P[k]; _rv.set((k ? .42 : -.42), 0, -1.38).applyMatrix4(M0); e.x = _rv.x; e.y = m.y; e.z = _rv.z; e.yaw = m.yaw; e.ph = ph * 2.2 + k * 1.7; e.mv = m.mv; e.flash = fl; e.flinch = m.flinch; rigHuman(KIT.foe, SPEC.crouch, e); }
+  return M0;
 }
 function rigHuihui(m) {
   if (!KIT.hh) gradeKits();
