@@ -542,7 +542,7 @@ class Tower {
         this.cool = d.rate[lvl] * crewRate(this); this.recoil = 1;
         this.carriage.rotation.y = this.gunYaw - this.yaw; this.group.updateMatrixWorld(true); const mz = _tv.set(0, 0, this.muzzleZ).applyMatrix4(this.barrel.matrixWorld);
         const dx = q.x - mz.x, dz = q.z - mz.z, l = Math.hypot(dx, dz) || 1, mx = mz.x, my = mz.y, mzz = mz.z;
-        G.shells.push({ shot: true, x: mx, y: my, z: mzz, y0: my, ty: q.y, dx: dx / l, dz: dz / l, dist: l, go: 0, max: d.range[lvl] + 2, dmg: ownDmg(d.dmg[lvl]), pass: d.pass[lvl], w: d.width, siege: d.siege, speed: d.speed, hit: [], tower: this, sm: 0 });
+        G.shells.push({ shot: true, x: mx, y: my, z: mzz, y0: my, ty: q.y, dx: dx / l, dz: dz / l, dist: l, go: 0, max: d.range[lvl] + 2, dmg: d.dmg[lvl], pass: d.pass[lvl], w: d.width, siege: d.siege, speed: d.speed, hit: [], tower: this, sm: 0 });
         fxTimed(3, mx + dx / l * .3, my, mzz + dz / l * .3, 1.6, 1.6, 4.5, 3.4, 2, 1, .14, { grow: 1 }); lightFlash(mx, my + .3, mzz, 0xffb060, 420, .2, 14);
         for (let i = 0; i < 9; i++) { const a = rr(-.9, .9), sp = rr(.5, 2.2), ux = dx / l, uz = dz / l; fxSmoke(mx, my, mzz, (ux * Math.cos(a) - uz * Math.sin(a)) * sp, rr(.1, .6), (uz * Math.cos(a) + ux * Math.sin(a)) * sp, rr(1.8, 3), .3, 1.1, .7, .69, .66, .55, { drag: 1.6, rise: .3 }); }
         fxSparks(mx, my, mzz, 8, 5, 3, 2, .8, { size: .05, grav: 4 }); fxDust(this.x, this.y + .2, this.z, 6, 1.2, { speed: 2 });
@@ -572,7 +572,7 @@ class Tower {
       for (const a of this.archers) {
         if (a.rank !== V.rank) continue; const m = foes[k++ % foes.length], e = a.e, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);
         const mx = e.x + fx * .78 * e.scale, my = e.y + 1.02 * e.scale, mz = e.z + fz * .78 * e.scale;
-        shootBall(mx, my, mz, m, ownDmg(d.dmg[lvl]), this, d.pierce[lvl]); a.fire = 1;
+        shootBall(mx, my, mz, m, d.dmg[lvl], this, d.pierce[lvl]); a.fire = 1;
         fxTimed(2, mx, my, mz, 1.2, 1.2, 3.2, 2.3, 1.1, 1, .09); fxSparks(mx, my, mz, 4, 3.5, 3, 2, .8, { size: .04, grav: 3 });
         for (let i = 0; i < 5; i++) fxSmoke(mx + fx * i * .15, my, mz + fz * i * .15, fx * rr(.6, 1.6) + rr(-.3, .3), rr(.1, .5), fz * rr(.6, 1.6) + rr(-.3, .3), rr(1.8, 2.8), .28, .9, .85, .84, .8, .7, { drag: 2, rise: .3 });
       }

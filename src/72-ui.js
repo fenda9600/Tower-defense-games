@@ -286,7 +286,7 @@ const UI = (() => {
     U.heroBox = G.phase === 'play' && U.playerActive() ? HERO.status(W - 5 * s, colY, cW) : null;
     if (U.heroBox) colY += U.heroBox.h + g3;
     U.col = { x: xc, y: yc, w: cW, h: colY - g3 - yc };
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · U 升级 · T 添兵 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && colY - g3 < H - h - 8 * s) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-' + towerKinds().length + ' 选塔 · U 升级 · T 添兵 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && colY - g3 < H - h - 8 * s) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
     for (let i = U.coins.length - 1; i >= 0; i--) {
       const q = U.coins[i]; q.t += R.frameDt; const u = sat(q.t / q.T), e = u * u * (3 - 2 * u), a = 1 - e;
       const px = a * a * q.sx + 2 * a * e * q.cx + e * e * goldPos.x, py = a * a * q.sy + 2 * a * e * q.cy + e * e * goldPos.y;

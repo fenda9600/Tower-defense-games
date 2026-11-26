@@ -222,7 +222,7 @@ function foeStoneLands(a) {
   const W = G.wall;
   fxDust(a.x, a.y, a.z, 14, 1.4, { speed: 3 }); FX.shake = Math.min(1.2, FX.shake + .35); sfx('hammer', a.x, a.z, 1, .1); sfx('bossStep', a.x, a.z, .9, .7);
   for (let i = 0; i < 4; i++) { _tm.compose(_tv.set(a.x + rr(-.3, .3), a.y + .2, a.z + rr(-.3, .3)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(.7, .7, .7)); addDebris(KIT.rubble, _tm, null, rr(-3, 3), rr(2, 5), rr(-3, 3), rr(4, 10), rr(1.4, 2.2)); }
-  if (a.gate) { if (!W.open) { W.gate -= a.dmg; W.hurtT = 0; if (W.gate <= 0) breakGate(); } return; }
+  if (a.gate) { if (!W.open) { W.gate -= foeMulDmg(a.dmg); W.hurtT = 0; if (W.gate <= 0) breakGate(); } return; }
   const t = a.tower, was = t.ruin, l = Math.hypot(a.tx - a.x0, a.tz - a.z0) || 1;
   damageTower(t, a.dmg, (a.tx - a.x0) / l, (a.tz - a.z0) / l, false);
   if (!was && t.ruin && a.from) { FOE.st.ruins++; foeKill(a.from, FOE.rank.work); }

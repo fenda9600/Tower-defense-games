@@ -12,7 +12,9 @@ const DIFF = {
 { const h = HASH.diff, i = h === undefined ? -1 : DIFF.list.findIndex(d => d.key === h); DIFF.cur = i >= 0 ? i : clamp(+h | 0, 0, DIFF.list.length - 1); }
 function diffNow() { return DIFF.list[DIFF.cur]; }
 function diffHas(key) { for (let i = 0; i <= DIFF.cur; i++) { const d = DIFF.list[i]; if (d.works.indexOf(key) >= 0 || d.foes.indexOf(key) >= 0) return true; } return false; }
-// every number the defender fields goes through these two, and every number the enemy fields through the three below
+// Each side's multiplier is taken once per number. The defender's damage where a blow lands (hitMonster); his health where a body is raised
+// (works, wall, gate, footmen, the general). The enemy's numbers when a wave is mustered, health when a man is spawned, damage where it lands.
+// The panels read through the same functions so that what they show is what is dealt.
 function ownDmg(v) { return v * diffNow().own.dmg; }
 function ownHp(v) { return v * diffNow().own.hp; }
 function foeMulN(v) { return v * diffNow().foe.n; }
