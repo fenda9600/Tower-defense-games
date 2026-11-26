@@ -14,6 +14,7 @@ const ROSTER = {
 function waveMenu(k, level) {
   const w = level * 5 + k, bio = G.B.bio, menu = [];
   for (const ty in ROSTER) {
+    if (!fielded(ty)) continue;
     const r = ROSTER[ty], mul = bio.mobs[ty] === undefined ? 1 : bio.mobs[ty], un = Math.min(r[4], bio.early[ty] || 99), wt = r[5] ? r[5] * mul : (bio.mobs[ty] || 0);
     if (w >= un && wt > 0) menu.push([ty, wt * (w === un && w > 1 ? 2.2 : 1)]);
   }
@@ -87,7 +88,7 @@ function padCoverage(pad, range, air) {
   return c;
 }
 function buildTower(pad, kind, byPlayer) {
-  const def = TOWER[kind]; if (pad.tower || !kindUnlocked(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
+  const def = TOWER[kind]; if (pad.tower || !kindOpen(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
   G.gold -= def.cost[0]; UI.goldShown = Math.min(UI.goldShown, G.gold);
   const t = new Tower(pad, kind, G.B.pads.indexOf(pad)); G.towers.push(t); UI.ping(pad.x, pad.y, pad.z, byPlayer); return t;
 }
@@ -100,18 +101,20 @@ function sellTower(t) {
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
-const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7 };
+const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7, ideal: { archer: .36, bombard: .22, spire: .2, guard: .22 } };
 function aiThink(dt) {
   if (G.phase !== 'play' || UI.playerActive()) return;
   AI.think -= dt; if (AI.think > 0) return; AI.think = .5;
   const B = G.B, towers = G.towers.filter(t => t.alive), empty = B.pads.filter(p => !p.tower), N = towers.length;
-  const cnt = { archer: 0, bombard: 0, spire: 0, guard: 0 }; for (const t of towers) cnt[t.kind]++;
-  const ideal = { archer: .36, bombard: .22, spire: .2, guard: .22 };
+  // the share of the bases each kind should hold: the kinds a grade brings take theirs out of the four old ones
+  const kinds = towerKinds(), cnt = {}, ideal = {}; for (const k in TOWER) cnt[k] = 0; for (const t of towers) cnt[t.kind]++;
+  let fresh = 0; for (const k of kinds) if (TOWER_KINDS.indexOf(k) < 0) fresh += AI.ideal[k];
+  for (const k of kinds) ideal[k] = TOWER_KINDS.indexOf(k) < 0 ? AI.ideal[k] : AI.ideal[k] * (1 - fresh);
   const lt = G.leakTypes; let air = 0, armor = 0, swarm = 0; for (const ty in lt) { const c = MON[ty].cat; if (c === 'air') air += lt[ty]; else if (c === 'armor') armor += lt[ty]; else if (c === 'swarm') swarm += lt[ty]; }
   const gatePress = sat(G.leaks / 8);
   const opts = [];
   const cap = tierCap();
-  for (const kind of TOWER_KINDS) {
+  for (const kind of kinds) {
     if (!kindUnlocked(kind)) continue;
     const def = TOWER[kind];
     let need = ideal[kind] * (N + 1.6) - cnt[kind] + .35;

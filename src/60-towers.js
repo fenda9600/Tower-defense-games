@@ -10,6 +10,13 @@ const TOWER = {
   guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 70, 100, 140], range: [3.4, 3.6, 3.8, 4.0], n: [2, 2, 3, 3], hp: [62, 82, 100, 140], dmg: [7, 9, 11, 15], rate: [7, 6.5, 6, 5], air: false, ground: true, light: [50, 58, 72, 90], desc: ['秦 · 锐士：出营拦路，', '与敌近身搏杀。'], tiers: [['秦 · 锐士', '秦兵俑所见：铆钉札甲、右侧发髻，持青铜戈。'], ['汉 · 戍卒', '汉代边郡戍卒，铁札甲、环首刀与盾。'], ['唐 · 陌刀手', '唐陌刀手披明光铠，列阵如墙破骑。'], ['宋 · 步人甲', '宋步人甲重约二十九公斤，斩马刀破骑。']] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
+// Which update runs each kind of work.
+const TOWER_ACT = { archer: 'updArcher', bombard: 'updBombard', spire: 'updSpire', guard: 'updGuard' };
+// A work or a troop type that a grade of difficulty brings (26-diff.js) takes the field only on that grade and the harder ones.
+// Asked afresh every time: the grade can change between battles.
+function fielded(key) { return diffHas(key) || !DIFF.list.some(d => d.works.indexOf(key) >= 0 || d.foes.indexOf(key) >= 0); }
+function towerKinds() { return Object.keys(TOWER).filter(fielded); }
+function kindOpen(kind) { return fielded(kind) && kindUnlocked(kind); }
 
 function blueprint(kind, lvl) {
   const pieces = [], mounts = {};
@@ -304,8 +311,8 @@ class Tower {
     this.gunYaw = this.yaw;
   }
   get maxLvl() { return this.def.tiers.length - 1; }
-  // the buildings have three visual stages; four-tier lines share the first stage between their first two tiers
-  get vl() { return Math.max(0, this.lvl - (this.def.tiers.length - 3)); }
+  // the old buildings have three visual stages, and their four-tier lines share the first stage between the first two tiers
+  get vl() { return Math.max(0, this.lvl - (this.def.tiers.length - (this.def.stages || 3))); }
   upgrade() { if (this.lvl >= this.maxLvl || this.state !== 'active') return false; this.spent += upgradeCost(this); this.lvl++; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
   sell() {
     this.alive = false; this.em.alive = false; this.em.on = 0; LT.emitters[this.idx] = null; this.pad.tower = null;
@@ -337,10 +344,7 @@ class Tower {
     this.em.on = damp(this.em.on, TOWER_STUN ? .12 : 1, TOWER_STUN ? 8 : 3, dt);
     if (this.flame) this.flame.on = this.em.on; if (this.flame2) this.flame2.on = this.em.on;
     this.cool -= dt;
-    if (this.kind === 'archer') this.updArcher(dt, d, lvl);
-    else if (this.kind === 'bombard') this.updBombard(dt, d, lvl);
-    else if (this.kind === 'spire') this.updSpire(dt, d, lvl);
-    else this.updGuard(dt, d, lvl);
+    this[TOWER_ACT[this.kind]](dt, d, lvl);
     crewDraw(this, dt); // the extra hands of the lesser upgrade (66-crew.js)
     TOWER_STUN = false;
   }

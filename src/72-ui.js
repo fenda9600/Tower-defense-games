@@ -82,7 +82,7 @@ const UI = (() => {
       if (CHEAT.owns(e.target)) return;
       if (e.repeat) return; audioGesture();
       const k = e.key;
-      if (k >= '1' && k <= '4') { pickKind(TOWER_KINDS[+k - 1]); e.preventDefault(); }
+      if (k >= '1' && k <= '9' && +k <= towerKinds().length) { pickKind(towerKinds()[+k - 1]); e.preventDefault(); }
       else if (k === ' ' || k === 'Enter') { touchInput(); if (callWaveEarly()) sfx('uiClick', CAM.x, CAM.z, .8); else sfx('uiDeny', CAM.x, CAM.z, .5); e.preventDefault(); }
       else if (k === 'Escape') { if (CHEAT.open) CHEAT.hide(); else if (U.menu || U.armed) U.closeMenu(); else if (U.lore) U.lore.dur = Math.min(U.lore.dur, U.lore.t + .4); }
       else if (k === 'u' || k === 'U') { const t = (U.menu && U.menu.tower) || (U.hover && U.hover.tower); if (t) { touchInput(); doUpgrade(t); } }
@@ -296,14 +296,14 @@ const UI = (() => {
       const place = (wP, hP) => [clamp(Math.round(p.x - wP / 2), 4 * s, W - wP - 4 * s), clamp(Math.round(p.y - hP - 7 * s), Math.min(y0 + topH + 4 * s, H - hP - 4 * s), H - hP - 4 * s)];
       c.globalAlpha = a;
       if (!m.tower) {
-        const bwid = 31 * s, bh = 35 * s, gapb = 3 * s, rowW = 4 * bwid + 3 * gapb;
-        let lit = null; const fk = U.gp.active ? TOWER_KINDS[m.focus % 4] : null;
-        const lines = k => k ? (kindUnlocked(k) ? [TOWER[k].name].concat(TOWER[k].desc) : [TOWER[k].name + ' · 未解锁', lockHint(kindNeeds(k)) + '。', '']) : ['选择防御工事', '悬停或按 1 至 4，', '查看各自用途。'];
-        let textW = 0; for (const k of [null].concat(TOWER_KINDS)) for (const l of lines(k)) textW = Math.max(textW, tw(l));
+        const kinds = towerKinds(), nk = kinds.length, bwid = 31 * s, bh = 35 * s, gapb = 3 * s, rowW = nk * bwid + (nk - 1) * gapb;
+        let lit = null; const fk = U.gp.active ? kinds[m.focus % nk] : null;
+        const lines = k => k ? (kindUnlocked(k) ? [TOWER[k].name].concat(TOWER[k].desc) : [TOWER[k].name + ' · 未解锁', lockHint(kindNeeds(k)) + '。', '']) : ['选择防御工事', '悬停或按 1 至 ' + nk + '，', '查看各自用途。'];
+        let textW = 0; for (const k of [null].concat(kinds)) for (const l of lines(k)) textW = Math.max(textW, tw(l));
         const wP = Math.max(rowW, textW) + mp * 2, hP = mp * 2 + LH + 3 * s + bh + 4 * s + LH * 3 + 2 * s, [px, py] = place(wP, hP);
         plate(px, py, wP, hP); text('在此建造', px + mp, py + mp - s, COLR.amber);
         const bx0 = px + Math.round((wP - rowW) / 2), by = py + mp + LH + 3 * s;
-        TOWER_KINDS.forEach((kind, i) => {
+        kinds.forEach((kind, i) => {
           const d = TOWER[kind], open = kindUnlocked(kind), can = open && G.gold >= d.cost[0], bx = bx0 + i * (bwid + gapb);
           const r = button(bx, by, bwid, bh, 'b' + kind, can, () => doBuild(m.pad, kind), kind);
           const [iw, ih] = PX.iconSize(d.icon); PX.icon(c, d.icon, bx + Math.round((bwid - iw * s) / 2), by + 6 * s + r.dy, s, can ? 1 : .45);
