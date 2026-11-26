@@ -14,6 +14,8 @@ const CREW = {
     archer: { cost: [50, 75, 75, 105], unit: '弓手', gain: '添弓手一名，楼上多一张弓', note: '居延汉简：一燧戍卒数人，轮番候望。' },
     spire: { cost: [25, 45, 75, 110], unit: '张弩手', gain: '添张弩手，绞轴上弦快四分之一', rate: .75, note: '《武经总要》：三弓床弩以七十人张发。' },
     bombard: { cost: [20, 40, 65, 95], unit: '拽手', gain: '添拽手，石重而伤害加四分之一', dmg: .25, note: '《武经总要》：单梢砲拽手四十人，七梢砲二百五十人。' },
+    cannon: { cost: [35, 50, 80, 110], unit: '炮手', gain: '添炮手，装弹快两成', rate: .8, note: '重炮装填费力，多派炮手，发炮便快。' },
+    gunner: { cost: [30, 45, 70, 100], unit: '装填手', gain: '添装填手，三行装填快两成', rate: .8, note: '火铳装填费时，多一人递药送弹，轮放更密。' },
   },
 };
 function crewOf(t) { return t.crew | 0; }
@@ -40,7 +42,7 @@ function crewTower(t, byPlayer) {
   return true;
 }
 // The extra hands on a bed crossbow or a trebuchet stand on the deck beside the engine and turn with it.
-const CREW_AT = { spire: [[.5, -.32], [-.52, -.3]], bombard: [[.58, -.12], [-.56, -.16]] };
+const CREW_AT = { spire: [[.5, -.32], [-.52, -.3]], bombard: [[.58, -.12], [-.56, -.16]], gunner: [[.55, -.72], [-.2, -.72]], cannon: [[.55, -.55], [-.55, -.5]] };
 function crewDraw(t, dt) {
   const at = CREW_AT[t.kind], n = crewOf(t); if (!at || !n) return;
   if (!t.hands) t.hands = [];

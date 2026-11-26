@@ -22,7 +22,7 @@ const SIEGE = { depth: 3.2, ladderFrom: 3, melee: 1.2, climb: { skel: 1.7, knigh
 
 function resetWall() {
   const B = G.B; wallDouse();
-  G.wall = { lvl: 0, n: 0, men: [], gate: GATE.hp[0], open: false, calm: 0, dealt: 0, recent: 0, kills: 0, siegeN: 0, stormN: 0, ladderN: 0, lost: 0, raised: 0, topped: 0, breaks: 0, hurtT: 9, cried: false, upI: 0, fallen: false, fires: [], B };
+  G.wall = { lvl: 0, n: 0, men: [], gate: ownHp(GATE.hp[0]), open: false, calm: 0, dealt: 0, recent: 0, kills: 0, siegeN: 0, stormN: 0, ladderN: 0, lost: 0, raised: 0, topped: 0, breaks: 0, hurtT: 9, cried: false, upI: 0, fallen: false, fires: [], B };
   for (const l of B.ladders) { l.bearer = null; l.user = null; l.cd = 0; l.up = 0; }
   const l0 = B.ladders[0], dx = l0.foot.x - l0.top.x, dz = l0.foot.z - l0.top.z, d = Math.hypot(dx, dz); G.wall.fx = dx / d; G.wall.fz = dz / d;
   for (let i = 0; i < WALL.start; i++) addWallMan(false);
@@ -44,11 +44,12 @@ function wallFall() {
   for (const [u, h, size] of [[.3, 1.0, .8], [.62, .8, 1.05], [.9, 1.9, .65]]) W.fires.push(addFlame({ x: lerp(a.x, b.x, u) + W.fx * .25, y: gy + h, z: lerp(a.z, b.z, u) + W.fz * .25, size, layers: 2, embers: 1.6, glow: .9, smoke: 4 }));
   W.fires.push(addFlame({ x: g.x - W.fx * .5, y: g.y + .7, z: g.z - W.fz * .5, size: .9, layers: 2, embers: 1.4, glow: .9, smoke: 3 }));
 }
-function gateMax() { return GATE.hp[G.wall.lvl]; }
+function gateMax() { return ownHp(GATE.hp[G.wall.lvl]); }
+function wallManHp(lvl) { return ownHp(WALL.hp[lvl]); }
 function addWallMan(fx) {
   const W = G.wall, B = G.B; let si = 0; while (W.men.some(a => a.si === si)) si++;
   const sl = B.wallSlots[si]; if (!sl) return null;
-  const yaw = Math.atan2(W.fx, W.fz), hp = WALL.hp[W.lvl];
+  const yaw = Math.atan2(W.fx, W.fz), hp = wallManHp(W.lvl);
   const man = { si, sl, yaw, home: yaw, draw: 0, cool: .4 + si * .17, appear: fx ? 0 : 1, hp, maxHp: hp, foe: null, atk: -1, struck: false, e: { scale: .82, ph: 0, mv: 0, atk: -1, bow: true, xbow: true, weapon: null, helm: false, hat: null, back: null, draw: 0, pitch: 0, tint: [1, .9, .7], x: sl.x, y: sl.y, z: sl.z, yaw, flash: 0, flinch: 0 } };
   W.men.push(man); W.n = W.men.length;
   if (fx) { fxDust(sl.x, sl.y + .2, sl.z, 6, .7, { speed: 1.6 }); sfx('buildDone', sl.x, sl.z, .7); }
@@ -64,7 +65,7 @@ function wallReinforce(byPlayer) {
 function wallUpgrade(byPlayer) {
   const W = G.wall; if (!W || G.phase !== 'play' || W.lvl >= Math.min(WALL.tiers.length - 1, tierCap())) return false; const c = WALL.cost[W.lvl + 1]; if (G.gold < c) return false;
   G.gold -= c; UI.goldShown = Math.min(UI.goldShown, G.gold); const g0 = gateMax(); W.lvl++; W.gate += gateMax() - g0;
-  for (const m of W.men) { const r = m.hp / m.maxHp; m.maxHp = WALL.hp[W.lvl]; m.hp = m.maxHp * Math.max(r, .6); m.appear = .35; fxDust(m.sl.x, m.sl.y + .2, m.sl.z, 5, .6, { speed: 1.4 }); }
+  for (const m of W.men) { const r = m.hp / m.maxHp; m.maxHp = wallManHp(W.lvl); m.hp = m.maxHp * Math.max(r, .6); m.appear = .35; fxDust(m.sl.x, m.sl.y + .2, m.sl.z, 5, .6, { speed: 1.4 }); }
   const tr = WALL.tiers[W.lvl]; UI.banner(WALL.name + ' · ' + tr[0], 3.6, false, tr[1]);
   sfx('buildDone', G.B.gate.x, G.B.gate.z, 1); UI.ping(G.B.gate.x, G.B.gate.y, G.B.gate.z, byPlayer); return true;
 }
@@ -90,13 +91,13 @@ function joinSiege(m) {
   const W = G.wall; m.siege = true; m.foe = null; G.leaks++; G.leakTypes[m.type] = (G.leakTypes[m.type] || 0) + m.def.lives;
   if (!W.cried) { W.cried = true; if (!UI.msg) UI.banner('敌军攻城', 2.2, true, '城头守军放箭御敌'); sfx('hornBoss', G.B.gate.x, G.B.gate.z, .6); }
   // fire-oil men burn the gate
-  if (m.def.explode) { m.hp = 0; if (!W.open) { W.gate -= GATE.burn; W.hurtT = 0; if (W.gate <= 0) breakGate(); } FX.shake = Math.min(1, FX.shake + .3); killMonster(m, 'blast', 0, 0, null); }
+  if (m.def.explode) { m.hp = 0; if (!W.open) { W.gate -= foeMulDmg(GATE.burn); W.hurtT = 0; if (W.gate <= 0) breakGate(); } FX.shake = Math.min(1, FX.shake + .3); killMonster(m, 'blast', 0, 0, null); }
 }
 // One blow against the gate.
 function siegeStrike(m) {
   const W = G.wall, B = G.B, def = m.def, p = pathAt(B, B.L - .1, _ap), w = gateWeight(m), big = w >= 3;
   if (W.open) return;
-  W.gate -= w * GATE.rate * def.atkT; W.hurtT = 0;
+  W.gate -= foeMulDmg(w * GATE.rate * def.atkT); W.hurtT = 0;
   fxDust(m.x + p.tx * (m.rad + .2), m.y + .5, m.z + p.tz * (m.rad + .2), big ? 6 : 2, big ? 1 : .5, { speed: big ? 2.2 : 1.2, a: .4 });
   if (big) { FX.shake = Math.min(1, FX.shake + .25); sfx('hammer', m.x, m.z, 1, .1); sfx('bossStep', m.x, m.z, .6, .4); } else if (rnd() < .5) sfx(def.blade ? 'clash' : 'hammer', m.x, m.z, .45, rnd());
   if (W.gate <= 0) breakGate();

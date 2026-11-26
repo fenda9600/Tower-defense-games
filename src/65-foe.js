@@ -32,13 +32,14 @@ Object.assign(MON, {
 RIGS.picked = m => { m.weapon = KIT.item.dao; m.hat = KIT.item.ironCap; return rigHuman(KIT.foe, SPEC.foot, m); };
 RIGS.lanzi = m => { m.weapon = KIT.item.saber; m.hat = KIT.item.furHat; m.riderKit = KIT.hu; return rigHorse(m); };
 SIEGE.climb.picked = 1.2; GATE.weight.lanzi = 1.2; STORM_SC.rove = 1.5;
+GATE.weight.huihui = 1.5; GATE.weight.tammachi = 1.5; GATE.weight.dunche = 4; GATE.weight.sibing = 1.4; SIEGE.climb.sibing = 2.8;
 
 function foeReset() { const st = FOE.st; st.muster = false; st.musterAt = st.releaseAt = -1; st.sneak = null; st.ruins = st.sneaks = st.calls = st.promos = st.van = 0; st.bossAt = 0; }
 
 // Who goes ahead of wave k on this battlefield. No dice here: buildWave charges the column for them before it is drawn up.
 function foeVan(k, level) {
   const ez = campaignEase(level)[0], out = [];
-  const nL = k >= 3 ? Math.max(1, Math.round((1 + Math.min(1, level >> 2)) * ez)) : 0, nP = Math.max(1, Math.round((1 + (k >> 2) + Math.min(1, level >> 1)) * ez));
+  const nL = k >= 3 ? Math.max(1, Math.round(foeMulN((1 + Math.min(1, level >> 2)) * ez))) : 0, nP = Math.max(1, Math.round(foeMulN((1 + (k >> 2) + Math.min(1, level >> 1)) * ez)));
   for (let i = 0; i < nL; i++) out.push('lanzi'); for (let i = 0; i < nP; i++) out.push('picked');
   return out;
 }
@@ -55,6 +56,8 @@ function foeWave() {
     if (b) { b.t = V.lead + M.span * M.bossAt; b.hold = true; }
     st.musterAt = V.lead; st.releaseAt = V.lead + M.span + M.wait;
   } else for (const e of q) e.t += V.lead;
+  // the men who march behind a mantlet cart
+  for (const e of q.slice()) { const es = MON[e.type].escort; if (es && fielded(es[0])) for (let i = 0; i < es[1]; i++) q.push({ t: e.t + .5 + i * .45, type: es[0], hpMul: e.hpMul, hold: e.hold }); }
   van.forEach((type, i) => q.push({ t: .3 + i * .55, type, hpMul, van: true }));
   q.sort((a, b) => a.t - b.t); st.van += van.length;
   const nP = van.filter(t => t === 'picked').length, nL = van.length - nP, who = (nL ? MON.lanzi.name + ' ' + nL + ' · ' : '') + MON.picked.name + ' ' + nP;
@@ -65,7 +68,7 @@ function foeWave() {
     const routes = foeRoutes(G.B);
     if (routes.length) {
       const route = routes[Math.floor(rnd() * routes.length)], menu = waveMenu(k, lv).map(e => e[0]), light = ['rat', 'spider', 'ghoul', 'wolf'].filter(t => menu.indexOf(t) >= 0), list = ['picked'];
-      const n = Math.max(2, Math.round((2 + (k >> 1) + (lv >> 1)) * campaignEase(lv)[0]));
+      const n = Math.max(2, Math.round(foeMulN((2 + (k >> 1) + (lv >> 1)) * campaignEase(lv)[0])));
       for (let i = 1; i < n; i++) list.push(light.length ? light[Math.floor(rnd() * light.length)] : 'skel');
       st.sneak = { t: (boss ? V.lead : V.lead + rr(3, 9)) + S.warn, warned: false, route, list, hpMul, gap: 0 };
     }
@@ -160,6 +163,12 @@ function foeThink(m, dt) {
     return k;
   }
   if (m.foe) return k;
+  if (def.lob) return k * foeLob(m, dt);
+  if (def.charge && G.t - (m.chargedAt || -99) > def.charge.rest) {
+    // a footman on the road ahead: the horseman lowers his lance and rides at him
+    const C = def.charge; for (const f of G.men) if (!f.dead && f.onRoad && f.s > m.s && f.s - m.s < C.reach && Math.abs(f.lat - m.lat) < 1.3) { m.charging = true; return k * C.pace; }
+    m.charging = false;
+  }
   if (def.harass) {
     const h = def.harass; m.harCd = (m.harCd || rr(.3, 1)) - dt;
     const t = raidPick(m, h.range, false); if (!t) return k;
@@ -187,12 +196,44 @@ function foeThink(m, dt) {
   return k;
 }
 
+// A trebuchet in the column: it halts as soon as a work or the gate is within its throw and lobs stones from beyond the reach of most works,
+// until its stones are spent; then it marches on. Returns the share of its pace it keeps.
+function foeLob(m, dt) {
+  const L = m.def.lob, B = G.B, W = G.wall, r2 = L.range * L.range;
+  if (m.stones === undefined) { m.stones = L.stones; m.lobCd = L.every * .5; }
+  m.swing = Math.max(0, (m.swing || 0) - dt * .45);
+  if (m.stones <= 0) { m.raid = m.lobT = null; return 1; }
+  let t = m.lobT;
+  if (t === 'gate' ? W.open : t && (!t.alive || t.ruin || t.state !== 'active' || dist2(t.x, t.z, m.x, m.z) > r2)) t = null;
+  if (!t) t = raidPick(m, L.range, false) || (!W.open && dist2(B.gate.x, B.gate.z, m.x, m.z) < r2 ? 'gate' : null);
+  m.lobT = t; m.raid = t && t !== 'gate' ? t : null;
+  if (!t) return 1;
+  m.lobCd -= dt;
+  if (m.lobCd <= 0 && m.swing <= 0) {
+    const gate = t === 'gate', tx = gate ? B.gate.x : t.x + rr(-.4, .4), tz = gate ? B.gate.z : t.z + rr(-.4, .4), ty = gate ? B.gate.y + 1 : t.y + rr(.5, Math.min(2.4, t.mounts.top)), dist = Math.hypot(tx - m.x, tz - m.z);
+    RAID.shots.push({ stone: true, from: m, gate, tower: gate ? null : t, x0: m.x, y0: m.y + 3.1, z0: m.z, tx, ty, tz, t: 0, T: L.T, arc: 2.6 + dist * .3, dmg: (gate ? L.gate : L.dmg) * (1 + RAID.lvDmg * G.level) * (m.pow || 1), x: m.x, y: m.y + 3.1, z: m.z, ember: 0 });
+    m.stones--; m.lobCd = L.every * rr(.9, 1.1); m.swing = 1;
+    sfx('bossStep', m.x, m.z, .8, .2); sfx('hammer', m.x, m.z, .6, .1); fxDust(m.x, m.y + .1, m.z, 6, 1.2, { speed: 2 });
+  }
+  return 0;
+}
+// A trebuchet stone comes down on a work or on the gate (called from updateRaid in 64-raid.js).
+function foeStoneLands(a) {
+  const W = G.wall;
+  fxDust(a.x, a.y, a.z, 14, 1.4, { speed: 3 }); FX.shake = Math.min(1.2, FX.shake + .35); sfx('hammer', a.x, a.z, 1, .1); sfx('bossStep', a.x, a.z, .9, .7);
+  for (let i = 0; i < 4; i++) { _tm.compose(_tv.set(a.x + rr(-.3, .3), a.y + .2, a.z + rr(-.3, .3)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(.7, .7, .7)); addDebris(KIT.rubble, _tm, null, rr(-3, 3), rr(2, 5), rr(-3, 3), rr(4, 10), rr(1.4, 2.2)); }
+  if (a.gate) { if (!W.open) { W.gate -= foeMulDmg(a.dmg); W.hurtT = 0; if (W.gate <= 0) breakGate(); } return; }
+  const t = a.tower, was = t.ruin, l = Math.hypot(a.tx - a.x0, a.tz - a.z0) || 1;
+  damageTower(t, a.dmg, (a.tx - a.x0) / l, (a.tz - a.z0) / l, false);
+  if (!was && t.ruin && a.from) { FOE.st.ruins++; foeKill(a.from, FOE.rank.work); }
+}
+
 // The chief halts, raises his standard and the three armies come up behind him with ladders.
 function foeCall(m) {
   const C = FOE.call, lv = G.level, ez = campaignEase(lv), B = G.B, menu = waveMenu(5, lv).map(e => e[0]);
   m.called = true; m.callT = C.halt; m.cast = 1; FOE.st.calls++;
   const pool = ['skel', 'skel', 'ghoul', 'knight', 'toad', 'spider'].filter(t => t === 'skel' || menu.indexOf(t) >= 0), list = [];
-  let budget = (C.budget[0] + C.budget[1] * lv) * ez[0] * Math.sqrt(G.press);
+  let budget = foeMulN((C.budget[0] + C.budget[1] * lv) * ez[0] * Math.sqrt(G.press));
   const nl = Math.min(2, 1 + (lv >> 1)); for (let i = 0; i < nl; i++) list.push('ladder');
   if (lv >= 1 && menu.indexOf('slime') >= 0) { list.push('slime'); budget -= ROSTER.slime[0]; }
   while (budget > 0 && list.length < 26) { const ty = pool[Math.floor(rnd() * pool.length)]; list.push(ty); budget -= ROSTER[ty][0]; }
@@ -228,6 +269,7 @@ const _fq = new THREE.Quaternion(), _fup = new THREE.Vector3(0, 1, 0), _fv = new
 // Once a step: the clock of the muster and of the flank raid, and the pennants of promoted men.
 function foeUpdate(dt) {
   const st = FOE.st, B = G.B, M = FOE.muster;
+  MANTLET.live = 0; for (const m of G.mons) if (m.def.mantlet && !m.dead) MANTLET.live++;
   if (G.phase !== 'play') { st.muster = false; st.sneak = null; return; }
   if (G.spawning && G.bossWave && st.musterAt >= 0) {
     if (!st.muster && G.waveT >= st.musterAt && G.waveT < st.releaseAt) {

@@ -128,7 +128,7 @@ function humanKit(style, cap) {
 function initKits() {
   const iron = COL.iron, rust = mixC(COL.ironL, C(0x7a4a2a), .45);
   KIT.skel = humanKit('skel', 96);
-  KIT.foot = humanKit('foot', 40);
+  KIT.foot = humanKit('foot', 96);
   KIT.giant = humanKit('giant', 2);
   KIT.ogre = humanKit('ogre', 30);
   KIT.jiang = humanKit('jiang', 40);
@@ -188,7 +188,7 @@ function initKits() {
   };
   KIT.arrow = new PartBatch(S => { S.box(.022, .022, .5, 0, 0, 0, COL.woodL, { jit: 0 }); S.cone(.035, .09, 0, 0, .29, COL.ember, { n: 4, r: [HPI, 0, 0], emis: .9, jit: 0 }); for (const r of [0, HPI]) S.box(.07, .006, .1, 0, 0, -.2, COL.bone, { r: [0, 0, r], jit: 0 }); }, 120, { shadow: false });
   KIT.shell = new PartBatch(S => { S.sph(.12, 0, 0, 0, mulC(COL.iron, .8), { l: L_METAL, w: 7, h: 5, smooth: false, rough: .5 }); S.box(.04, .04, .04, 0, .12, 0, COL.ember, { emis: 1, jit: 0 }); }, 24, {});
-  KIT.stoneShot = new PartBatch(S => { S.rock(.13, 0, 0, 0, COL.stone, {}); }, 24, {});
+  KIT.stoneShot = new PartBatch(S => { S.rock(.13, 0, 0, 0, COL.stone, {}); }, 48, {});
   KIT.coin = new PartBatch(S => { S.cyl(.075, .022, 0, 0, 0, COL.gold, { n: 8, l: L_METAL, rough: .35, emis: .16, jit: 0 }); S.cyl(.05, .026, 0, 0, 0, mulC(COL.gold, 1.3), { n: 8, l: L_METAL, rough: .3, emis: .2, jit: 0 }); }, 160, { shadow: false, rad: .05 });
   KIT.goo = new PartBatch(S => { S.ico(.08, 0, 0, 0, COL.slime, { d: 1, rough: .3, emis: .08 }); }, 200, { shadow: false, rad: .06 });
   KIT.rubble = new PartBatch(S => { S.rock(.14, 0, 0, 0, COL.stone, {}); }, 160, { rad: .1 });
@@ -244,7 +244,7 @@ function rigHuman(kit, sp, e) {
   if (e.weapon) { const M8 = xf(_M[8], M7, 0, -sp.lArm, 0, bladeA - psiR, 0, 0, e.wScale || 1, e.wScale || 1, e.wScale || 1); e.weapon.put(M8, fl, null); RIGOUT.tip.set(0, .6, 0).applyMatrix4(M8); }
   if (e.shield) { const M9 = xf(_M[9], M5, .04, -sp.lArm * .6, .06, -psiL + .05, .25, 0); e.shield.put(M9, fl, e.shieldTint || null); }
   if (e.torch) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, .25 - psiL, 0, 0); I.torch.put(M9, 0, null); RIGOUT.torch.set(0, .46, 0).applyMatrix4(M9); }
-  if (e.bow) { if (e.xbow) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, -psiL, 0, 0); I.xbow.put(M9, fl, null); } else { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, HPI + .0, 0, 0); I.bow.put(M9, fl, null); } }
+  if (e.bow) { if (e.gun) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, -psiL, 0, 0); e.gun.put(M9, fl, null); } else if (e.xbow) { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, -psiL, 0, 0); I.xbow.put(M9, fl, null); } else { const M9 = xf(_M[9], M5, 0, -sp.lArm, 0, HPI + .0, 0, 0); I.bow.put(M9, fl, null); } }
   if (e.helm) I.helm.put(M3, fl, null);
   if (e.plate) I.plate.put(M2, fl, null);
   if (e.hood) I.hood.put(M3, fl, null); if (e.robe) I.robe.put(M2, fl, null); if (e.drum) I.drum.put(M2, fl, null); if (e.standard) I.standard.put(M2, 0, null);
