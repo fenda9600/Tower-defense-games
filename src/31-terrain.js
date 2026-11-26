@@ -89,7 +89,7 @@ function buildBoard(seed, index) {
   for (const p of pads) p.y0 = py[clamp(Math.round(p.s / PATH_STEP), 0, n - 1)] + .05;
 
   const ponds = [];
-  for (let t = 0; t < 900 && ponds.length < Math.round(bio.ponds * AREA); t++) {
+  for (let t = 0; t < 700 && ponds.length < Math.round(bio.ponds * AREA); t++) {
     const r = rng.range(1.2, 2.3), x = rng.range(-BH + 3.4 + r, BH - 3.4 - r), z = rng.range(-BH + 3.4 + r, BH - 3.4 - r);
     if (dfAt(dRoad, x, z) < ROAD_HALF + 2.6 + r || dfAt(dStr, x, z) < 3.9 + r) continue;
     if (x < BW + 6 + r || z < BN + 6 + r || (Math.abs(x - kx) < 6.5 + r && z < BN + 9.5 + r)) continue;
@@ -258,7 +258,8 @@ function buildBoard(seed, index) {
     const S = chunkAt((a[0] + c[0]) / 2, (a[2] + c[2]) / 2).soup;
     for (const v of [a, b, c, a, c, d]) S.v(v[0], v[1], v[2], 0, 1, 0, v[3][0], v[3][1], v[3][2], v[0] * .25, v[2] * .25, L_COBBLE, v[4]);
   }
-  for (let q = 0; q < 22; q++) {
+  const nCracks = Math.round(16 * LIN);
+  for (let q = 0; q < nCracks; q++) {
     const i = rng.int(20, n - 20); if (Math.abs(i - ci0) * PATH_STEP < 4) continue;
     let x = px[i] - tz[i] * rng.range(-.9, .9), z = pz[i] + tx[i] * rng.range(-.9, .9), a = rng.range(0, TAU); const y = py[i] + .045, S = chunkAt(x, z).soup;
     for (let sgm = 0; sgm < rng.int(3, 6); sgm++) {

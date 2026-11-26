@@ -427,7 +427,7 @@ function scatterProps(B) {
   const bio = B.bio;
   const at = (x, z, build, r, T0) => { if (Math.abs(x) > BH - .8 || Math.abs(z) > BH - .8) return; const T = T0 || new Soup(); if (!T0) build(T); B.put(T, x, z, { ry: rng() * TAU }); if (r) placed.push([x, z, r]); };
   const nA = k => Math.round(k * AREA), nL = k => Math.round(k * LIN); // by-area and by-road-length counts for the larger board
-  for (let k = 0; k < 2; k++) drop(T => PROP.towerRuin(T, rng), 2.9, { far: 3.6 });
+  for (let k = 0; k < nA(1); k++) drop(T => PROP.towerRuin(T, rng), 2.9, { far: 3.6 });
   drop(T => PROP.well(T, rng), 1.3, { near: 5.5, far: 2.6 });
   drop(T => PROP.statue(T, rng), 1.2, { near: 6, far: 2.4 });
   drop(T => PROP.ribcage(T, rng), 2.4, { far: 2.8 });
