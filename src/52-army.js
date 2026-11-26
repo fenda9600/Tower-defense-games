@@ -250,6 +250,38 @@ function gradeKits() {
     new PartBatch(S => { tube(S, irn, .022, -.1, .72, L_METAL); S.box(.055, .06, .62, 0, -.035, .05, stockL, { l: L_WOOD }); S.box(.06, .11, .32, 0, -.085, -.38, stockL, { l: L_WOOD, r: [-.28, 0, 0] }); S.box(.012, .07, .04, .03, .05, -.14, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.2, .45]) S.cyl(.03, .02, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); }, 40, { rad: .2, shadow: false }),
     new PartBatch(S => { tube(S, mulC(irn, .8), .025, -.12, .86, L_METAL); S.box(.055, .06, .7, 0, -.035, .08, stock, { l: L_WOOD }); S.box(.06, .12, .34, 0, -.09, -.42, stock, { l: L_WOOD, r: [-.3, 0, 0] }); S.box(.012, .08, .04, .03, .05, -.16, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.1, .34, .6, .84]) S.cyl(.033, .025, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); S.cone(.012, .03, 0, .03, .8, band, { n: 4 }); }, 40, { rad: .2, shadow: false }),
   ];
+  // the Mongol helmet of the tammachi riders: a tall iron bowl with a spike and a plume, and a leather neck guard
+  I.mgHelm = new PartBatch(S => {
+    S.add(gDome(8, 3), { s: [.16, .22, .16], p: [0, .2, 0], c: mulC(COL.iron, 1.2), l: L_METAL, rough: .45 }); S.cyl(.17, .035, 0, .2, 0, band, { n: 8, l: L_METAL });
+    S.cone(.03, .2, 0, .5, 0, band, { n: 5, l: L_METAL }); S.ico(.045, 0, .6, -.02, C(0x8a1a14), { d: 0, sc: [1, 1.6, 1] });
+    S.box(.3, .2, .05, 0, .08, -.15, C(0x4a3420), { l: L_CLOTH, r: [.25, 0, 0] }); for (const sg of [-1, 1]) S.box(.05, .2, .2, sg * .16, .08, -.03, C(0x4a3420), { l: L_CLOTH, r: [0, 0, sg * -.15] });
+  }, 60, { rad: .2, shadow: false });
+  // The Muslim trebuchet: a wheeled bed, two tall trestles carrying the axle, and (in KIT.hhArm) the long beam with its box of counterweight.
+  const tim = COL.wood, timD = COL.woodD, ironB = COL.iron;
+  KIT.hh = new PartBatch(S => {
+    for (const sg of [-1, 1]) S.box(.12, .14, 2.3, sg * .55, .34, 0, timD, { l: L_WOOD }); for (const z of [-1.05, -.35, .35, 1.05]) S.box(1.2, .1, .12, 0, .36, z, timD, { l: L_WOOD });
+    S.box(1.0, .05, 1.4, 0, .43, -.35, tim, { l: L_WOOD });
+    for (const sg of [-1, 1]) { S.seg([sg * .5, .4, -.85], [sg * .36, 2.55, -.1], .07, .06, timD, { n: 5, l: L_WOOD }); S.seg([sg * .5, .4, .75], [sg * .36, 2.55, -.1], .07, .06, timD, { n: 5, l: L_WOOD }); S.seg([sg * .5, 1.2, -.6], [sg * .5, 1.2, .5], .04, .04, tim, { n: 4, l: L_WOOD }); }
+    S.cyl(.07, .9, 0, 2.55, -.1, ironB, { n: 6, r: [0, 0, HPI], l: L_METAL });
+    // the windlass that hauls the beam down, and a stone ready in the trough
+    S.cyl(.1, .9, 0, .62, -.95, timD, { n: 6, r: [0, 0, HPI], l: L_WOOD }); for (const sg of [-1, 1]) S.box(.06, .3, .06, sg * .46, .55, -.95, tim, { l: L_WOOD });
+    S.box(.3, .08, .8, 0, .5, .75, tim, { l: L_WOOD }); S.rock(.16, 0, .64, .9, COL.stone, {});
+  }, 16, { rad: .9 });
+  KIT.hhArm = new PartBatch(S => {
+    S.seg([0, -.85, 0], [0, 2.6, 0], .08, .045, tim, { n: 6, l: L_WOOD }); for (const y of [-.4, .6, 1.4]) S.cyl(.1, .06, 0, y, 0, COL.rope, { n: 6 });
+    S.box(.62, .55, .55, 0, -1.08, 0, timD, { l: L_WOOD }); for (const y of [-.9, -1.26]) S.box(.64, .05, .57, 0, y, 0, ironB, { l: L_METAL }); S.box(.5, .1, .45, 0, -.79, 0, COL.stoneD, { l: L_ROCK });
+    S.seg([0, 2.6, 0], [0, 2.0, .25], .012, .012, COL.rope, { n: 3 }); S.box(.12, .1, .1, 0, 2.0, .25, C(0x5a4028), {});
+  }, 16, { rad: 1.4 });
+}
+function rigHuihui(m) {
+  if (!KIT.hh) gradeKits();
+  const s = m.scale || 1, fl = m.flash || 0, ph = m.ph, M0 = xf(_M[14], null, m.x, m.y + .02, m.z, -(m.flinch || 0) * .05, m.yaw, Math.sin(ph * 1.3) * .015 * m.mv, s, s, s);
+  KIT.hh.put(M0, fl, m.tint);
+  // the throw: the box drops, the long end whips up and over, then the crew wind it back down
+  const p = 1 - (m.swing || 0), a = p < .12 ? lerp(-2.35, .45, easeIn(p / .12)) : lerp(.45, -2.35, easeInOut((p - .12) / .88));
+  KIT.hhArm.put(xf(_M[15], M0, 0, 2.55, -.1, a, 0, 0), fl, m.tint);
+  let i = 16; for (const sg of [-1, 1]) for (const z of [-.75, .75]) KIT.wheel.put(xf(_M[i++], M0, sg * .66, .3, z, ph * 1.6, 0, 0), fl, m.tint);
+  return M0;
 }
 
 function rigRider(m, M0, kit, sy, sz) {

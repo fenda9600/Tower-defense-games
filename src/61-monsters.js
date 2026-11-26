@@ -30,6 +30,13 @@ const MON = {
   colossus: { name: '云车', en: 'Cloud tower', hp: 1250, spd: .7, rad: 1.05, mass: 60, bounty: 200, lives: 5, hitH: 2.2, top: 6.0, dmg: 60, atkT: 2.0, scale: 1.45, boss: true, armor: .85, slowRes: .3, enrage: [.3, 1.25], cart: 'tower', gait: 2.1, death: 'wood', cat: 'armor' },
   king: { name: '匈奴单于', en: 'Xiongnu chanyu', hp: 1250, spd: .86, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.0, top: 3.9, dmg: 46, atkT: 1.7, scale: 2.6, boss: true, summon: { type: 'wolf', n: 3, every: 9, max: 99, hp: 1 }, death: 'man', blade: true, cat: 'armor' },
 };
+// The troops the harder grades bring (26-diff.js): Yuan and Ming in the middle grade, the Ming-Qing wars in the hard one.
+// lob: a counterweight trebuchet halts once a work or the gate is within range and throws its stones, then marches on. engine: footmen sally out against it.
+// charge: a heavy horseman closing on a footman quickens to pace and lands his first blow at blow times its weight.
+Object.assign(MON, {
+  huihui: { name: '回回砲', en: 'Counterweight trebuchet', hp: 420, spd: .5, rad: .58, mass: 14, bounty: 26, lives: 2, hitH: 1.0, top: 3.6, dmg: 6, atkT: 1.4, scale: 1, cart: 'huihui', gait: 1.6, death: 'wood', cat: 'armor', engine: true, split: ['slimelet', 3], lob: { range: 7.8, dmg: 30, gate: 36, every: 5.5, stones: 5, T: 1.7 } },
+  tammachi: { name: '探马赤军', en: 'Tammachi horse', hp: 150, spd: 2.3, rad: .34, mass: 2.6, bounty: 15, lives: 2, hitH: 1.05, top: 2.25, dmg: 13, atkT: .9, scale: .95, armor: .45, bard: true, death: 'horse', gait: 3.2, cat: 'armor', blade: true, charge: { reach: 3.4, pace: 1.45, blow: 2.5, rest: 6 } },
+});
 
 function spawnMonster(type, o = {}) {
   const B = G.B, def = MON[type], hpMul = o.hpMul || 1, bt = B.bio.tints;
@@ -149,6 +156,8 @@ const RIGS = {
   wolf(m) { m.weapon = KIT.item.saber; m.hat = KIT.item.furHat; m.riderKit = KIT.hu; return rigHorse(m); },
   golem(m) { m.weapon = KIT.item.spear; m.helm = true; m.plate = true; m.riderKit = KIT.foe; return rigHorse(m); },
   jotun(m) { m.weapon = KIT.item.spear; m.wScale = 1.2; m.helm = true; m.plate = true; m.riderKit = KIT.chief; return rigHorse(m); },
+  tammachi(m) { if (!KIT.gun) gradeKits(); m.weapon = KIT.item.spear; m.wScale = 1.15; m.plate = true; m.helm = false; m.hat = KIT.item.mgHelm; m.riderKit = KIT.hu; m.horseTint = [1.35, 1.25, 1.15]; return rigHorse(m); },
+  huihui: m => rigHuihui(m),
   brood: rigElephant, queen: rigElephant,
   slime: rigCart, mummy: rigCart, colossus: rigCart,
   bat: rigFlyer, wisp: rigFlyer, gargoyle: rigFlyer,
@@ -201,6 +210,8 @@ function slotPos(f, out) {
   const p = pathAt(B, Math.min(B.L - .2, (f.muster != null ? f.muster : f.tower.pad.s) + (back ? .7 : 0)), out); p.x += -p.tz * lat; p.z += p.tx * lat; return p;
 }
 const _fp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
+// how far along the road the footmen of a post will sally out to fall on a siege engine that has halted to shoot
+const FOOT_SALLY = 7;
 function footmanThink(f, dt) {
   const B = G.B, tw = f.tower; f.age += dt;
   if (f.lvlUp) { f.lvlUp = false; const d = tw.def, r = f.hp / f.maxHp; f.maxHp = d.hp[tw.lvl]; f.hp = f.maxHp * Math.max(r, .6); f.dmg = d.dmg[tw.lvl]; f.scale = .9 + tw.lvl * .04; }
@@ -209,10 +220,10 @@ function footmanThink(f, dt) {
   const rally = slotPos(f, _fp), rs = f.muster != null ? f.muster : tw.pad.s; // muster: the general's rallying horn (64-hero.js) calls the men to the wall foot
   if (f.leave) { f.gone = true; f.alive = false; if (f.flame) { removeFlame(f.flame); f.flame = null; } fxDust(f.x, f.y + .3, f.z, 4, .6); return; }
   let m = f.target;
-  if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > 3.0 || m.dying || (m.wallSt && !m.rove))) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
+  if (m && (m.dead || m.hp <= 0 || Math.abs(m.s - rs) > (m.def.engine ? FOOT_SALLY + 1.5 : 3.0) || m.dying || (m.wallSt && !m.rove))) { if (m.foe === f) m.foe = null; m.men = Math.max(0, m.men - 1); m = f.target = null; }
   if (!m && f.state !== 'march' && Math.abs(f.s - rs) < 4) {
     let best = null, bd = 1e9;
-    for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost || (q.wallSt && !q.rove)) continue; if (Math.abs(q.s - rs) > 2.5) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
+    for (const q of G.mons) { if (q.dead || q.fly || q.hp <= 0 || !q.vis || q.dying || q.def.ghost || (q.wallSt && !q.rove)) continue; if (Math.abs(q.s - rs) > (q.def.engine && q.lobT ? FOOT_SALLY : 2.5)) continue; const d = dist2(f.x, f.z, q.x, q.z) + q.men * 6; if (d < bd) { bd = d; best = q; } }
     if (best) { m = f.target = best; best.men++; }
   }
   if (m) {
@@ -241,7 +252,9 @@ function strike(a, b, dmg, byMan) {
   const my = a.y + (byMan ? .85 : (a.hitH || .7) * (big ? .6 : 1)) + .1;
   const rx = Math.cos(CAM.yaw), rz = -Math.sin(CAM.yaw), se = Math.sin(CAM.elev), ux = -se * Math.sin(CAM.yaw), uz = -se * Math.cos(CAM.yaw);
   const rot = Math.atan2(dx * ux + dz * uz, dx * rx + dz * rz);
-  const blade = byMan || (a.def && a.def.blade) || big;
+  const blade = byMan || (a.def && a.def.blade) || big, ch = !byMan && a.def && a.def.charge;
+  // the first blow of a charging horseman lands with the weight of horse and rider behind it
+  if (ch && G.t - (a.chargedAt || -99) > ch.rest) { a.chargedAt = G.t; a.charging = false; dmg *= ch.blow; fxDust(b.x, b.y + .1, b.z, 8, 1, { speed: 2.6 }); FX.shake = Math.min(1, FX.shake + .2); sfx('bossStep', b.x, b.z, .7, .4); }
   if (blade) fxTimed(7, mx, my, mz, big ? 4.2 : 1.55, big ? 4.2 : 1.55, byMan ? 2.2 : 2.0, byMan ? 2.2 : 1.7, byMan ? 2.4 : 1.3, .9, .2, { rot });
   if (byMan) { const metal = !!b.def.armor || (b.def.death === 'bones' && rnd() < .4); fxSparks(b.x - dx / l * b.rad, my, b.z - dz / l * b.rad, metal ? 7 : 3, 3.6, 3, 2.3, 1.2, { size: .055, grav: 7 }); sfx(metal ? 'clash' : 'slash', mx, mz, .7, rnd()); hitMonster(b, dmg, 'sword', dx / l, dz / l, a.tower); a.tower.recent += dmg * .5; }
   else {
@@ -283,7 +296,7 @@ function updateUnits(dt) {
     }
     if (def.ladder && !m.wallSt && m.s > gateS - 4.5) tryLadder(m);
     if (m.wallSt) { if (m.rove) updateRover(m, dt); else updateStormer(m, dt); continue; }
-    if (m.foe && (m.foe.dead || m.foe.gone)) m.foe = null;
+    if (m.foe && (m.foe.dead || m.foe.gone || (def.engine && Math.hypot(m.foe.x - m.x, m.foe.z - m.z) > 2.2))) m.foe = null;
     if (def.explode && m.foe) { m.hp = 0; killMonster(m, 'blast', 0, 0, null); continue; }
     if (def.regen && m.hp < m.maxHp && G.t - m.hitAt > 2.2) m.hp = Math.min(m.maxHp, m.hp + m.maxHp * def.regen * dt);
     if (def.ghost) { m.gT = (m.gT + dt) % (def.ghost[0] + def.ghost[1]); m.eth = m.gT < def.ghost[0]; }

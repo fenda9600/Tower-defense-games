@@ -10,6 +10,8 @@ const ROSTER = {
   slime: [9.5, 1, 3, .9, 3, 2], spider: [3, 3, 6, .25, 3, 2], scarab: [1.9, 5, 8, .18, 2, 0], knight: [12.5, 1, 3, .5, 4, 2], wolf: [5.5, 2, 4, .35, 4, 1.6], bomber: [6, 1, 2, .8, 4, 1.2],
   wraith: [9, 1, 3, .7, 5, 1.4], toad: [8, 1, 3, .7, 5, .7], wisp: [3.4, 3, 5, .25, 5, .45], drummer: [13, 1, 1, 1, 6, .9], gargoyle: [14, 1, 2, .6, 6, .6],
   ladder: [8, 1, 2, .9, 3, .8], necro: [18, 1, 1, 1.2, 7, .9], mummy: [15, 1, 2, .9, 7, .9], brute: [32, 1, 1, 2, 8, .7], golem: [40, 1, 1, 2, 8, .7], brood: [30, 1, 1, 2, 9, .6],
+  // brought by the harder grades only (26-diff.js)
+  tammachi: [11, 2, 3, .35, 4, .9], huihui: [24, 1, 1, 3, 7, .5],
 };
 function waveMenu(k, level) {
   const w = level * 5 + k, bio = G.B.bio, menu = [];
