@@ -1,9 +1,11 @@
 // Difficulty: three grades, each opened by holding the last battlefield of the one before. A grade multiplies both sides,
 // the enemy a little more than the defender, and brings troops from a later age of Chinese warfare onto the field.
 // `works` are the kinds of work it opens to the defender and `foes` the troop types it adds to the enemy; once opened they stay on every harder grade.
+// `ease`: the grade on which the arsenal is still being opened, so its first battlefields are thinned (CAMPAIGN.ease). A harder grade opens
+// only once the easy one is held whole, with every work and tier already won, and its strength is set by the multipliers alone.
 const DIFF = {
   list: [
-    { key: 'easy', name: '简易', era: '', foe: { n: 1, hp: 1, dmg: 1 }, own: { hp: 1, dmg: 1 }, works: [], foes: [] },
+    { key: 'easy', name: '简易', era: '', ease: true, foe: { n: 1, hp: 1, dmg: 1 }, own: { hp: 1, dmg: 1 }, works: [], foes: [] },
     { key: 'mid', name: '中等', era: '元明火器', foe: { n: 1.1, hp: 1.4, dmg: 1.3 }, own: { hp: 1.25, dmg: 1.25 }, works: ['gunner'], foes: ['huihui', 'tammachi'] },
     { key: 'hard', name: '困难', era: '明清鼎革', foe: { n: 1.2, hp: 1.9, dmg: 1.6 }, own: { hp: 1.5, dmg: 1.5 }, works: ['cannon'], foes: ['dunche', 'sibing'] },
   ],

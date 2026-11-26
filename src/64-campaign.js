@@ -26,6 +26,7 @@ const CAMPAIGN = {
   ],
   // The game was tuned for a full arsenal on every battlefield. With part of it still locked the enemy is thinned to match:
   // [numbers, rank-and-file health, chieftain health] for each battlefield of the first round; later rounds are met at full strength.
+  // Only the grade that opens the arsenal is thinned (DIFF.list's ease).
   ease: [[.62, .66, .5], [.7, .72, .6], [.72, .75, .6], [.76, .78, .66], [.84, .85, .75], [.88, .88, .8], [1, 1, 1], [1, 1, 1], [1, 1, 1], [1, 1, 1]],
   // best is the furthest any grade has been held, which is what opens the arsenal; held counts, grade by grade, the battlefields held on it.
   best: 0, held: {}, sel: 0, news: null, grade: null, replay: false, all: !!HASH.unlock, persist: !HASH.seed && !HASH.manual,
@@ -45,7 +46,7 @@ function tierCap() { const p = campaignProgress(); let cap = CAMPAIGN.start.tier
 // the hint shown on a locked button: which battlefield has to be held first
 function lockHint(needs) { return '守住' + stageName(needs - 1) + '后解锁'; }
 
-function campaignEase(level) { return (!CAMPAIGN.all && CAMPAIGN.ease[level]) || [1, 1, 1]; }
+function campaignEase(level) { return (!CAMPAIGN.all && diffNow().ease && CAMPAIGN.ease[level]) || [1, 1, 1]; }
 
 // A grade opens once every battlefield of the grade before it is held; a battlefield once the one before it is held on this grade.
 function gradeOpen(i) { return i >= 0 && i < DIFF.list.length && (i === 0 || CAMPAIGN.all || CAMPAIGN.held[DIFF.list[i - 1].key] >= stageCount()); }
