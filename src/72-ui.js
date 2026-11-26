@@ -218,6 +218,7 @@ const UI = (() => {
       c.globalAlpha = 1;
       if (b.boss) text(b.name, p.x, y - LH - 2 * pix, COLR.tx, { align: 'c', outline: COLR.dark });
     }
+    HERO.draw(); // the general's name tag belongs to the field, like the health bars: under every panel and menu drawn below
     const stats = [['flame', '' + G.lives, U.hurt > 0 ? COLR.red : COLR.tx], ['coin', '' + Math.floor(U.goldShown), U.deny > 0 ? COLR.red : (U.goldBump > 0 ? '#ffe2a0' : COLR.tx)], ['skull', '' + G.slain, U.slainBump > .5 ? '#ffffff' : COLR.tx]];
     let wS = pad; for (const st of stats) wS += PX.iconSize(st[0])[0] * s + 2 * s + Math.max(tw(st[1]), tw('000')) + 6 * s; wS += pad - 6 * s;
     const hS = 10 * s + pad * 2 - 2 * s, x0 = 5 * s, y0 = 5 * s + U.insetTop;
@@ -296,7 +297,7 @@ const UI = (() => {
     if (U.lore) drawLore(y0 + topH + 4 * s); else U.loreRect = null;
     if (U.msg) {
       const m = U.msg; m.t += R.frameDt; const a = sat(Math.min(m.t * 3, (m.dur - m.t) * 2));
-      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; let yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); { const col = U.col; if (col && W / 2 + w / 2 > col.x - 3 * s && yb < col.y + col.h) yb = col.y + col.h + 4 * s; } plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
+      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; let yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); { const col = U.col; if (col && W / 2 + w / 2 > col.x - 3 * s && yb < col.y + col.h) yb = col.y + col.h + 4 * s; } { const lr = U.loreRect; if (lr && W / 2 - w / 2 < lr.x + lr.w && W / 2 + w / 2 > lr.x && yb < lr.y + lr.h && yb + h > lr.y) yb = Math.min(lr.y + lr.h + 4 * s, H - h - 5 * s); } plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
     }
     if (U.menu && G.phase === 'play') {
       const m = U.menu, p = proj(m.pad.x, m.pad.y + (m.tower ? Math.min(3.6, m.tower.mounts.top) : 1.2), m.pad.z), a = sat(m.t * 8), mp = 6 * s;
