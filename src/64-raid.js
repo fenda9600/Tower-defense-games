@@ -19,7 +19,7 @@ const RAID = {
   shots: [], ruined: 0, rebuilt: 0,
 };
 function raidWarn(type) { const r = RAID.by[type]; return r ? r.warn : undefined; }
-function towerMaxHp(t) { return Math.round(RAID.hp[t.kind][t.lvl] * crewHp(t)); }
+function towerMaxHp(t) { return Math.round(ownHp(RAID.hp[t.kind][t.lvl] * crewHp(t))); }
 function rebuildCost(t) { return Math.round(t.spent * RAID.rebuild); }
 function towerRefund(t) { return Math.round(t.spent * (t.ruin ? RAID.ruinRefund : .6)); }
 
@@ -48,7 +48,7 @@ function raidTend(t, dt) {
 function damageTower(t, dmg, dx, dz, fire) {
   if (!t.alive || t.ruin || G.phase !== 'play') return;
   if (t.hp === undefined) raidTend(t, 0);
-  t.hp -= dmg; t.hitT = G.t; t.shk = Math.min(1.4, (t.shk || 0) + (fire ? .35 : 1));
+  t.hp -= foeMulDmg(dmg); t.hitT = G.t; t.shk = Math.min(1.4, (t.shk || 0) + (fire ? .35 : 1));
   const top = Math.min(3, t.mounts.top), n = fire ? 1 : 4;
   for (let i = 0; i < n; i++) { _tm.compose(_tv.set(t.x + rr(-.6, .6), t.y + rr(.4, top), t.z + rr(-.6, .6)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(1, 1, 1)); addDebris(t.kind === 'bombard' || rnd() < .3 ? KIT.rubble : KIT.plank, _tm, null, rr(-2, 2) + (dx || 0) * 2, rr(1.5, 4), rr(-2, 2) + (dz || 0) * 2, rr(3, 9), rr(1.6, 2.6)); }
   if (t.hp <= 0) ruinTower(t);

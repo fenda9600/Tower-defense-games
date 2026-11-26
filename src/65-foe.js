@@ -38,7 +38,7 @@ function foeReset() { const st = FOE.st; st.muster = false; st.musterAt = st.rel
 // Who goes ahead of wave k on this battlefield. No dice here: buildWave charges the column for them before it is drawn up.
 function foeVan(k, level) {
   const ez = campaignEase(level)[0], out = [];
-  const nL = k >= 3 ? Math.max(1, Math.round((1 + Math.min(1, level >> 2)) * ez)) : 0, nP = Math.max(1, Math.round((1 + (k >> 2) + Math.min(1, level >> 1)) * ez));
+  const nL = k >= 3 ? Math.max(1, Math.round(foeMulN((1 + Math.min(1, level >> 2)) * ez))) : 0, nP = Math.max(1, Math.round(foeMulN((1 + (k >> 2) + Math.min(1, level >> 1)) * ez)));
   for (let i = 0; i < nL; i++) out.push('lanzi'); for (let i = 0; i < nP; i++) out.push('picked');
   return out;
 }
@@ -65,7 +65,7 @@ function foeWave() {
     const routes = foeRoutes(G.B);
     if (routes.length) {
       const route = routes[Math.floor(rnd() * routes.length)], menu = waveMenu(k, lv).map(e => e[0]), light = ['rat', 'spider', 'ghoul', 'wolf'].filter(t => menu.indexOf(t) >= 0), list = ['picked'];
-      const n = Math.max(2, Math.round((2 + (k >> 1) + (lv >> 1)) * campaignEase(lv)[0]));
+      const n = Math.max(2, Math.round(foeMulN((2 + (k >> 1) + (lv >> 1)) * campaignEase(lv)[0])));
       for (let i = 1; i < n; i++) list.push(light.length ? light[Math.floor(rnd() * light.length)] : 'skel');
       st.sneak = { t: (boss ? V.lead : V.lead + rr(3, 9)) + S.warn, warned: false, route, list, hpMul, gap: 0 };
     }
@@ -192,7 +192,7 @@ function foeCall(m) {
   const C = FOE.call, lv = G.level, ez = campaignEase(lv), B = G.B, menu = waveMenu(5, lv).map(e => e[0]);
   m.called = true; m.callT = C.halt; m.cast = 1; FOE.st.calls++;
   const pool = ['skel', 'skel', 'ghoul', 'knight', 'toad', 'spider'].filter(t => t === 'skel' || menu.indexOf(t) >= 0), list = [];
-  let budget = (C.budget[0] + C.budget[1] * lv) * ez[0] * Math.sqrt(G.press);
+  let budget = foeMulN((C.budget[0] + C.budget[1] * lv) * ez[0] * Math.sqrt(G.press));
   const nl = Math.min(2, 1 + (lv >> 1)); for (let i = 0; i < nl; i++) list.push('ladder');
   if (lv >= 1 && menu.indexOf('slime') >= 0) { list.push('slime'); budget -= ROSTER.slime[0]; }
   while (budget > 0 && list.length < 26) { const ty = pool[Math.floor(rnd() * pool.length)]; list.push(ty); budget -= ROSTER[ty][0]; }

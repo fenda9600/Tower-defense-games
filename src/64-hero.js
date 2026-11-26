@@ -89,7 +89,7 @@ const HERO = (() => {
     const B = G.B, d = HEROES[H.save.pick], s = homeS();
     const u = H.u = { key: H.save.pick, d, s, lat: .55, x: 0, y: 0, z: 0, yaw: 0, ph: 0, mv: 0, atk: -1, struck: false, cd: .6, flash: 0, flinch: 0, scale: d.mount ? 1.12 : 1.18, tgt: null, think: 0, draw: 0, pitch: 0, cds: [0, 0, 0], say: null, sayT: 0, charge: null, hasteT: 0, appear: 0, def: { bard: false }, riderKit: KIT.foot, vx: 0, vz: 0, shots: 0,
       isHero: true, hp: 0, maxHp: 0, rad: d.mount ? .42 : .3, dead: false, gone: false, alive: true, torch: false, foes: 0, hurtT: 99, lastHp: 0, mode: 'auto', order: null, rest: false };
-    u.maxHp = u.hp = u.lastHp = Math.round(d.hp * (1 + .2 * G.level));
+    u.maxHp = u.hp = u.lastHp = Math.round(ownHp(d.hp * (1 + .2 * G.level)));
     d.skills.forEach((sk, i) => { if (sk.cd) u.cds[i] = sk.cd[0] * (swap ? 1 : .4); });
     place(u); const p = pathAt(B, u.s, _p); u.yaw = Math.atan2(-p.tx, -p.tz);
     fxDust(u.x, u.y + .2, u.z, 8, 1, { speed: 1.8 });

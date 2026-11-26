@@ -261,7 +261,7 @@ const UI = (() => {
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {
       const Wl = G.wall, lv = Wl.lvl, maxed = lv >= WALL.tiers.length - 1, locked = !maxed && lv >= tierCap(), full = Wl.n >= WALL.max, upc = maxed ? 0 : WALL.cost[lv + 1];
-      const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = (Wl.open ? '城门已破' : '城门 ' + Math.ceil(Wl.gate)) + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + WALL.dmg[lv];
+      const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = (Wl.open ? '城门已破' : '城门 ' + Math.ceil(Wl.gate)) + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + Math.round(ownDmg(WALL.dmg[lv]));
       const la = full ? '守军已满' : 'R 增兵 ' + WALL.addCost, lu = maxed ? '已满级' : locked ? '升级未解锁' : 'G 升级 ' + upc;
       const bh = LH + 4 * s, w = Math.max(tw(t1), tw(t2), (Math.max(tw(la), tw(lu)) + 8 * s) * 2 + 3 * s) + pad * 2, h = LH * 2 + bh + pad * 2 + 3 * s;
       const xp = Math.round(W / 2 - w / 2), sr = U.speedRect || U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
@@ -320,7 +320,7 @@ const UI = (() => {
         // the lesser upgrade: more men for this work (66-crew.js)
         const C = CREW.by[t.kind], cn = crewOf(t), cfull = cn >= CREW.max, cc = crewCost(t), ccan = !ruin && !cfull && G.gold >= cc && t.state === 'active';
         const ul = ruin ? '重建 ' + upc : maxed ? '已满级' : locked ? '未解锁' : '升级 ' + upc, cl = cfull ? '兵满' : '添兵 ' + cc, sl = '拆除 +' + refund, iw9 = 9 * s, bw3 = Math.max(tw(ul), tw(cl), tw(sl)) + iw9 + 11 * s, bh = 15 * s;
-        const st = ruin ? '已被首领摧毁，停止作战' : (t.kind === 'guard' ? '戍卒 ' + crewMen(t) + ' · 生命 ' + d.hp[t.lvl] : (t.kind === 'archer' ? '弓手 ' + t.archers.length + ' · ' : '') + '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + Math.round(d.dmg[t.lvl] * crewDmg(t))) + ' · 耐久 ' + Math.ceil(t.hp === undefined ? towerMaxHp(t) : t.hp);
+        const st = ruin ? '已被首领摧毁，停止作战' : (t.kind === 'guard' ? '戍卒 ' + crewMen(t) + ' · 生命 ' + Math.round(ownHp(d.hp[t.lvl])) : (t.kind === 'archer' ? '弓手 ' + t.archers.length + ' · ' : '') + '射程 ' + d.range[t.lvl].toFixed(1) + ' · 伤害 ' + Math.round(ownDmg(d.dmg[t.lvl] * crewDmg(t)))) + ' · 耐久 ' + Math.ceil(t.hp === undefined ? towerMaxHp(t) : t.hp);
         // the era of this level, and what the next level brings; over the lesser upgrade's button, what more men bring
         const onCrew = !ruin && (U.gp.active ? m.focus === 1 : !!(U.hotBtn && U.hotBtn.id === 'crew'));
         const cur = d.tiers[t.lvl][0] + ' · 添兵 ' + cn + '/' + CREW.max, nx = maxed || ruin ? null : d.tiers[t.lvl + 1];

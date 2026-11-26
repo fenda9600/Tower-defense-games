@@ -31,8 +31,9 @@ const MON = {
   king: { name: '匈奴单于', en: 'Xiongnu chanyu', hp: 1250, spd: .86, rad: .92, mass: 40, bounty: 200, lives: 5, hitH: 2.0, top: 3.9, dmg: 46, atkT: 1.7, scale: 2.6, boss: true, summon: { type: 'wolf', n: 3, every: 9, max: 99, hp: 1 }, death: 'man', blade: true, cat: 'armor' },
 };
 
+// the grade's health multiplier is applied here, once per enemy; spawn heirs a split or a summons whose hpMul is taken from a parent that already has it
 function spawnMonster(type, o = {}) {
-  const B = G.B, def = MON[type], hpMul = o.hpMul || 1, bt = B.bio.tints;
+  const B = G.B, def = MON[type], hpMul = o.heir ? o.hpMul : foeMulHp(o.hpMul || 1), bt = B.bio.tints;
   const m = {
     type, def, hp: def.hp * hpMul, maxHp: def.hp * hpMul, s: o.s === undefined ? .7 + rnd() * .5 : o.s, lat: o.lat === undefined ? rr(-.85, .85) : o.lat,
     x: 0, y: 0, z: 0, yaw: 0, ph: rnd() * 6, mv: 1, vf: def.spd, spdNow: def.spd, spdMul: rr(.93, 1.07) * (o.spdMul || 1), slowT: 0, slowF: 0,
@@ -53,8 +54,10 @@ function spawnMonster(type, o = {}) {
 function removeMonster(m) { m.dead = true; m.alive = false; if (m.flame) { removeFlame(m.flame); m.flame = null; } if (m.foe) { m.foe = null; } }
 
 function slowMonster(m, f, t) { if (m.def.boss) { f *= .4; t *= .6; } if (m.def.slowRes) f *= 1 - m.def.slowRes; m.slowF = Math.max(m.slowF, f); m.slowT = Math.max(m.slowT, t); }
+// every blow the defender lands comes through here with its source (a work, the wall, the general), and the grade's damage multiplier with it
 function hitMonster(m, dmg, kind, dx, dz, tower) {
   if (m.dead || m.hp <= 0) return false;
+  if (tower) dmg = ownDmg(dmg);
   if (m.eth) { if (kind === 'arrow' || kind === 'sword') { if (rnd() < .5) fxTimed(0, m.x + rr(-.2, .2), m.y + m.hitH + rr(-.2, .3), m.z + rr(-.2, .2), .5, .5, .5, .9, 1.8, .7, .18); return false; } dmg *= .5; }
   if (kind === 'arrow' && m.def.armor) { dmg *= m.def.armor; if (rnd() < .6) { fxSparks(m.x, m.y + m.hitH, m.z, 3, 3, 2.4, 2.2, 1.6, { size: .05 }); } }
   m.hp -= dmg; m.flash = 1; m.flinch = m.def.boss ? Math.max(m.flinch, .25) : 1; m.hitAt = G.t;
@@ -109,7 +112,7 @@ function killMonster(m, kind, dx, dz, tower) {
     for (let i = 0; i < 5; i++) fxSmoke(m.x, m.y + .3, m.z, rr(-1, 1), rr(.5, 1.5), rr(-1, 1), rr(.4, .8), .35 * sc, .5, .12, .3, .12, .5, { drag: 3 });
     sfx('squelch', m.x, m.z, .8, big ? .8 : .2);
   }
-  if (def.split && G.mons.length < 90) { const [ty, n] = def.split; for (let i = 0; i < n; i++) { const u = n > 1 ? i / (n - 1) * 2 - 1 : 0; spawnMonster(ty, { s: Math.max(.5, m.s - .15 - .1 * Math.abs(u)), lat: clamp(m.lat + u * .34, -.95, .95), hpMul: m.maxHp / def.hp, pop: 1 }).kl = u * 2.2; } }
+  if (def.split && G.mons.length < 90) { const [ty, n] = def.split; for (let i = 0; i < n; i++) { const u = n > 1 ? i / (n - 1) * 2 - 1 : 0; spawnMonster(ty, { s: Math.max(.5, m.s - .15 - .1 * Math.abs(u)), lat: clamp(m.lat + u * .34, -.95, .95), hpMul: m.maxHp / def.hp, heir: true, pop: 1 }).kl = u * 2.2; } }
   if (m.torch && m.flame) fxEmbers(m.flame.x, m.flame.y, m.flame.z, 8, .15);
   dropCoins(m.x, m.y + m.hitH * .6, m.z, Math.round(def.bounty * G.bountyMul), clamp(Math.round(def.bounty / 3), 1, 6));
   removeMonster(m);
@@ -179,7 +182,7 @@ function spawnFootman(tower) {
   const d = tower.def, lvl = tower.lvl, door = tower.w(tower.mounts.door, {});
   const used = tower.men.map(f => f.slot); let slot = 0; while (used.includes(slot)) slot++;
   const f = {
-    isMan: true, tower, slot, x: door.x, y: door.y, z: door.z, yaw: tower.yaw, ph: 0, mv: 0, atk: -1, flinch: 0, flash: 0, hp: d.hp[lvl], maxHp: d.hp[lvl], dmg: d.dmg[lvl],
+    isMan: true, tower, slot, x: door.x, y: door.y, z: door.z, yaw: tower.yaw, ph: 0, mv: 0, atk: -1, flinch: 0, flash: 0, hp: ownHp(d.hp[lvl]), maxHp: ownHp(d.hp[lvl]), dmg: d.dmg[lvl],
     rad: .26, mass: 7, s: tower.pad.s, lat: 0, onRoad: false, state: 'march', target: null, cd: rr(.2, .6), torch: slot === 0, gone: false, dead: false, vf: 0, scale: .9 + lvl * .04,
     struck: false, alive: true, lI: slot === 0 ? 32 : 0, lx: 0, ly: 0, lz: 0, lseed: rnd() * 9, flame: null, leave: false, lvlUp: false, weapon: null, shield: null, age: 0, foes: 0,
   };
@@ -201,7 +204,7 @@ function slotPos(f, out) {
 const _fp = { x: 0, y: 0, z: 0, tx: 0, tz: 0 };
 function footmanThink(f, dt) {
   const B = G.B, tw = f.tower; f.age += dt;
-  if (f.lvlUp) { f.lvlUp = false; const d = tw.def, r = f.hp / f.maxHp; f.maxHp = d.hp[tw.lvl]; f.hp = f.maxHp * Math.max(r, .6); f.dmg = d.dmg[tw.lvl]; f.scale = .9 + tw.lvl * .04; }
+  if (f.lvlUp) { f.lvlUp = false; const d = tw.def, r = f.hp / f.maxHp; f.maxHp = ownHp(d.hp[tw.lvl]); f.hp = f.maxHp * Math.max(r, .6); f.dmg = d.dmg[tw.lvl]; f.scale = .9 + tw.lvl * .04; }
   if (!tw.alive) f.leave = true;
   let gx, gz, face = null, speed = 2.1, fighting = false;
   const rally = slotPos(f, _fp), rs = f.muster != null ? f.muster : tw.pad.s; // muster: the general's rallying horn (64-hero.js) calls the men to the wall foot
@@ -291,7 +294,7 @@ function updateUnits(dt) {
       m.sumT -= dt;
       if (m.sumT <= 0 && m.sumN < def.summon.max && mons.length < 78) {
         const sm = def.summon; m.sumT = sm.every; m.sumN++; m.cast = 1; sfx('horn', m.x, m.z, .25, .2);
-        for (let i = 0; i < sm.n; i++) { const q = spawnMonster(sm.type, { s: Math.max(.5, m.s - .6 - .3 * i - (def.boss ? 1.2 : 0)), lat: clamp(m.lat + (i - (sm.n - 1) / 2) * .8 + rr(-.1, .1), -.9, .9), hpMul: (m.maxHp / def.hp) * sm.hp, pop: 1 }); fxDust(q.x, q.y + .1, q.z, 5, .7, { a: .45 }); }
+        for (let i = 0; i < sm.n; i++) { const q = spawnMonster(sm.type, { s: Math.max(.5, m.s - .6 - .3 * i - (def.boss ? 1.2 : 0)), lat: clamp(m.lat + (i - (sm.n - 1) / 2) * .8 + rr(-.1, .1), -.9, .9), hpMul: (m.maxHp / def.hp) * sm.hp, heir: true, pop: 1 }); fxDust(q.x, q.y + .1, q.z, 5, .7, { a: .45 }); }
       }
     }
     if (def.stomp && m.vis) {
