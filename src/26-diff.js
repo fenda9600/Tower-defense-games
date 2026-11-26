@@ -6,8 +6,8 @@
 const DIFF = {
   list: [
     { key: 'easy', name: '简易', era: '', ease: true, foe: { n: 1, hp: 1, dmg: 1 }, own: { hp: 1, dmg: 1 }, works: [], foes: [] },
-    { key: 'mid', name: '中等', era: '元明火器', foe: { n: 1.1, hp: 1.4, dmg: 1.3 }, own: { hp: 1.25, dmg: 1.25 }, works: ['gunner'], foes: ['huihui', 'tammachi'] },
-    { key: 'hard', name: '困难', era: '明清鼎革', foe: { n: 1.2, hp: 1.9, dmg: 1.6 }, own: { hp: 1.5, dmg: 1.5 }, works: ['cannon'], foes: ['dunche', 'sibing'] },
+    { key: 'mid', name: '中等', era: '元明火器', foe: { n: 1.15, hp: 1.9, dmg: 1.45 }, own: { hp: 1.15, dmg: 1.15 }, works: ['gunner'], foes: ['huihui', 'tammachi'] },
+    { key: 'hard', name: '困难', era: '明清鼎革', foe: { n: 1.3, hp: 2.4, dmg: 1.7 }, own: { hp: 1.3, dmg: 1.3 }, works: ['cannon'], foes: ['dunche', 'sibing'] },
   ],
   cur: 0,
 };
