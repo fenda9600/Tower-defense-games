@@ -60,7 +60,7 @@ function initArmy() {
   // Foot soldiers of the attacking host: dark tunics, leather armour, a black head cloth.
   KIT.foe = armyKit({ tunic: indigo, pants: C(0x3a3a36), armor: C(0x5a4030), belt: C(0x2a1d14), head: 'wrap', wraps: C(0x8a8068) }, 150);
   // Steppe riders and their lords: belted coats closed on the left, fur trim, braids.
-  KIT.hu = armyKit({ tunic: hide, pants: C(0x4a3c30), trim: fur, long: true, leftLapel: true, head: 'braid', hair: C(0x1c1612), beard: true, boots: C(0x2a201a) }, 70);
+  KIT.hu = armyKit({ tunic: hide, pants: C(0x4a3c30), trim: fur, long: true, leftLapel: true, head: "braid", hair: C(0x1c1612), beard: true, boots: C(0x2a201a) }, 110);
   // Light men: bare arms of plain hemp, a topknot, wrapped shins.
   KIT.light = armyKit({ tunic: C(0x6a6250), pants: C(0x4c463a), head: 'knot', wraps: C(0x8a8068), belt: C(0x3a2a1c) }, 90);
   // Officers and the general: lacquered armour over a long coat.
@@ -156,9 +156,9 @@ function initArmy() {
     tail: new PartBatch(S => { S.seg([0, 0, 0], [0, -.4, -.12], .05, .03, mane, { n: 4 }); }, 60, { rad: .05, shadow: false }),
   };
   KIT.horseA = {
-    body: new PartBatch(S => horseBody(S, true), 14, { rad: .45 }),
-    leg: new PartBatch(S => horseLeg(S, true), 56, { rad: .07, shadow: false }),
-    tail: new PartBatch(S => { S.seg([0, 0, 0], [0, -.4, -.12], .05, .03, mane, { n: 4 }); }, 14, { rad: .05, shadow: false }),
+    body: new PartBatch(S => horseBody(S, true), 96, { rad: .45 }),
+    leg: new PartBatch(S => horseLeg(S, true), 384, { rad: .07, shadow: false }),
+    tail: new PartBatch(S => { S.seg([0, 0, 0], [0, -.4, -.12], .05, .03, mane, { n: 4 }); }, 96, { rad: .05, shadow: false }),
   };
   for (const k of ['leg']) KIT.horseA[k].mesh.castShadow = true;
 
@@ -184,7 +184,7 @@ function initArmy() {
 
   // Siege carts on solid wheels: the ram, the hide-roofed tortoise and the tall assault tower.
   const tim = COL.wood, timD = COL.woodD, hideC = C(0x6a5034), hideD = C(0x4a3824);
-  KIT.wheel = new PartBatch(S => { S.cyl(.3, .1, 0, 0, 0, timD, { n: 10, r: [0, 0, HPI], l: L_WOOD }); S.cyl(.31, .06, 0, 0, 0, COL.iron, { n: 10, r: [0, 0, HPI], l: L_METAL }); S.cyl(.08, .14, 0, 0, 0, COL.iron, { n: 6, r: [0, 0, HPI], l: L_METAL }); for (const a of [0, PI / 3, 2 * PI / 3]) S.box(.11, .54, .05, 0, 0, 0, tim, { l: L_WOOD, r: [a, 0, 0] }); }, 120, { rad: .2 });
+  KIT.wheel = new PartBatch(S => { S.cyl(.3, .1, 0, 0, 0, timD, { n: 10, r: [0, 0, HPI], l: L_WOOD }); S.cyl(.31, .06, 0, 0, 0, COL.iron, { n: 10, r: [0, 0, HPI], l: L_METAL }); S.cyl(.08, .14, 0, 0, 0, COL.iron, { n: 6, r: [0, 0, HPI], l: L_METAL }); for (const a of [0, PI / 3, 2 * PI / 3]) S.box(.11, .54, .05, 0, 0, 0, tim, { l: L_WOOD, r: [a, 0, 0] }); }, 220, { rad: .2 });
   const frame = (S, w, l, y) => { for (const sg of [-1, 1]) S.box(.1, .1, l, sg * w / 2, y, 0, timD, { l: L_WOOD }); for (const z of [-l / 2 + .05, 0, l / 2 - .05]) S.box(w, .08, .1, 0, y, z, timD, { l: L_WOOD }); S.box(w - .1, .04, l - .1, 0, y + .04, 0, tim, { l: L_WOOD }); };
   KIT.ram = new PartBatch(S => {
     frame(S, .8, 1.5, .3);
@@ -235,6 +235,81 @@ function initArmy() {
     }, 24, { rad: .2 }),
     wing: new PartBatch(S => { S.tri([0, 0, .14], [.3, 0, -.02], [0, 0, -.14], wdBD, L_PLAIN, .9); S.tri([0, 0, .14], [0, 0, -.14], [.3, 0, -.02], wdBD, L_PLAIN, .9); S.seg([0, .01, .1], [.3, .01, -.02], .01, .008, wdB, { n: 3 }); }, 48, { rad: .1 }),
   };
+}
+
+// Parts for the troops and works that only the harder grades bring. Built on first use, so that an easy game never builds them
+// (building draws on the shared geometry jitter stream, and the easy board must come out exactly as it always has).
+function gradeKits() {
+  const I = KIT.item, Z = [HPI, 0, 0], brz = mulC(COL.bronze, 1.1), irn = mulC(COL.iron, 1.1), stock = C(0x4a2e1c), stockL = C(0x6a4428), band = mulC(COL.brass, 1.05);
+  // guns, gripped by the forward hand at the origin, muzzle along +z: the Yuan bronze hand gun and the early Ming iron one on a wooden tiller,
+  // the Jiajing fowling piece with its bent stock and serpentine, and the longer, darker Rumi gun
+  const tube = (S, c, r, z0, z1, l) => S.cyl(r, z1 - z0, 0, 0, (z0 + z1) / 2, c, { n: 7, r: Z, l });
+  KIT.gun = [
+    new PartBatch(S => { tube(S, brz, .045, .02, .4, L_METAL); S.sph(.068, 0, 0, .02, brz, { l: L_METAL, w: 7, h: 5, smooth: false }); S.cyl(.055, .04, 0, 0, .39, brz, { n: 7, r: Z, l: L_METAL }); S.box(.04, .04, .62, 0, -.01, -.32, stock, { l: L_WOOD }); }, 100, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, irn, .04, -.02, .5, L_METAL); S.sph(.06, 0, 0, -.02, irn, { l: L_METAL, w: 7, h: 5, smooth: false }); for (const z of [.15, .3, .48]) S.cyl(.048, .03, 0, 0, z, band, { n: 7, r: Z, l: L_METAL }); S.box(.045, .045, .66, 0, -.01, -.38, stock, { l: L_WOOD }); }, 100, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, irn, .032, -.1, .72, L_METAL); S.box(.055, .06, .62, 0, -.035, .05, stockL, { l: L_WOOD }); S.box(.06, .11, .32, 0, -.085, -.38, stockL, { l: L_WOOD, r: [-.28, 0, 0] }); S.box(.012, .07, .04, .03, .05, -.14, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.2, .45]) S.cyl(.03, .02, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); }, 100, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, mulC(irn, .8), .036, -.12, .86, L_METAL); S.box(.055, .06, .7, 0, -.035, .08, stock, { l: L_WOOD }); S.box(.06, .12, .34, 0, -.09, -.42, stock, { l: L_WOOD, r: [-.3, 0, 0] }); S.box(.012, .08, .04, .03, .05, -.16, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.1, .34, .6, .84]) S.cyl(.033, .025, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); S.cone(.012, .03, 0, .03, .8, band, { n: 4 }); }, 100, { rad: .2, shadow: false }),
+  ];
+  // the Mongol helmet of the tammachi riders: a tall iron bowl with a spike and a plume, and a leather neck guard
+  I.mgHelm = new PartBatch(S => {
+    S.add(gDome(8, 3), { s: [.16, .22, .16], p: [0, .2, 0], c: mulC(COL.iron, 1.2), l: L_METAL, rough: .45 }); S.cyl(.17, .035, 0, .2, 0, band, { n: 8, l: L_METAL });
+    S.cone(.03, .2, 0, .5, 0, band, { n: 5, l: L_METAL }); S.ico(.045, 0, .6, -.02, C(0x8a1a14), { d: 0, sc: [1, 1.6, 1] });
+    S.box(.3, .2, .05, 0, .08, -.15, C(0x4a3420), { l: L_CLOTH, r: [.25, 0, 0] }); for (const sg of [-1, 1]) S.box(.05, .2, .2, sg * .16, .08, -.03, C(0x4a3420), { l: L_CLOTH, r: [0, 0, sg * -.15] });
+  }, 90, { rad: .2, shadow: false });
+  // The Muslim trebuchet: a wheeled bed, two tall trestles carrying the axle, and (in KIT.hhArm) the long beam with its box of counterweight.
+  const tim = COL.wood, timD = COL.woodD, ironB = COL.iron;
+  KIT.hh = new PartBatch(S => {
+    for (const sg of [-1, 1]) S.box(.12, .14, 2.3, sg * .55, .34, 0, timD, { l: L_WOOD }); for (const z of [-1.05, -.35, .35, 1.05]) S.box(1.2, .1, .12, 0, .36, z, timD, { l: L_WOOD });
+    S.box(1.0, .05, 1.4, 0, .43, -.35, tim, { l: L_WOOD });
+    for (const sg of [-1, 1]) { S.seg([sg * .5, .4, -.85], [sg * .36, 2.55, -.1], .07, .06, timD, { n: 5, l: L_WOOD }); S.seg([sg * .5, .4, .75], [sg * .36, 2.55, -.1], .07, .06, timD, { n: 5, l: L_WOOD }); S.seg([sg * .5, 1.2, -.6], [sg * .5, 1.2, .5], .04, .04, tim, { n: 4, l: L_WOOD }); }
+    S.cyl(.07, .9, 0, 2.55, -.1, ironB, { n: 6, r: [0, 0, HPI], l: L_METAL });
+    // the windlass that hauls the beam down, and a stone ready in the trough
+    S.cyl(.1, .9, 0, .62, -.95, timD, { n: 6, r: [0, 0, HPI], l: L_WOOD }); for (const sg of [-1, 1]) S.box(.06, .3, .06, sg * .46, .55, -.95, tim, { l: L_WOOD });
+    S.box(.3, .08, .8, 0, .5, .75, tim, { l: L_WOOD }); S.rock(.16, 0, .64, .9, COL.stone, {});
+  }, 32, { rad: .9 });
+  // the Jurchen heavy foot: an iron helmet with a spike and a mail curtain, a second coat of lamellar over the first, and long tassets
+  const irH = mulC(COL.iron, 1.25), irHL = COL.ironL, lea = C(0x4a3020);
+  I.jinHelm = new PartBatch(S => { S.add(gDome(8, 3), { s: [.165, .17, .17], p: [0, .21, 0], c: irH, l: L_METAL, rough: .45 }); S.cone(.025, .16, 0, .45, 0, irHL, { n: 4, l: L_METAL }); S.cyl(.18, .03, 0, .21, 0, irHL, { n: 8, l: L_METAL }); for (const y of [.15, .09, .03]) S.cyl(.19 - (.21 - y) * .1, .05, 0, y, -.02, mulC(irH, .85), { n: 8, l: L_METAL, rough: .55, open: true }); S.box(.22, .04, .03, 0, .13, .17, irHL, { l: L_METAL }); }, 90, { rad: .2, shadow: false });
+  I.sbJia = new PartBatch(S => { S.box(.4, .38, .3, 0, .22, 0, irH, { l: L_METAL, rough: .5 }); for (let y = .06; y < .42; y += .05) S.box(.405, .012, .305, 0, y, 0, irHL, { l: L_METAL, jit: 0 }); for (const sg of [-1, 1]) { S.box(.22, .1, .3, sg * .26, .44, 0, irH, { l: L_METAL }); S.box(.2, .12, .27, sg * .3, .34, 0, mulC(irH, .9), { l: L_METAL, r: [0, 0, sg * .3] }); } S.box(.42, .06, .31, 0, .02, 0, lea, { l: L_CLOTH }); S.box(.12, .12, .02, 0, .28, .16, COL.brass, { l: L_METAL }); }, 90, { rad: .2, shadow: false });
+  I.sbSkirt = new PartBatch(S => { for (const sg of [-1, 1]) for (const zs of [-1, 1]) { S.box(.2, .42, .05, sg * .1, -.2, zs * .13, irH, { l: L_METAL, rough: .55 }); for (let y = -.38; y < 0; y += .07) S.box(.205, .012, .055, sg * .1, y, zs * .13, irHL, { l: L_METAL, jit: 0 }); } }, 90, { rad: .2, shadow: false });
+  // the mantlet cart: a low bed on four wheels behind a tall shield of planks faced with hide and iron strips, loopholes and a slanted top
+  KIT.dunche = new PartBatch(S => {
+    for (const sg of [-1, 1]) S.box(.1, .1, 1.5, sg * .5, .32, -.1, timD, { l: L_WOOD }); for (const z of [-.75, 0, .55]) S.box(1.1, .08, .1, 0, .34, z, timD, { l: L_WOOD });
+    const hide = C(0x7a5a3a), hideD = C(0x5a4028);
+    for (let i = 0; i < 7; i++) { const x = -.72 + i * .24; S.box(.23, 1.55, .1, x, 1.05, .68, i & 1 ? hide : hideD, { l: L_PLAIN }); }
+    for (const y of [.45, 1.0, 1.55]) S.box(1.72, .07, .03, 0, y, .74, ironB, { l: L_METAL }); for (const x of [-.55, 0, .55]) S.box(.06, 1.5, .03, x, 1.05, .745, mulC(ironB, .9), { l: L_METAL });
+    for (const x of [-.36, .36]) S.box(.14, .08, .04, x, 1.25, .755, COL.black, { jit: 0 });
+    S.box(1.76, .08, .5, 0, 1.86, .5, timD, { l: L_WOOD, r: [-.45, 0, 0] });
+    for (const sg of [-1, 1]) S.seg([sg * .6, .38, -.6], [sg * .6, 1.5, .62], .045, .045, tim, { n: 4, l: L_WOOD });
+    for (const sg of [-1, 1]) S.seg([sg * .42, .4, -.85], [sg * .42, .95, -1.2], .035, .03, tim, { n: 4, l: L_WOOD });
+    for (const sg of [-1, 1]) for (const x of [-.45, -.15, .15, .45]) S.cone(.03, .18, x, 1.9 + sg * 0, .75, ironB, { n: 4, l: L_METAL });
+  }, 48, { rad: .9 });
+  KIT.ball = new PartBatch(S => { S.sph(.15, 0, 0, 0, mulC(COL.iron, .7), { l: L_METAL, w: 7, h: 5, smooth: false, rough: .5 }); }, 24, { rad: .15 });
+  KIT.hhArm = new PartBatch(S => {
+    S.seg([0, -.85, 0], [0, 2.6, 0], .08, .045, tim, { n: 6, l: L_WOOD }); for (const y of [-.4, .6, 1.4]) S.cyl(.1, .06, 0, y, 0, COL.rope, { n: 6 });
+    S.box(.62, .55, .55, 0, -1.08, 0, timD, { l: L_WOOD }); for (const y of [-.9, -1.26]) S.box(.64, .05, .57, 0, y, 0, ironB, { l: L_METAL }); S.box(.5, .1, .45, 0, -.79, 0, COL.stoneD, { l: L_ROCK });
+    S.seg([0, 2.6, 0], [0, 2.0, .25], .012, .012, COL.rope, { n: 3 }); S.box(.12, .1, .1, 0, 2.0, .25, C(0x5a4028), {});
+  }, 32, { rad: 1.4 });
+}
+function rigDunche(m) {
+  if (!KIT.dunche) gradeKits();
+  const s = m.scale || 1, fl = m.flash || 0, ph = m.ph, M0 = xf(_M[14], null, m.x, m.y + .02, m.z, -(m.flinch || 0) * .05, m.yaw, Math.sin(ph * 1.3) * .015 * m.mv, s, s, s);
+  KIT.dunche.put(M0, fl, m.tint);
+  let i = 15; for (const sg of [-1, 1]) for (const z of [-.6, .45]) KIT.wheel.put(xf(_M[i++], M0, sg * .6, .3, z, ph * 1.6, 0, 0), fl, m.tint);
+  // two men lean into the push bars behind it; when the cart breaks up they are not debris, they walk on (its split)
+  const P = m.pushers || (m.pushers = [0, 1].map(k => ({ scale: .95, ph: k * 1.7, mv: 1, atk: -1, shamble: true, weapon: null, tint: null, x: 0, y: 0, z: 0, yaw: 0, flash: 0 })));
+  if (!RIG_CAPTURE) for (let k = 0; k < 2; k++) { const e = P[k]; _rv.set((k ? .42 : -.42), 0, -1.38).applyMatrix4(M0); e.x = _rv.x; e.y = m.y; e.z = _rv.z; e.yaw = m.yaw; e.ph = ph * 2.2 + k * 1.7; e.mv = m.mv; e.flash = fl; e.flinch = m.flinch; rigHuman(KIT.foe, SPEC.crouch, e); }
+  return M0;
+}
+function rigHuihui(m) {
+  if (!KIT.hh) gradeKits();
+  const s = m.scale || 1, fl = m.flash || 0, ph = m.ph, M0 = xf(_M[14], null, m.x, m.y + .02, m.z, -(m.flinch || 0) * .05, m.yaw, Math.sin(ph * 1.3) * .015 * m.mv, s, s, s);
+  KIT.hh.put(M0, fl, m.tint);
+  // the throw: the box drops, the long end whips up and over, then the crew wind it back down
+  const p = 1 - (m.swing || 0), a = p < .12 ? lerp(-2.35, .45, easeIn(p / .12)) : lerp(.45, -2.35, easeInOut((p - .12) / .88));
+  KIT.hhArm.put(xf(_M[15], M0, 0, 2.55, -.1, a, 0, 0), fl, m.tint);
+  let i = 16; for (const sg of [-1, 1]) for (const z of [-.75, .75]) KIT.wheel.put(xf(_M[i++], M0, sg * .66, .3, z, ph * 1.6, 0, 0), fl, m.tint);
+  return M0;
 }
 
 function rigRider(m, M0, kit, sy, sz) {

@@ -5,7 +5,7 @@
 // until it is rebuilt for a part of what it cost. A chief who is tied up by the garrison's foot has no time for the towers.
 const RAID = {
   // strength of each work at each tier
-  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310] },
+  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310], gunner: [120, 160, 210, 270], cannon: [150, 200, 260, 330] },
   calm: 6, mend: .05, rebuild: .3, ruinRefund: .3, lvDmg: .12,
   // how each chief goes about it; README.md gives the source for each
   by: {
@@ -123,6 +123,13 @@ function updateRaid(dt) {
     const u = Math.min(1, a.t / a.T), px = a.x, py = a.y, pz = a.z;
     a.x = lerp(a.x0, a.tx, u); a.z = lerp(a.z0, a.tz, u); a.y = lerp(a.y0, a.ty, u) + a.arc * 4 * u * (1 - u);
     const dx = a.x - px, dy = a.y - py, dz = a.z - pz, l = Math.hypot(dx, dy, dz) || 1, ux = dx / l, uy = dy / l, uz = dz / l;
+    if (a.stone) {
+      // a trebuchet stone (65-foe.js): a big rock trailing dust
+      _tm.compose(_tv.set(a.x, a.y, a.z), _tq.setFromAxisAngle(_tz, a.t * 5), _ts.set(1.7, 1.7, 1.7)); KIT.stoneShot.put(_tm, 0, null);
+      if (rnd() < .5) fxSmoke(a.x, a.y, a.z, 0, .1, 0, rr(.4, .7), .14, .3, .4, .36, .32, .3, { drag: 1 });
+      if (u >= 1) { swapRemove(A, i); foeStoneLands(a); }
+      continue;
+    }
     KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, ux, uy, uz), 0, null);
     FX.segs.push(a.x, a.y, a.z, .055, a.x - ux * .95, a.y - uy * .95, a.z - uz * .95, .0, 2.6, 1.05, .25, .85);
     FX.add.push(a.x, a.y, a.z, .3, .3, 0, 0, 3.6, 1.9, .5, 1, 0, 0, 0, 0);

@@ -167,6 +167,14 @@ const AU = (function () {
     const c = gn(d), cf = flt(c, 'highpass', 1100); noi(t, 0.1, cf); ad(c.gain, t, 0.5, 0.0008, 0.05);
     const r = gn(d), rf = flt(r, 'lowpass', 230, 0.5); noi(t + 0.05, 1.5, rf, bufBrown); ad(r.gain, t + 0.05, 0.5, 0.12, 1.2);
   };
+  S.musket = (d, t, p) => {
+    // a rank of matchlocks going off almost together: sharp cracks, a short boom and the smoke's hiss
+    const k = rr(0.9, 1.1), sh = shape(d, 1.6);
+    for (let i = 0; i < 3; i++) { const t0 = t + i * rr(0.008, 0.02), c = gn(d), cf = flt(c, 'highpass', 1800 * k); noi(t0, 0.06, cf); ad(c.gain, t0, 0.55, 0.0006, 0.035); }
+    const g = gn(sh), o = osc('sine', 150 * k, t, 0.3, g); sw(o.frequency, t, 170 * k, 50 * k, 0.18); ad(g.gain, t, 0.8, 0.002, 0.2);
+    const b = gn(sh), bf = flt(b, 'lowpass', 2400, 0.7); noi(t, 0.35, bf); sw(bf.frequency, t, 3200, 400, 0.25); ad(b.gain, t, 0.55, 0.001, 0.22);
+    const r = gn(d), rf = flt(r, 'bandpass', 900, 0.6); noi(t + 0.03, 0.7, rf); ad(r.gain, t + 0.03, 0.12 + 0.05 * p, 0.05, 0.55);
+  };
   S.explode = (d, t, p) => {
     const k = rr(0.88, 1.12) * (1 - 0.25 * p), L = 1 + 0.5 * p, sh = shape(d, 1.8);
     const g = gn(sh), o = osc('sine', 90 * k, t, 0.6 * L, g); sw(o.frequency, t, 95 * k, 30 * k, 0.32 * L); ad(g.gain, t, 0.95, 0.003, 0.45 * L);
@@ -400,6 +408,7 @@ const AU = (function () {
     bow: [S.bow, 0.05, 0.18, 1, 0.3, 0.55],
     arrowHit: [S.arrowHit, 0.045, 0.12, 0, 0.15, 0.5],
     cannon: [S.cannon, 0.09, 0.45, 2, 1.6, 0.9],
+    musket: [S.musket, 0.08, 0.4, 2, 0.9, 0.75],
     explode: [S.explode, 0.08, 0.5, 2, 1.5, 0.85],
     charge: [S.charge, 0.12, 0.3, 0, 0.6, 0.6],
     zap: [S.zap, 0.09, 0.45, 1, 1.1, 0.7],

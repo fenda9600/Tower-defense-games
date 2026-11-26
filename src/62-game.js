@@ -10,10 +10,13 @@ const ROSTER = {
   slime: [9.5, 1, 3, .9, 3, 2], spider: [3, 3, 6, .25, 3, 2], scarab: [1.9, 5, 8, .18, 2, 0], knight: [12.5, 1, 3, .5, 4, 2], wolf: [5.5, 2, 4, .35, 4, 1.6], bomber: [6, 1, 2, .8, 4, 1.2],
   wraith: [9, 1, 3, .7, 5, 1.4], toad: [8, 1, 3, .7, 5, .7], wisp: [3.4, 3, 5, .25, 5, .45], drummer: [13, 1, 1, 1, 6, .9], gargoyle: [14, 1, 2, .6, 6, .6],
   ladder: [8, 1, 2, .9, 3, .8], necro: [18, 1, 1, 1.2, 7, .9], mummy: [15, 1, 2, .9, 7, .9], brute: [32, 1, 1, 2, 8, .7], golem: [40, 1, 1, 2, 8, .7], brood: [30, 1, 1, 2, 9, .6],
+  // brought by the harder grades only (26-diff.js)
+  tammachi: [11, 2, 3, .35, 4, .9], huihui: [24, 1, 1, 3, 7, .5], dunche: [26, 1, 1, 2.5, 11, .55], sibing: [12, 1, 3, .7, 12, .7],
 };
 function waveMenu(k, level) {
   const w = level * 5 + k, bio = G.B.bio, menu = [];
   for (const ty in ROSTER) {
+    if (!fielded(ty)) continue;
     const r = ROSTER[ty], mul = bio.mobs[ty] === undefined ? 1 : bio.mobs[ty], un = Math.min(r[4], bio.early[ty] || 99), wt = r[5] ? r[5] * mul : (bio.mobs[ty] || 0);
     if (w >= un && wt > 0) menu.push([ty, wt * (w === un && w > 1 ? 2.2 : 1)]);
   }
@@ -87,7 +90,7 @@ function padCoverage(pad, range, air) {
   return c;
 }
 function buildTower(pad, kind, byPlayer) {
-  const def = TOWER[kind]; if (pad.tower || !kindUnlocked(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
+  const def = TOWER[kind]; if (pad.tower || !kindOpen(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
   G.gold -= def.cost[0]; UI.goldShown = Math.min(UI.goldShown, G.gold);
   const t = new Tower(pad, kind, G.B.pads.indexOf(pad)); G.towers.push(t); UI.ping(pad.x, pad.y, pad.z, byPlayer); return t;
 }
@@ -100,22 +103,25 @@ function sellTower(t) {
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
-const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7 };
+const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7, ideal: { archer: .36, bombard: .22, spire: .2, guard: .22, gunner: .18, cannon: .14 } };
 function aiThink(dt) {
   if (G.phase !== 'play' || UI.playerActive()) return;
   AI.think -= dt; if (AI.think > 0) return; AI.think = .5;
   const B = G.B, towers = G.towers.filter(t => t.alive), empty = B.pads.filter(p => !p.tower), N = towers.length;
-  const cnt = { archer: 0, bombard: 0, spire: 0, guard: 0 }; for (const t of towers) cnt[t.kind]++;
-  const ideal = { archer: .36, bombard: .22, spire: .2, guard: .22 };
-  const lt = G.leakTypes; let air = 0, armor = 0, swarm = 0; for (const ty in lt) { const c = MON[ty].cat; if (c === 'air') air += lt[ty]; else if (c === 'armor') armor += lt[ty]; else if (c === 'swarm') swarm += lt[ty]; }
+  // the share of the bases each kind should hold: the kinds a grade brings take theirs out of the four old ones
+  const kinds = towerKinds(), cnt = {}, ideal = {}; for (const k in TOWER) cnt[k] = 0; for (const t of towers) cnt[t.kind]++;
+  let fresh = 0; for (const k of kinds) if (TOWER_KINDS.indexOf(k) < 0) fresh += AI.ideal[k];
+  for (const k of kinds) ideal[k] = TOWER_KINDS.indexOf(k) < 0 ? AI.ideal[k] : AI.ideal[k] * (1 - fresh);
+  const lt = G.leakTypes; let air = 0, armor = 0, swarm = 0, cart = 0; for (const ty in lt) { const c = MON[ty].cat; if (c === 'air') air += lt[ty]; else if (c === 'armor') armor += lt[ty]; else if (c === 'swarm') swarm += lt[ty]; if (MON[ty].cart || MON[ty].engine) cart += lt[ty]; }
   const gatePress = sat(G.leaks / 8);
   const opts = [];
   const cap = tierCap();
-  for (const kind of TOWER_KINDS) {
+  for (const kind of kinds) {
     if (!kindUnlocked(kind)) continue;
     const def = TOWER[kind];
     let need = ideal[kind] * (N + 1.6) - cnt[kind] + .35;
     if (kind === 'archer') need += air * .2 + (N === 0 ? 1 : 0); if (kind === 'spire') need += air * .12 + armor * .1; if (kind === 'bombard') need += armor * .08 + swarm * .06 + (N >= 2 && cnt.bombard === 0 ? .5 : 0); if (kind === 'guard') need += swarm * .04 + (N >= 1 && cnt.guard === 0 ? .9 : 0);
+    if (kind === 'gunner') need += armor * .1; if (kind === 'cannon') need += armor * .06 + cart * .15;
     if (need <= 0) continue;
     for (const pad of empty) {
       const cov = padCoverage(pad, def.range[0]) / (def.range[0] * 2);
@@ -134,7 +140,7 @@ function aiThink(dt) {
     if (t.state !== 'active' || t.lvl >= Math.min(t.maxLvl, cap)) continue;
     const c = upgradeCost(t), use = sat(t.recent / 60);
     let sc = (.5 + use * .9 + (t.lvl === 0 ? .12 : 0)) * (N >= 4 ? 1.25 : .7) * (empty.length === 0 ? 1.6 : 1) * (110 / c);
-    if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05;
+    if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05; if (t.kind === 'gunner' || t.kind === 'cannon') sc *= 1 + armor * .05;
     opts.push({ sc, cost: c, act: 'up', t });
   }
   // the lesser upgrade: more men for a work that is seeing action (66-crew.js). A new work covers more road than more men in an old one,

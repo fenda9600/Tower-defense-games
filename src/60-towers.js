@@ -8,8 +8,22 @@ const TOWER = {
   bombard: { name: '砲车台', short: '砲车', icon: 'bombard', cost: [120, 100, 130, 180], range: [7.4, 7.7, 8.1, 8.6], minRange: 2.3, dmg: [36, 50, 68, 104], splash: [1.55, 1.7, 1.85, 2.1], rate: [2.9, 2.8, 2.65, 2.5], air: false, ground: true, light: [46, 50, 62, 80], desc: ['汉 · 发石机：装填慢，', '落石砸伤一片，只打地面。'], tiers: [['汉 · 发石机', '汉代以机发石，重十二斤，行二百步。'], ['三国 · 霹雳车', '官渡之战，曹操造发石车击袁绍楼橹，号霹雳车。'], ['唐 · 抛车', '唐军攻辽东，抛车飞大石过三百步。'], ['宋 · 霹雳火砲', '宋《武经总要》霹雳火球，以砲抛出。']] },
   spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [110, 90, 120, 170], range: [5.5, 5.8, 6.1, 6.5], dmg: [17, 22, 28, 37], jumps: [3, 4, 5, 6], rate: [2.3, 2.2, 2.05, 1.9], slow: [.36, .4, .44, .48], slowT: [1.3, 1.4, 1.55, 1.7], air: true, ground: true, light: [34, 40, 52, 66], desc: ['秦 · 连弩：一发贯数敌，', '中者迟滞，可射飞敌。'], tiers: [['秦 · 连弩', '《史记》：始皇于之罘以连弩射杀巨鱼。'], ['汉 · 大黄弩', '李广以大黄弩射杀匈奴裨将。'], ['唐 · 车弩', '唐《通典》车弩以绞轴张弦，中垒即摧。'], ['宋 · 三弓床弩', '宋三弓床弩七十人张发，射三百步。']] },
   guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 70, 100, 140], range: [3.4, 3.6, 3.8, 4.0], n: [2, 2, 3, 3], hp: [62, 82, 100, 140], dmg: [7, 9, 11, 15], rate: [7, 6.5, 6, 5], air: false, ground: true, light: [50, 58, 72, 90], desc: ['秦 · 锐士：出营拦路，', '与敌近身搏杀。'], tiers: [['秦 · 锐士', '秦兵俑所见：铆钉札甲、右侧发髻，持青铜戈。'], ['汉 · 戍卒', '汉代边郡戍卒，铁札甲、环首刀与盾。'], ['唐 · 陌刀手', '唐陌刀手披明光铠，列阵如墙破骑。'], ['宋 · 步人甲', '宋步人甲重约二十九公斤，斩马刀破骑。']] },
+  // The kinds of work the harder grades bring (26-diff.js). Each tier has a model of its own (stages: 4).
+  // gunner: three ranks fire one after another (gap seconds apart), then all reload together. men: guns in each rank. pierce: the share of armour a ball goes through.
+  // cav: damage against horse and elephant, which also shy at the noise for shy seconds.
+  gunner: { name: '神机铳台', short: '铳台', icon: 'gunner', stages: 4, cost: [100, 90, 130, 170], range: [5.8, 6.1, 6.5, 7.0], dmg: [8, 10, 14, 18], men: [2, 2, 3, 3], ranks: 3, gap: .24, reload: [2.9, 2.7, 2.7, 2.5], pierce: [.5, .6, .65, .75], cav: 1.5, shy: [.45, .9], air: false, ground: true, light: [44, 52, 64, 80], desc: ['元 · 火铳手：三行轮放，', '铳弹破甲，惊乱骑兵与象。'], tiers: [['元 · 火铳手', '元代已有铜火铳，持铳近射，装填颇慢。'], ['明初 · 神机营', '永乐设神机营；沐英列火铳为三行迭射。'], ['嘉靖 · 鸟铳手', '鸟铳嘉靖间传入，戚继光《纪效新书》专论其法。'], ['万历 · 鲁密铳手', '赵士桢《神器谱》载鲁密铳，万历间献于朝。']] },
+  // cannon: a flat shot that goes on through every man in its line. pass: the share of its force left after each one it goes through.
+  // siege: damage against carts and engines. Slowest to load, longest reach, and it cannot be laid on anything closer than minRange.
+  cannon: { name: '红夷炮台', short: '炮台', icon: 'cannon', stages: 4, cost: [150, 120, 170, 230], range: [8.6, 9.2, 9.8, 10.5], minRange: 3, dmg: [44, 60, 82, 110], rate: [4.6, 4.4, 4.1, 3.8], pass: [.8, .84, .87, .9], width: .42, siege: 2.2, speed: 26, air: false, ground: true, light: [40, 46, 58, 72], desc: ['明初 · 碗口铳：平射贯穿，', '射程最远，专破车械。'], tiers: [['明初 · 碗口铳', '明初铜碗口铳，炮口阔如碗，存世有洪武年间铭者。'], ['嘉靖 · 佛郎机', '嘉靖初明军得佛郎机铳，以子铳轮换装填。'], ['天启 · 红夷大炮', '1626 年宁远之战，袁崇焕凭城用红夷大炮击退后金。'], ['崇祯 · 定辽大将军', '明末所铸重炮，炮身铭「定辽大将军」。']] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
+// Which update runs each kind of work.
+const TOWER_ACT = { archer: 'updArcher', bombard: 'updBombard', spire: 'updSpire', guard: 'updGuard', gunner: 'updGunner', cannon: 'updCannon' };
+// A work or a troop type that a grade of difficulty brings (26-diff.js) takes the field only on that grade and the harder ones.
+// Asked afresh every time: the grade can change between battles.
+function fielded(key) { return diffHas(key) || !DIFF.list.some(d => d.works.indexOf(key) >= 0 || d.foes.indexOf(key) >= 0); }
+function towerKinds() { return Object.keys(TOWER).filter(fielded); }
+function kindOpen(kind) { return fielded(kind) && kindUnlocked(kind); }
 
 function blueprint(kind, lvl) {
   const pieces = [], mounts = {};
@@ -141,6 +155,89 @@ function blueprint(kind, lvl) {
     piece('fire', 3, S => brazier(S, fx, H + .1, fz, bs));
     if (lvl >= 1) piece('flag', 4, S => { cnBanner(S, -W / 2 + .1, H + .1, H + 2.2 + lvl * .3, W / 2 - .1, COL.clothD, rng, { w: .34, len: .9, col2: mulC(COL.lacqL, 1.1) }); });
     mounts.flame = [fx, H + .1 + bs * .72, fz]; mounts.flameSize = bs; mounts.top = H + 1.3; mounts.gun = [0, H + .1, 0]; mounts.bows = lvl + 1;
+  } else if (kind === 'gunner') {
+    // Gun platform: a square stage with a breastwork on the road side and a slow-match brazier. Yuan: a timber stage on an earth bank behind stakes.
+    // Early Ming: a rammed earth platform with a low battlement. Jiajing: brick, battlements on three sides. Wanli: higher, with a tiled powder shed at the back.
+    const H = [.6, .95, 1.25, 1.5][lvl], W = 1.8, brick = lvl >= 2, earth = brick ? st : COL.ram, lay = brick ? L_MASON : L_DIRT;
+    piece('base', 0, S => {
+      S.box(W + .3, .18, W + .3, 0, .09, 0, sdk, { l: L_MASON });
+      if (lvl === 0) {
+        S.cyl(W * .62, .32, 0, .34, 0, COL.ram, { n: 4, l: L_DIRT, rt: .85, r: [0, PI / 4, 0], jit: .04 });
+        for (const [a, b] of corners) S.box(.14, H, .14, a * (W / 2 - .12), H / 2, b * (W / 2 - .12), wd, { l: L_WOOD });
+        for (const sg of [-1, 1]) S.seg([sg * (W / 2 - .12), .2, -W / 2 + .12], [-sg * (W / 2 - .12), H - .05, -W / 2 + .12], .035, .035, w, { l: L_WOOD, n: 4 });
+      } else {
+        S.cyl(W * .72, H - .18, 0, .18 + (H - .18) / 2, 0, earth, { n: 4, l: lay, rt: .93, r: [0, PI / 4, 0], jit: .03 });
+        for (let y = .42; y < H - .1; y += .3) S.box(W * 1.0 - y * .07, .04, W * 1.0 - y * .07, 0, y, 0, mulC(earth, .8), { l: lay, jit: 0 });
+      }
+      // steps up the back
+      for (let k = 0; k < 4; k++) S.box(.5, .1, .24, -W / 2 + .45, .14 + k * (H - .1) / 4, -W / 2 - .36 + k * .1, lvl ? sl : wl, { l: lvl ? L_MASON : L_WOOD });
+    });
+    piece('deck', 1, S => {
+      S.box(W + .1, .1, W + .1, 0, H + .05, 0, lvl ? sl : wd, { l: lvl ? L_MASON : L_WOOD });
+      if (!lvl) for (const x of [-.6, -.2, .2, .6]) S.box(.36, .03, W, x, H + .11, 0, w, { l: L_WOOD });
+    });
+    piece('wall', 2, S => {
+      const y0 = H + .1, fz = W / 2 + .02;
+      if (lvl === 0) {
+        // sharpened stakes along the front
+        for (let i = 0; i < 9; i++) { const x = -W / 2 + .1 + i * (W - .2) / 8; S.seg([x, y0 - .05, fz], [x, y0 + .55 + (i & 1) * .08, fz + .12], .045, .02, w, { l: L_WOOD, n: 4 }); }
+        S.box(W, .06, .06, 0, y0 + .25, fz + .04, wd, { l: L_WOOD });
+      } else {
+        const hgt = [0, .34, .4, .46][lvl], side = lvl >= 2;
+        for (const [ang, len] of side ? [[0, W], [HPI, W], [-HPI, W]] : [[0, W]]) {
+          const cs = Math.cos(ang), sn = Math.sin(ang), at = (u, y, ww, hh, c) => S.box(ww, hh, .16, u * cs + fz * sn, y, -u * sn + fz * cs, c, { l: lay, r: [0, ang, 0] });
+          at(0, y0 + hgt / 2, len, hgt, earth);
+          for (let u = -len / 2 + .2; u < len / 2 - .1; u += .42) at(u, y0 + hgt + .11, .24, .22, mixC(earth, sl, .3));
+        }
+      }
+    });
+    piece('kegs', 3, S => {
+      PROP.barrel(S, W / 2 - .3, H + .1, -W / 2 + .32, .6, rng); PROP.barrel(S, W / 2 - .62, H + .1, -W / 2 + .3, .55, rng);
+      // ramrods in a rack
+      S.box(.06, .06, .5, W / 2 - .12, H + .5, 0, wd, { l: L_WOOD }); for (const z of [-.15, 0, .15]) S.seg([W / 2 - .14, H + .1, z], [W / 2 - .1, H + .95, z - .05], .012, .012, wl, { l: L_WOOD, n: 3 });
+    });
+    const fx = -W / 2 + .26, fz = -W / 2 + .3, bs = [.3, .34, .38, .42][lvl];
+    piece('fire', 4, S => brazier(S, fx, H + .1, fz, bs));
+    if (lvl >= 1) piece('flag', 5, S => { cnBanner(S, -W / 2 + .08, H + .1, H + 2.1 + lvl * .25, W / 2 - .1, lvl >= 2 ? COL.clothR : COL.clothD, rng, { w: .36, len: .95, col2: mulC(COL.gold, .7) }); });
+    if (lvl === 3) piece('shed', 6, S => {
+      for (const a of [-1, 1]) for (const z of [-W / 2 + .1, -.55]) S.seg([a * (W / 2 - .12), H + .1, z], [a * (W / 2 - .12), H + 1.3, z], .05, .045, red, { l: L_WOOD, n: 5 });
+      cnRoof(S, { y: H + 1.33, z: -.72, a: W / 2 + .12, b: .3, h: .32, ridge: W / 2, lift: .12, n: 3, m: 3, rr: .035 });
+    });
+    mounts.flame = [fx, H + .1 + bs * .72, fz]; mounts.flameSize = bs; mounts.top = H + (lvl === 3 ? 1.9 : 1.5); mounts.gun = [0, H + .1, 0];
+  } else if (kind === 'cannon') {
+    // Gun battery: a timber stage for the bowl-mouthed gun, then stone, then a brick bastion with an embrasure for the red barbarian gun, and a higher one with a powder vault.
+    const H = [.5, .8, 1.1, 1.35][lvl], W = 2.0, brick = lvl >= 2, earth = lvl === 0 ? COL.ram : brick ? st : sl, lay = lvl === 0 ? L_DIRT : L_MASON;
+    piece('base', 0, S => {
+      S.box(W + .34, .2, W + .34, 0, .1, 0, sdk, { l: L_MASON });
+      S.cyl(W * .73, H - .2, 0, .2 + (H - .2) / 2, 0, earth, { n: 4, l: lay, rt: lvl >= 2 ? .88 : .95, r: [0, PI / 4, 0], jit: .03 });
+      if (lvl >= 1) for (let y = .45; y < H - .1; y += .28) S.box(W * 1.03 - y * .1, .04, W * 1.03 - y * .1, 0, y, 0, mulC(earth, .78), { l: lay, jit: 0 });
+      if (lvl >= 2) for (const [a, b] of corners) S.box(.3, H - .1, .3, a * (W / 2 - .02), .2 + (H - .3) / 2, b * (W / 2 - .02), sdk, { l: L_MASON });
+      S.box(.42, .55, .08, -W / 2 + .5, .48, -W / 2 - .02, COL.black, { jit: 0 }); S.box(.52, .08, .12, -W / 2 + .5, .78, -W / 2, redD, { l: L_WOOD });
+    });
+    piece('deck', 1, S => { S.box(W + .12, .1, W + .12, 0, H + .05, 0, lvl ? sl : wd, { l: lvl ? L_MASON : L_WOOD }); S.cyl(.62, .04, 0, H + .12, 0, lvl ? mulC(sl, .85) : w, { n: 10, l: lvl ? L_MASON : L_WOOD }); });
+    piece('wall', 2, S => {
+      // a breastwork on three sides with a wide embrasure in the front for the gun
+      const y0 = H + .1, hgt = [.3, .36, .46, .52][lvl], R = W / 2 + .02;
+      for (const ang of [0, HPI, -HPI]) {
+        const cs = Math.cos(ang), sn = Math.sin(ang), at = (u, y, ww, hh, c) => S.box(ww, hh, .2, u * cs + R * sn, y, -u * sn + R * cs, c, { l: lay, r: [0, ang, 0] });
+        if (ang === 0) for (const sg of [-1, 1]) { at(sg * (W / 4 + .2), y0 + hgt / 2, W / 2 - .4, hgt, earth); if (lvl >= 2) at(sg * (W / 4 + .2), y0 + hgt + .12, W / 2 - .5, .24, mixC(earth, sl, .3)); }
+        else { at(0, y0 + hgt / 2, W, hgt, earth); if (lvl >= 1) for (let u = -W / 2 + .2; u < W / 2 - .1; u += .46) at(u, y0 + hgt + .12, .26, .24, mixC(earth, sl, .3)); }
+      }
+      if (lvl === 0) for (const sg of [-1, 1]) S.box(.1, .5, .1, sg * .52, y0 + .25, R, wd, { l: L_WOOD });
+    });
+    piece('shot', 3, S => {
+      // a pyramid of balls and a powder cask by the gun
+      const bx = W / 2 - .38, bz = -W / 2 + .38, r = [.07, .08, .1, .11][lvl], bc = mulC(iron, .7);
+      for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) S.sph(r, bx + x * r, H + .1 + r, bz + z * r, bc, { l: L_METAL, w: 6, h: 4, smooth: false });
+      S.sph(r, bx, H + .1 + r * 2.4, bz, bc, { l: L_METAL, w: 6, h: 4, smooth: false });
+      PROP.barrel(S, -W / 2 + .4, H + .1, -W / 2 + .35, .55 + lvl * .04, rng);
+      for (const z of [-.2, .1]) S.seg([-W / 2 + .2, H + .12, z], [-W / 2 + .18, H + 1.05, z - .05], .016, .016, wl, { l: L_WOOD, n: 3 });
+    });
+    const fx = W / 2 - .3, fz = W / 2 - .35, bs = [.28, .32, .36, .4][lvl];
+    piece('fire', 4, S => brazier(S, fx, H + .1, fz, bs));
+    if (lvl >= 1) piece('flag', 5, S => { cnBanner(S, -W / 2 + .1, H + .1, H + 2.2 + lvl * .25, W / 2 - .1, lvl >= 2 ? COL.clothB : COL.clothD, rng, { w: .38, len: 1.0, col2: mulC(COL.gold, .7) }); });
+    if (lvl === 3) piece('vault', 6, S => { const z = -W / 2 + .3; S.box(.8, .5, .45, .3, H + .35, z, st, { l: L_MASON }); cnRoof(S, { x: .3, y: H + .6, z, a: .5, b: .32, h: .26, ridge: .4, lift: .08, n: 2, m: 3, rr: .03 }); S.box(.22, .32, .04, .3, H + .27, z + .23, COL.black, { jit: 0 }); });
+    mounts.flame = [fx, H + .1 + bs * .72, fz]; mounts.flameSize = bs; mounts.top = H + 1.6; mounts.gun = [0, H + .1, .05];
   } else {
     // Garrison hall: rammed earth or brick walls under a tiled roof, a halberd rack and a corner tower at the top level.
     const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], brick = lvl === 2;
@@ -201,6 +298,13 @@ function findTarget(x, z, range, air, ground, minRange = 0) {
   }
   return best;
 }
+// up to n ground targets in range, the furthest along the road first; fewer if fewer are there
+const _fts = [];
+function findTargets(x, z, range, n) {
+  _fts.length = 0; const r2 = range * range;
+  for (const m of G.mons) { if (m.dead || m.hp <= 0 || !m.vis || m.fly) continue; if (dist2(x, z, m.x, m.z) <= r2) _fts.push(m); }
+  _fts.sort((a, b) => b.prog - a.prog); if (_fts.length > n) _fts.length = n; return _fts;
+}
 function aimPoint(m, dt, out) {
   if (m.fly || m.wallSt) { out.x = m.x + (m.vx || 0) * dt; out.y = m.y + (m.fly ? 0 : m.hitH); out.z = m.z + (m.vz || 0) * dt; return out; }
   const B = G.B, adv = m.blocked ? 0 : m.spdNow * dt, s2 = Math.min(B.L - .1, m.s + adv);
@@ -257,6 +361,8 @@ class Tower {
     if (this.kind === 'bombard') this.makeGun();
     if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
+    if (this.kind === 'gunner') this.makeRanks();
+    if (this.kind === 'cannon') this.makeCannon();
     if (this.mended) this.mended = false; else if (lvl > 0) { const tr = d.tiers[lvl]; UI.banner(d.name + ' · ' + tr[0], 3.6, false, tr[1]); }
     this.state = 'active'; this.appear = 0;
     fxDust(this.x, this.y + .2, this.z, 10, 1.3, { speed: 2.2 });
@@ -304,8 +410,8 @@ class Tower {
     this.gunYaw = this.yaw;
   }
   get maxLvl() { return this.def.tiers.length - 1; }
-  // the buildings have three visual stages; four-tier lines share the first stage between their first two tiers
-  get vl() { return Math.max(0, this.lvl - (this.def.tiers.length - 3)); }
+  // the old buildings have three visual stages, and their four-tier lines share the first stage between the first two tiers
+  get vl() { return Math.max(0, this.lvl - (this.def.tiers.length - (this.def.stages || 3))); }
   upgrade() { if (this.lvl >= this.maxLvl || this.state !== 'active') return false; this.spent += upgradeCost(this); this.lvl++; for (const m of this.men) m.lvlUp = true; this.begin(); return true; }
   sell() {
     this.alive = false; this.em.alive = false; this.em.on = 0; LT.emitters[this.idx] = null; this.pad.tower = null;
@@ -337,10 +443,7 @@ class Tower {
     this.em.on = damp(this.em.on, TOWER_STUN ? .12 : 1, TOWER_STUN ? 8 : 3, dt);
     if (this.flame) this.flame.on = this.em.on; if (this.flame2) this.flame2.on = this.em.on;
     this.cool -= dt;
-    if (this.kind === 'archer') this.updArcher(dt, d, lvl);
-    else if (this.kind === 'bombard') this.updBombard(dt, d, lvl);
-    else if (this.kind === 'spire') this.updSpire(dt, d, lvl);
-    else this.updGuard(dt, d, lvl);
+    this[TOWER_ACT[this.kind]](dt, d, lvl);
     crewDraw(this, dt); // the extra hands of the lesser upgrade (66-crew.js)
     TOWER_STUN = false;
   }
@@ -408,6 +511,85 @@ class Tower {
       sfx('zap', this.x, this.z, 1, lvl / 3); FX.shake = Math.min(1, FX.shake + .05);
     }
   }
+  makeCannon() {
+    // the gun on its mount, turning on the deck: a bowl-mouthed bronze gun on a timber bed, a breech-loading Frankish gun on a swivel yoke,
+    // the long red barbarian gun on a wheeled carriage, and a bigger one of the same for the last tier
+    if (!KIT.ball) gradeKits();
+    const mt = this.mounts, lvl = this.vl, S = new Soup(), wd = COL.woodD, w = COL.wood, Z = [HPI, 0, 0];
+    const L = [.62, 1.05, 1.55, 1.85][lvl], r0 = [.13, .085, .15, .18][lvl], r1 = [.11, .075, .1, .12][lvl], metal = lvl === 0 ? mulC(COL.bronze, 1.1) : lvl === 1 ? mulC(COL.iron, 1.15) : lvl === 2 ? mulC(COL.bronze, .85) : mulC(COL.iron, .95), ring = lvl === 3 ? COL.gold : COL.brass;
+    if (lvl === 0) { S.box(.5, .24, .8, 0, .12, 0, wd, { l: L_WOOD }); S.box(.56, .06, .86, 0, .02, 0, w, { l: L_WOOD }); }
+    else if (lvl === 1) { S.cyl(.09, .42, 0, .21, 0, wd, { n: 6, l: L_WOOD }); for (const sg of [-1, 1]) S.box(.04, .2, .08, sg * .12, .48, 0, COL.iron, { l: L_METAL }); }
+    else { for (const sg of [-1, 1]) { S.box(.08, .3, 1.0, sg * .2, .28, -.1, wd, { l: L_WOOD }); S.cyl(.3 + lvl * .02, .08, sg * .33, .3, .15, w, { n: 10, r: [0, 0, HPI], l: L_WOOD }); S.cyl(.31 + lvl * .02, .04, sg * .33, .3, .15, COL.iron, { n: 10, r: [0, 0, HPI], l: L_METAL }); } S.box(.4, .08, .6, 0, .16, -.55, wd, { l: L_WOOD }); S.cyl(.05, .74, 0, .3, .15, COL.iron, { n: 6, r: [0, 0, HPI], l: L_METAL }); }
+    this.carriage = new THREE.Mesh(S.build(), MAT.world); this.carriage.castShadow = this.carriage.receiveShadow = true; this.carriage.position.set(mt.gun[0], mt.gun[1], mt.gun[2]); this.group.add(this.carriage);
+    const Bq = new Soup(), z0 = -L * .35, z1 = L * .65;
+    Bq.cyl(r0, L, 0, 0, (z0 + z1) / 2, metal, { n: 10, r: Z, l: L_METAL, rough: .4, rt: r1 / r0 });
+    Bq.sph(r0 * 1.05, 0, 0, z0, metal, { l: L_METAL, w: 8, h: 5, smooth: false }); Bq.sph(r0 * .4, 0, 0, z0 - r0 * 1.1, metal, { l: L_METAL, w: 6, h: 4, smooth: false });
+    for (const u of [.1, .4, .7, .97]) Bq.cyl(lerp(r0, r1, u) + .018, .04, 0, 0, lerp(z0, z1, u), ring, { n: 10, r: Z, l: L_METAL, rough: .35 });
+    if (lvl === 0) Bq.cyl(.17, .1, 0, 0, z1, metal, { n: 10, r: Z, l: L_METAL, rt: 1.3 });
+    if (lvl === 1) { Bq.box(.12, .12, .24, 0, .08, z0 + .2, mulC(metal, .8), { l: L_METAL }); Bq.seg([0, 0, z0], [0, -.05, z0 - .35], .025, .02, wd, { n: 4, l: L_WOOD }); }
+    if (lvl >= 2) for (const sg of [-1, 1]) Bq.cyl(.045, .12, sg * (r0 + .04), 0, z0 + L * .38, metal, { n: 6, r: [0, 0, HPI], l: L_METAL });
+    if (lvl === 3) Bq.box(.04, .05, L * .3, 0, r0 + .01, z0 + L * .35, COL.gold, { l: L_METAL, emis: .05 });
+    this.barrel = new THREE.Mesh(Bq.build(), MAT.world); this.barrel.castShadow = this.barrel.receiveShadow = true; this.barrel.position.set(0, [.3, .55, .42, .48][lvl], 0); this.carriage.add(this.barrel);
+    this.muzzleZ = z1; this.gunYaw = this.yaw;
+  }
+  updCannon(dt, d, lvl) {
+    const tgt = findTarget(this.x, this.z, d.range[lvl], false, true, d.minRange);
+    this.recoil = Math.max(0, this.recoil - dt * 1.1);
+    if (tgt) {
+      const dist = Math.hypot(tgt.x - this.x, tgt.z - this.z), q = aimPoint(tgt, dist / d.speed + .05, _ap2), want = Math.atan2(q.x - this.x, q.z - this.z);
+      this.gunYaw = angDamp(this.gunYaw, want, 3.5, dt);
+      if (Math.abs(angDiff(this.gunYaw, want)) < .05 && this.cool <= 0) {
+        this.cool = d.rate[lvl] * crewRate(this); this.recoil = 1;
+        this.carriage.rotation.y = this.gunYaw - this.yaw; this.group.updateMatrixWorld(true); const mz = _tv.set(0, 0, this.muzzleZ).applyMatrix4(this.barrel.matrixWorld);
+        const dx = q.x - mz.x, dz = q.z - mz.z, l = Math.hypot(dx, dz) || 1, mx = mz.x, my = mz.y, mzz = mz.z;
+        G.shells.push({ shot: true, x: mx, y: my, z: mzz, y0: my, ty: q.y, dx: dx / l, dz: dz / l, dist: l, go: 0, max: d.range[lvl] + 2, dmg: ownDmg(d.dmg[lvl]), pass: d.pass[lvl], w: d.width, siege: d.siege, speed: d.speed, hit: [], tower: this, sm: 0 });
+        fxTimed(3, mx + dx / l * .3, my, mzz + dz / l * .3, 1.6, 1.6, 4.5, 3.4, 2, 1, .14, { grow: 1 }); lightFlash(mx, my + .3, mzz, 0xffb060, 420, .2, 14);
+        for (let i = 0; i < 9; i++) { const a = rr(-.9, .9), sp = rr(.5, 2.2), ux = dx / l, uz = dz / l; fxSmoke(mx, my, mzz, (ux * Math.cos(a) - uz * Math.sin(a)) * sp, rr(.1, .6), (uz * Math.cos(a) + ux * Math.sin(a)) * sp, rr(1.8, 3), .3, 1.1, .7, .69, .66, .55, { drag: 1.6, rise: .3 }); }
+        fxSparks(mx, my, mzz, 8, 5, 3, 2, .8, { size: .05, grav: 4 }); fxDust(this.x, this.y + .2, this.z, 6, 1.2, { speed: 2 });
+        FX.shake = Math.min(1.2, FX.shake + .25); sfx('cannon', this.x, this.z, 1, lvl / 3);
+      }
+    } else this.gunYaw = angDamp(this.gunYaw, this.yaw + Math.sin(G.t * .25 + this.idx) * .4, 1, dt);
+    this.carriage.rotation.y = this.gunYaw - this.yaw;
+    // the recoil throws the gun back; the crew run it up again
+    const u = this.recoil; this.barrel.position.z = -(u > .8 ? easeOut((1 - u) / .2) : u / .8) * .35; this.barrel.rotation.x = -.04 - u * .08;
+  }
+  makeRanks() {
+    // the gunners: d.ranks ranks of d.men each, kept in this.archers so that the model's teardown clears them with the bowmen
+    if (!KIT.gun) gradeKits();
+    const d = this.def, lvl = this.lvl, n = d.men[lvl];
+    for (let r = 0; r < d.ranks; r++) for (let j = 0; j < n; j++) this.archers.push({ rank: r, j, n, fire: 0, e: { scale: .8, ph: 0, mv: 0, atk: -1, bow: true, gun: KIT.gun[this.vl], draw: 0, pitch: .7, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: this.yaw, flash: 0 } });
+    this.vol = { rank: -1, t: .6 }; this.gunYaw = this.yaw;
+  }
+  updGunner(dt, d, lvl) {
+    const V = this.vol, tgt = findTarget(this.x, this.z, d.range[lvl], false, true), reload = d.reload[lvl] * crewRate(this);
+    if (tgt) this.gunYaw = angDamp(this.gunYaw, Math.atan2(tgt.x - this.x, tgt.z - this.z), 9, dt); else this.gunYaw = angDamp(this.gunYaw, this.yaw, 1.5, dt);
+    V.t -= dt;
+    // reloaded, with something to shoot at: the first rank fires at once, the second and third follow a beat apart, then all reload
+    if (V.rank < 0 && V.t <= 0 && tgt) V.rank = 0;
+    if (V.rank >= 0 && V.t <= 0 && tgt) {
+      const foes = findTargets(this.x, this.z, d.range[lvl], d.men[lvl]), y = this.mounts.gun[1];
+      let k = 0;
+      for (const a of this.archers) {
+        if (a.rank !== V.rank) continue; const m = foes[k++ % foes.length], e = a.e, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);
+        const mx = e.x + fx * .78 * e.scale, my = e.y + 1.02 * e.scale, mz = e.z + fz * .78 * e.scale;
+        shootBall(mx, my, mz, m, ownDmg(d.dmg[lvl]), this, d.pierce[lvl]); a.fire = 1;
+        fxTimed(2, mx, my, mz, 1.2, 1.2, 3.2, 2.3, 1.1, 1, .09); fxSparks(mx, my, mz, 4, 3.5, 3, 2, .8, { size: .04, grav: 3 });
+        for (let i = 0; i < 5; i++) fxSmoke(mx + fx * i * .15, my, mz + fz * i * .15, fx * rr(.6, 1.6) + rr(-.3, .3), rr(.1, .5), fz * rr(.6, 1.6) + rr(-.3, .3), rr(1.8, 2.8), .28, .9, .85, .84, .8, .7, { drag: 2, rise: .3 });
+      }
+      const p = this.w([0, y + 1, .5], _ap); lightFlash(p.x, p.y, p.z, 0xffc070, 120, .12, 9); sfx('musket', this.x, this.z, .9, rnd());
+      if (++V.rank >= d.ranks) { V.rank = -1; V.t = reload; } else V.t = d.gap;
+    }
+    this.charge = V.rank < 0 ? sat(1 - V.t / reload) : 1;
+    // three ranks across the platform, square to the line of fire; the rank about to fire levels its guns, the others hold them at the port
+    const rot = this.gunYaw - this.yaw, cr = Math.cos(rot), sr = Math.sin(rot), y = this.mounts.gun[1];
+    for (const a of this.archers) {
+      const lx = (a.j - (a.n - 1) / 2) * .5, lz = .55 - a.rank * .45, p = this.w([lx * cr + lz * sr, y, -lx * sr + lz * cr], _ap), e = a.e;
+      e.x = p.x; e.y = p.y - (1 - easeOut(this.appear)) * .5; e.z = p.z; e.scale = .8 * (.3 + .7 * this.appear); e.yaw = this.gunYaw;
+      const ready = tgt && (V.rank === a.rank || (V.rank < 0 && V.t < .5));
+      a.fire = Math.max(0, a.fire - dt * 4); a.aim = damp(a.aim === undefined ? .7 : a.aim, ready ? .1 : .7, 10, dt); e.pitch = a.aim - a.fire * .3;
+      rigHuman(KIT.foot, SPEC.foot, e);
+    }
+  }
   updGuard(dt, d, lvl) {
     for (let i = this.men.length - 1; i >= 0; i--) if (this.men[i].gone) this.men.splice(i, 1);
     if (this.men.length < crewMen(this)) { this.respawn -= dt; if (this.respawn <= 0) { this.respawn = this.men.length === 0 && G.t < 4 ? .5 : d.rate[lvl]; spawnFootman(this); } }
@@ -420,6 +602,11 @@ function shootArrow(x, y, z, m, dmg, tower, o = {}) {
   const dist = Math.hypot(m.x - x, m.z - z), T = clamp(dist / (o.fast ? 24 : 14), o.fast ? .12 : .22, .62), q = aimPoint(m, T, _ap2);
   G.arrows.push({ x0: x, y0: y, z0: z, tx: q.x, ty: q.y, tz: q.z, t: 0, T, m, dmg, tower, x, y, z, dx: 0, dy: 0, dz: 1, arc: o.fast ? .05 + dist * .02 : .25 + dist * .07, alive: true, lI: o.fast ? 0 : 22, lCol: 0xff9040, lx: x, ly: y, lz: z, lseed: rnd() * 9, ember: 0, kind: o.kind || 'arrow', slow: o.slow || null, plain: !!o.fast });
 }
+// A gun ball: flat and too quick to see, drawn as a tracer streak. pierce is the share of armour it goes through.
+function shootBall(x, y, z, m, dmg, tower, pierce) {
+  const dist = Math.hypot(m.x - x, m.z - z), T = clamp(dist / 45, .05, .2), q = aimPoint(m, T, _ap2);
+  G.arrows.push({ x0: x, y0: y, z0: z, tx: q.x + rr(-.12, .12), ty: q.y + rr(-.1, .1), tz: q.z + rr(-.12, .12), t: 0, T, m, dmg, tower, x, y, z, dx: 0, dy: 0, dz: 1, arc: .02, alive: true, lI: 0, lCol: 0xff9040, lx: x, ly: y, lz: z, lseed: 0, ember: 0, kind: 'ball', slow: null, plain: true, ball: true, pierce });
+}
 function arrowMatrix(x, y, z, dx, dy, dz) { _tq.setFromUnitVectors(_tz, _tv.set(dx, dy, dz).normalize()); return _tm.compose(_tv.set(x, y, z), _tq, _ts.set(1, 1, 1)); }
 function updateProjectiles(dt) {
   const A = G.arrows, B = G.B;
@@ -430,14 +617,16 @@ function updateProjectiles(dt) {
     a.x = lerp(a.x0, a.tx, u); a.z = lerp(a.z0, a.tz, u); a.y = lerp(a.y0, a.ty, u) + a.arc * 4 * u * (1 - u);
     const dx = a.x - px, dy = a.y - py, dz = a.z - pz, l = Math.hypot(dx, dy, dz) || 1; a.dx = dx / l; a.dy = dy / l; a.dz = dz / l;
     a.lx = a.x; a.ly = a.y; a.lz = a.z;
-    KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, a.dx, a.dy, a.dz), 0, null);
+    if (!a.ball) KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, a.dx, a.dy, a.dz), 0, null);
     const hx = a.x + a.dx * .25, hy = a.y + a.dy * .25, hz = a.z + a.dz * .25;
-    if (a.plain) FX.segs.push(hx, hy, hz, .04, hx - a.dx * 1.4, hy - a.dy * 1.4, hz - a.dz * 1.4, .0, .9, .85, .7, .5);
+    if (a.ball) FX.segs.push(hx, hy, hz, .035, hx - a.dx * .9, hy - a.dy * .9, hz - a.dz * .9, .0, 3, 2.4, 1.3, .9);
+    else if (a.plain) FX.segs.push(hx, hy, hz, .04, hx - a.dx * 1.4, hy - a.dy * 1.4, hz - a.dz * 1.4, .0, .9, .85, .7, .5);
     else { FX.segs.push(hx, hy, hz, .055, hx - a.dx * .95, hy - a.dy * .95, hz - a.dz * .95, .0, 2.6, 1.05, .25, .85);
     FX.add.push(hx, hy, hz, .3, .3, 0, 0, 3.6, 1.9, .5, 1, 0, 0, 0, 0); FX.add.push(hx, hy, hz, 1.0, 1.0, 0, 0, 1, .45, .12, .22, 2, 0, 0, 0); }
     if (!a.plain) a.ember += dt * 26; while (a.ember > 1) { a.ember -= 1; fxPart(hx, hy, hz, rr(-.4, .4), rr(-.1, .6), rr(-.4, .4), rr(.25, .6), .05, 2.6, 1.1, .2, { drag: 1.5, rise: .6 }); }
     if (u >= 1) {
       a.alive = false; swapRemove(A, i);
+      if (a.ball) { gunHit(a, m); continue; }
       if (m && !m.dead && m.hp > 0 && dist2(a.tx, a.tz, m.x, m.z) < 1.0) {
         fxSparks(a.x, a.y, a.z, 5, 3, 3, 1.5, .4, { size: .055, grav: 6 }); fxTimed(2, a.x, a.y, a.z, .9, .9, 1.6, .8, .25, .8, .12);
         sfx('arrowHit', a.x, a.z, .55, rnd()); if (a.slow) slowMonster(m, a.slow[0], a.slow[1]); hitMonster(m, a.dmg, a.kind, a.dx, a.dz, a.tower);
@@ -456,13 +645,45 @@ function updateProjectiles(dt) {
   }
   const Sh = G.shells;
   for (let i = Sh.length - 1; i >= 0; i--) {
-    const s = Sh[i]; s.t += dt; const u = Math.min(1, s.t / s.T);
+    const s = Sh[i]; if (s.shot) { if (cannonShot(s, dt)) swapRemove(Sh, i); continue; }
+    s.t += dt; const u = Math.min(1, s.t / s.T);
     s.x = lerp(s.x0, s.tx, u); s.z = lerp(s.z0, s.tz, u); s.y = lerp(s.y0, s.ty, u) + s.arc * 4 * u * (1 - u);
     _tm.compose(_tv.set(s.x, s.y, s.z), _tq.setFromAxisAngle(_tz, s.t * 9), _ts.set(1, 1, 1)); (s.fire ? KIT.shell : KIT.stoneShot).put(_tm, 0, null);
     if (s.fire) FX.add.push(s.x, s.y + .1, s.z, .3, .3, 0, 0, 3.2, 1.5, .3, 1, 0, 0, 0, 0);
     if (s.fire) s.sm += dt * 30; while (s.sm > 1) { s.sm -= 1; fxSmoke(s.x, s.y, s.z, rr(-.1, .1), rr(0, .2), rr(-.1, .1), rr(.5, .9), .16, .3, .26, .25, .25, .32, { drag: 1 }); if (rnd() < .5) fxPart(s.x, s.y, s.z, rr(-.5, .5), rr(-.2, .5), rr(-.5, .5), .4, .05, 2.5, 1.1, .2, { grav: 2 }); }
     if (u >= 1) { swapRemove(Sh, i); explodeAt(s.tx, s.ty, s.tz, s.dmg, s.splash, s.tower, !s.fire); }
   }
+}
+// A cannon ball in flight: flat down the line it was laid on, then skipping along the ground; it goes through every man it meets,
+// losing a share of its force to each, and smashes carts and engines. True when it is spent.
+function cannonShot(s, dt) {
+  const B = G.B, st = s.speed * dt, px = s.x, pz = s.z;
+  s.go += st; s.x += s.dx * st; s.z += s.dz * st;
+  const gy = B.heightAt(s.x, s.z); s.y = s.go < s.dist ? lerp(s.y0, s.ty, s.go / s.dist) : Math.max(gy + .5, s.y - st * .25);
+  _tm.compose(_tv.set(s.x, s.y, s.z), _tq.setFromAxisAngle(_tz, s.go * 3), _ts.set(1, 1, 1)); KIT.ball.put(_tm, 0, null);
+  FX.segs.push(s.x, s.y, s.z, .07, s.x - s.dx * 1.3, s.y, s.z - s.dz * 1.3, .0, 1.2, 1.1, 1, .5);
+  s.sm += dt * 24; while (s.sm > 1) { s.sm -= 1; fxSmoke(s.x, s.y, s.z, rr(-.1, .1), rr(0, .2), rr(-.1, .1), rr(.4, .8), .12, .4, .55, .53, .5, .3, { drag: 1.5 }); }
+  for (const m of G.mons) {
+    if (m.dead || m.hp <= 0 || m.fly || !m.vis || s.hit.indexOf(m) >= 0) continue;
+    const rx = m.x - px, rz = m.z - pz, along = rx * s.dx + rz * s.dz; if (along < -m.rad || along > st + m.rad) continue;
+    if (Math.abs(rx * s.dz - rz * s.dx) > s.w + m.rad) continue;
+    s.hit.push(m); const engine = !!(m.def.cart || m.def.engine);
+    fxSparks(m.x, m.y + m.hitH, m.z, engine ? 10 : 5, 4, 3, 2.2, 1, { size: .06, grav: 6 }); fxDust(m.x, m.y + .2, m.z, engine ? 8 : 3, engine ? 1 : .6, { speed: 2.4 });
+    if (engine) { for (let i = 0; i < 3; i++) { _tm.compose(_tv.set(m.x + rr(-.3, .3), m.y + rr(.4, 1.2), m.z + rr(-.3, .3)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(1, 1, 1)); addDebris(KIT.plank, _tm, null, s.dx * 3 + rr(-1, 1), rr(2, 4), s.dz * 3 + rr(-1, 1), rr(4, 9), rr(1.6, 2.6)); } sfx('hammer', m.x, m.z, .8, .2); }
+    sfx('arrowHit', m.x, m.z, .6, rnd());
+    hitMonster(m, s.dmg * (engine ? s.siege : 1), 'shot', s.dx, s.dz, s.tower); s.dmg *= s.pass;
+  }
+  if (s.go > s.dist && s.y < gy + .52 && rnd() < dt * 6) fxDust(s.x, gy + .05, s.z, 3, .5, { speed: 1.4 });
+  if (s.go >= s.max || s.y < gy - .2) { fxDust(s.x, gy + .1, s.z, 6, .8, { speed: 2 }); return true; }
+  return false;
+}
+// A ball arrives. Horses and elephants take more from it and shy at the noise (Mu Ying's guns broke an elephant line, 1388).
+function gunHit(a, m) {
+  if (!m || m.dead || m.hp <= 0 || dist2(a.tx, a.tz, m.x, m.z) > 1.2) { const gy = G.B.heightAt(a.x, a.z); if (Math.abs(a.y - gy) < 1) fxDust(a.x, gy + .05, a.z, 2, .3, { speed: .8, a: .35 }); return; }
+  const d = TOWER.gunner; let dmg = a.dmg;
+  fxSparks(a.x, a.y, a.z, 4, 3, 3, 2, .8, { size: .045, grav: 6 }); sfx('arrowHit', a.x, a.z, .45, rnd());
+  if (m.def.death === 'horse' || m.def.death === 'beast') { dmg *= d.cav; slowMonster(m, d.shy[0], d.shy[1]); m.flinch = 1; }
+  hitMonster(m, dmg, 'ball', a.dx, a.dz, a.tower, a.pierce);
 }
 function explodeAt(x, y, z, dmg, splash, tower, stone) {
   const sc = splash / 1.7;
