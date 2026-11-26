@@ -267,6 +267,7 @@ function gradeKits() {
     S.cyl(.1, .9, 0, .62, -.95, timD, { n: 6, r: [0, 0, HPI], l: L_WOOD }); for (const sg of [-1, 1]) S.box(.06, .3, .06, sg * .46, .55, -.95, tim, { l: L_WOOD });
     S.box(.3, .08, .8, 0, .5, .75, tim, { l: L_WOOD }); S.rock(.16, 0, .64, .9, COL.stone, {});
   }, 16, { rad: .9 });
+  KIT.ball = new PartBatch(S => { S.sph(.15, 0, 0, 0, mulC(COL.iron, .7), { l: L_METAL, w: 7, h: 5, smooth: false, rough: .5 }); }, 24, { rad: .15 });
   KIT.hhArm = new PartBatch(S => {
     S.seg([0, -.85, 0], [0, 2.6, 0], .08, .045, tim, { n: 6, l: L_WOOD }); for (const y of [-.4, .6, 1.4]) S.cyl(.1, .06, 0, y, 0, COL.rope, { n: 6 });
     S.box(.62, .55, .55, 0, -1.08, 0, timD, { l: L_WOOD }); for (const y of [-.9, -1.26]) S.box(.64, .05, .57, 0, y, 0, ironB, { l: L_METAL }); S.box(.5, .1, .45, 0, -.79, 0, COL.stoneD, { l: L_ROCK });

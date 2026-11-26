@@ -5,7 +5,7 @@
 // until it is rebuilt for a part of what it cost. A chief who is tied up by the garrison's foot has no time for the towers.
 const RAID = {
   // strength of each work at each tier
-  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310], gunner: [120, 160, 210, 270] },
+  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310], gunner: [120, 160, 210, 270], cannon: [150, 200, 260, 330] },
   calm: 6, mend: .05, rebuild: .3, ruinRefund: .3, lvDmg: .12,
   // how each chief goes about it; README.md gives the source for each
   by: {
