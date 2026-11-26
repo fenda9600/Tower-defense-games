@@ -169,6 +169,7 @@ function setPhase(p) {
   G.phase = p; G.phaseT = 0;
   if (p === 'clear') { G.advance = true; const nw = campaignCleared(), last = (G.level + 1) % stageCount() === 0; UI.banner('关隘无恙', nw || last ? 4.2 : 3.2, false, nw ? '解锁 · ' + nw.name : last ? STAGE_ORD[stageCount() - 1] + '关皆守 · 再战更强之敌' : undefined); UI.closeMenu(); }
   if (p === 'defeat') { UI.banner('关城失守', 4.2, true, '烽火熄灭'); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
+  if (p === 'clear' || p === 'defeat') MENU.settle(p === 'clear');
   if (p === 'crumble') startCrumble();
   if (p === 'rise') startRise();
 }
@@ -204,7 +205,17 @@ function activateBoard(B, lit) {
   LT.beaconPos = b; LT.beaconOn = lit ? 1 : 0; LT.beaconLevel = 1; LT.envSrc = B.env.slice(0, LT.env.length); LT.envK = lit ? 1 : 0; setBiomeLook(B, lit);
   FX.groundAt = B.heightAt;
   G.padCov = null;
-  UI.showLore(B.bio);
+  if (G.phase !== 'menu') UI.showLore(B.bio);
+}
+// Takes the battle off the field at once, with none of the crumble: the menu raises its battlefields on a clear field.
+function clearField() {
+  for (const m of G.mons) removeMonster(m);
+  for (const f of G.men) { f.dead = f.gone = true; f.alive = false; if (f.flame) removeFlame(f.flame); }
+  G.mons.length = 0; G.men.length = 0; G.arrows.length = 0; G.shells.length = 0; G.stuck.length = 0; G.queue = []; G.spawning = false;
+  for (const t of G.towers) t.dispose(); G.towers.length = 0;
+  if (G.B) { for (const f of G.B.flames) removeFlame(f); G.B.flames.length = 0; wallDouse(); disposeBoard(G.B); }
+  for (let i = 0; i < LT.emitters.length; i++) LT.emitters[i] = null;
+  clearDebris(); clearFX(); RAID.shots.length = 0; G.advance = false;
 }
 function beginBattle(first) {
   const B = G.B;
@@ -221,10 +232,10 @@ function updatePhase(dt) {
   LT.beaconLevel = damp(LT.beaconLevel, G.lives / G.maxLives, 3, dt);
   if (B.beaconFlame) { const f = B.beaconFlame, lv = LT.beaconLevel; f.on = LT.beaconOn; f.size = 2.35 * (.42 + .58 * lv) * (1 - .32 * LT.beaconGutter); f.embers = 1 + 2 * lv + 6 * LT.beaconGutter; }
   for (let i = 1; i < B.flames.length; i++) B.flames[i].on = LT.beaconOn;
-  if (G.phase === 'clear') { if (t > 2.6 && !HERO.hold()) setPhase('crumble'); } // the post-battle merit roll (64-hero.js) holds the stage until it is dismissed
+  if (G.phase === 'clear') { if (t > 2.6 && !MENU.holding()) FLOW.after(true); } // the after-action card (74-menu.js) holds the field until it is dismissed
   else if (G.phase === 'defeat') {
     for (const tw of G.towers) { tw.em.on = damp(tw.em.on, 0, 1.5 + tw.idx * .15, dt); if (tw.flame) tw.flame.on = tw.em.on; if (tw.flame2) tw.flame2.on = tw.em.on; }
-    if (t > 4.4) { G.press = Math.max(.8, G.press * .85); G.run++; setPhase('crumble'); }
+    if (t > 4.4 && !MENU.holding()) { G.press = Math.max(.8, G.press * .85); G.run++; FLOW.after(false); }
   } else if (G.phase === 'crumble') {
     let done = true;
     for (const p of B.pieces) {

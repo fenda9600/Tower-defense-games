@@ -203,6 +203,7 @@ const UI = (() => {
   function draw() {
     const c = U.ctx, s = U.s, W = R.dw, H = R.dh, pad = 5 * s, LH = PX.LINE * s;
     c.clearRect(0, 0, W, H); U.btns.length = 0; let hot = null;
+    if (G.phase === 'menu') { U.statsRect = U.cmdRect = U.speedRect = U.pauseRect = U.soundRect = U.wallBox = U.loreRect = null; U.wallRects.length = 0; U.hotBtn = null; return; } // the menu draws itself (74-menu.js)
     const pix = Math.max(1, Math.round(R.dh / R.ih));
     for (const b of G.hbars) {
       const p = proj(b.x, b.y, b.z), w = (b.boss ? 34 : b.wide ? 16 : b.man ? 8 : 9) * pix, h = (b.boss ? 2 : 1) * pix, x = Math.round(p.x - w / 2), y = Math.round(p.y);

@@ -50,6 +50,34 @@ function campaignLoad() {
   return null;
 }
 function campaignSave(level) { if (!CAMPAIGN.persist) return; try { localStorage.setItem(CAMPAIGN.KEY, JSON.stringify({ best: CAMPAIGN.best, level })); } catch (e) {} }
+// How a session runs. The campaign is the game a player gets: the menu, one battlefield per sortie, the after-action card, back to the menu.
+// Any tool parameter in the address (#seed, #manual, #level, #biome, #k, #ff, #phase, or a bare #auto) runs it the way the simulators and
+// recorders were written for instead: straight into battle, battlefield after battlefield, on into later rounds.
+// `card` says after which ends of a battle the after-action card holds the field; `lapse` lets an unattended card close itself.
+const FLOW = (() => {
+  const auto = ['auto', 'seed', 'manual', 'level', 'biome', 'k', 'ff', 'phase'].some(k => HASH[k] !== undefined);
+  const MODES = {
+    auto: {
+      card: { clear: true, defeat: false }, lapse: true,
+      start() {
+        { const sv = campaignLoad(); G.level = HASH.level !== undefined ? +HASH.level : sv && isFinite(sv.level) ? Math.max(0, sv.level | 0) : 0; }
+        // #biome=<key|name|campaign position> previews one battlefield without changing the level
+        { const ks = CAMPAIGN.order, bn = BIOMES.find(b => b.key === HASH.biome || b.name === String(HASH.biome)), bi = bn ? ks.indexOf(bn.key) : HASH.biome !== undefined && isFinite(+HASH.biome) ? +HASH.biome : -1; BIOME.start = bi >= 0 ? bi - G.level : 0; }
+        const B = G.B = buildBoard(G.boardSeed++, G.level);
+        R.scene.add(B.group); activateBoard(B, true);
+        beginBattle(true);
+      },
+      after() { setPhase('crumble'); },
+    },
+    campaign: {
+      card: { clear: true, defeat: true }, lapse: false,
+      start() { const sv = campaignLoad(); MENU.sel = clamp(sv && isFinite(sv.level) ? sv.level | 0 : 0, 0, Math.min(CAMPAIGN.best, stageCount() - 1)); MENU.enter(null); },
+      after(won) { MENU.enter(won); },
+    },
+  };
+  return Object.assign({ key: auto ? 'auto' : 'campaign' }, MODES[auto ? 'auto' : 'campaign']);
+})();
+
 // Called once when a battlefield is held. Other end-of-battle bookkeeping (the after-action review, skill points) belongs next to this call in setPhase('clear').
 function campaignCleared() {
   const p0 = campaignProgress(); CAMPAIGN.best = Math.max(CAMPAIGN.best, G.level + 1);

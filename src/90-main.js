@@ -47,12 +47,14 @@ function updateCamera(dt) {
     for (const t of G.towers) if (t.recent > 5) { const w = Math.min(4, t.recent / 20); wx += t.x * w; wz += t.z * w; ws += w; }
   }
   let tx = wx / ws, tz = wz / ws; const l = Math.hypot(tx, tz), lim = 6.5 + (BH - 18) * 1.2; if (l > lim) { tx *= lim / l; tz *= lim / l; }
-  const away = G.phase === 'clear' || G.phase === 'crumble' || G.phase === 'rise';
+  const menu = G.phase === 'menu', away = menu || G.phase === 'clear' || G.phase === 'crumble' || G.phase === 'rise';
   if (away) { tx = 0; tz = 0; }
+  // behind the menu the view drifts slowly over the battlefield, never far from its middle
+  if (menu) { tx = Math.sin(G.t * .045) * 5 * LIN; tz = Math.cos(G.t * .031) * 4 * LIN; }
   CAM.fx = damp(CAM.fx, tx, .9, dt); CAM.fz = damp(CAM.fz, tz, .9, dt);
   CAM.sx = damp(CAM.sx, CAM.fx, .8, dt); CAM.sz = damp(CAM.sz, CAM.fz, .8, dt);
   CAM.x = CAM.sx; CAM.z = CAM.sz;
-  let zt = away ? .62 / LIN : (G.phase === 'defeat' ? .92 : (boss ? 1.14 : 1));
+  let zt = menu ? .8 / LIN : away ? .62 / LIN : (G.phase === 'defeat' ? .92 : (boss ? 1.14 : 1));
   // the player's own view: a pan holds the camera where they left it until 0 hands it back to the action; the wheel zooms either way
   const P = CAM.pan; if (away && P.on) { P.on = false; P.zoom = 1; }
   if (!away) {
@@ -62,7 +64,7 @@ function updateCamera(dt) {
     zt *= P.zoom;
   }
   CAM.zoom = damp(CAM.zoom, zt, zt < CAM.zoom ? 1.1 : .7, P.zoomT > 0 ? R.frameDt * 9 : dt); P.zoomT = Math.max(0, P.zoomT - R.frameDt);
-  CAM.y = damp(CAM.y, away ? -2.2 : .4, 1, dt);
+  CAM.y = damp(CAM.y, away && !menu ? -2.2 : .4, 1, dt);
   const lk = window.__cw && window.__cw.lock; if (lk) { CAM.x = lk[0]; CAM.z = lk[1]; CAM.zoom = lk[2] || 1; if (lk[3]) CAM.y = lk[3]; }
 }
 
@@ -125,7 +127,7 @@ function frame(now) {
   if (G.paused) { updateCamera(rdt); UI.update(rdt); }
   else { const n = G.speed > 1 ? G.speed : 1; for (let i = 1; i < n; i++) step(rdt, true); step(rdt); }
   R.fade = Math.min(1, R.fade + rdt * 1.6);
-  applyCamera(); renderFrame(); UI.draw(); HERO.draw();
+  applyCamera(); renderFrame(); UI.draw(); HERO.draw(); MENU.draw();
   if (document.hidden || raw > .25) { _acc = 0; _frames = 0; return; }
   _acc += raw; _frames++;
   if (_acc >= 2) {
@@ -142,19 +144,13 @@ function frame(now) {
 }
 
 function boot() {
-  initRenderer(); initMaterials(); resizeRenderer(); initLights(); initFX(); initWeather(); initKits(); UI.init(); initCamControl(); HERO.init();
+  initRenderer(); initMaterials(); resizeRenderer(); initLights(); initFX(); initWeather(); initKits(); MENU.init(); UI.init(); initCamControl(); HERO.init();
   // the flag on an empty tower base: a tall pole with an apricot-yellow pennant, bright against every battlefield
   KIT.marker = new PartBatch(S => { S.box(.07, 1.6, .07, 0, .8, 0, COL.wood, { l: L_WOOD }); S.cone(.07, .14, 0, 1.67, 0, COL.brass, { n: 4, l: L_METAL, emis: .05 }); const y = C(0xf0b83a); for (let k = 0; k < 4; k++) S.box(.17, .46 - k * .09, .025, .12 + k * .17, 1.33, 0, k === 1 ? COL.lacqL : y, { l: L_CLOTH, emis: .1, jit: 0, sway: .1 + k * .12 }); }, PADS_MAX + 4, { rad: .1 });
   G.boardSeed = HASH.seed ? +HASH.seed : 1 + Math.floor(Math.random() * 9000);
-  // the campaign resumes at the battlefield it was left on; #level=N or a fixed #seed starts where told, #reset wipes the record
-  { const sv = campaignLoad(); G.level = HASH.level !== undefined ? +HASH.level : sv && isFinite(sv.level) ? Math.max(0, sv.level | 0) : 0; }
-  // #biome=<key|name|campaign position> previews one battlefield without changing the level
-  { const ks = CAMPAIGN.order, bn = BIOMES.find(b => b.key === HASH.biome || b.name === String(HASH.biome)), bi = bn ? ks.indexOf(bn.key) : HASH.biome !== undefined && isFinite(+HASH.biome) ? +HASH.biome : -1; BIOME.start = bi >= 0 ? bi - G.level : 0; }
-  const B = G.B = buildBoard(G.boardSeed++, G.level);
-  R.scene.add(B.group); activateBoard(B, true);
-  beginBattle(true);
+  FLOW.start();
   window.addEventListener('resize', resizeRenderer);
-  window.__cw = { CREW, crewTower, crewCost, upgradeCost, FOE, HERO, HEROES, CAMPAIGN, G, R, CAM, UI, LT, FX, AI, PX, MON, LOOK, KIT, buildTower, upgradeTower, wallReinforce, wallUpgrade, WALL, RAID, rebuildTower, damageTower, SIEGE, GATE, ROSTER, TOWER, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); HERO.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
+  window.__cw = { FLOW, MENU, DIFF, CREW, crewTower, crewCost, upgradeCost, FOE, HERO, HEROES, CAMPAIGN, G, R, CAM, UI, LT, FX, AI, PX, MON, LOOK, KIT, buildTower, upgradeTower, wallReinforce, wallUpgrade, WALL, RAID, rebuildTower, damageTower, SIEGE, GATE, ROSTER, TOWER, step, setPhase, spawnMonster, hitMonster, MAT, tick(dt, render) { R.frameDt = dt; step(dt); R.fade = 1; applyCamera(); if (render) renderFrame(); UI.draw(); HERO.draw(); MENU.draw(); }, bench(n = 40) { const gl = R.renderer.getContext(), px = new Uint8Array(4); applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); const t0 = performance.now(); for (let i = 0; i < n; i++) { applyCamera(); renderFrame(); gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px); } return +((performance.now() - t0) / n).toFixed(2); }, build(i, kind, lvl) { const pad = G.B.pads[i]; if (pad.tower) return; G.gold += 999; const t = buildTower(pad, kind, false); for (let k = 0; k < 90; k++) step(1 / 30); for (let l = 0; l < (lvl || 0); l++) { G.gold += 999; upgradeTower(t); for (let k = 0; k < 90; k++) step(1 / 30); } return t.kind + t.lvl; } };
   if (HASH.k) G.k = +HASH.k;
   if (HASH.ff) { const n = Math.round(+HASH.ff * 30); for (let i = 0; i < n; i++) step(1 / 30); CAM.sx = CAM.fx; CAM.sz = CAM.fz; R.fade = 1; }
   if (HASH.phase) setPhase(HASH.phase);

@@ -290,13 +290,6 @@ const HERO = (() => {
     const zhuan = 5 - zhen - huo + (whole ? 1 : 0);
     H.eval = { level: G.level, bio: G.B.bio.name, press: G.press, kills, leaks, held, zhen, huo, whole, zhuan, lives: G.lives, lost: W.lost, breaks: W.breaks, topped: W.topped, hero: H.u ? H.u.d.name : '', heroKills: H.kills };
     H.save.pts += zhuan; H.save.won++; store();
-    H.pending = true;
-  }
-  // 策勋榜开着时，关卡停在「关隘无恙」不往下走。无人操作则 14 秒后自动收榜（快进与模拟对局按游戏内 60 秒计）。
-  function hold() {
-    if (!H.pending && !(H.open && H.evalMode)) return false;
-    if (!UI.playerActive() && (G.phaseT > 60 || (H.holdT0 && performance.now() - H.holdT0 > 14000))) { closePanel(); H.pending = false; return false; }
-    return true;
   }
 
   function update(dt) {
@@ -405,7 +398,6 @@ const HERO = (() => {
   function draw() {
     if (!H.save || !H.u || !UI.ctx) return;
     const c = UI.ctx, s = UI.s, u = H.u, d = u.d, LH = PX.LINE * s, pad = 5 * s, W = R.dw, tw = t => PX.measure(t, s) * s;
-    if (H.pending && !H.open && G.phase === 'clear' && G.phaseT > 1.3) { openPanel(true); H.holdT0 = performance.now(); }
     if (H.open && !H.evalMode && G.phase !== 'play' && G.phase !== 'clear') closePanel();
     const live = G.phase === 'play' || G.phase === 'clear' || G.phase === 'defeat';
     const dn = H.down;
@@ -467,6 +459,6 @@ const HERO = (() => {
       else if (e.key === 'Escape' && H.open) { closePanel(); e.stopPropagation(); }
     }, true);
   }
-  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, hold, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
+  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
   return H;
 })();
