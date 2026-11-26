@@ -159,8 +159,10 @@ const UI = (() => {
   }
   function pollGamepad(dt) {
     const pads = navigator.getGamepads ? navigator.getGamepads() : []; let gp = null; for (const p of pads) if (p && p.connected) { gp = p; break; }
-    if (!gp || !G.B || G.phase !== 'play') return;
+    if (!gp) return;
     const st = U.gp, b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), was = i => !!st.prev[i], hit = i => b(i) && !was(i);
+    // outside battle the buttons are still tracked, so the A that rode out from the menu is not read again as a first press
+    if (!G.B || G.phase !== 'play') { for (let i = 0; i < 16; i++) st.prev[i] = b(i); return; }
     let ax = (Math.abs(gp.axes[0]) > .5 ? Math.sign(gp.axes[0]) : 0) + (b(15) ? 1 : 0) - (b(14) ? 1 : 0), ay = (Math.abs(gp.axes[1]) > .5 ? Math.sign(gp.axes[1]) : 0) + (b(13) ? 1 : 0) - (b(12) ? 1 : 0);
     st.t -= dt;
     if ((ax || ay) && st.t <= 0) {
@@ -304,7 +306,13 @@ const UI = (() => {
         plate(bx, by + (down ? s : 0), bw2, bh2, { bg: lit ? COLR.bg2 : 'rgba(16,18,27,0.96)', bd: lit ? COLR.bdHi : (enabled ? COLR.bd : '#3a342c'), hi: lit ? 'rgba(232,176,74,0.18)' : null });
         return { lit, dy: down ? s : 0 };
       };
-      const place = (wP, hP) => [clamp(Math.round(p.x - wP / 2), 4 * s, W - wP - 4 * s), clamp(Math.round(p.y - hP - 7 * s), Math.min(y0 + topH + 4 * s, H - hP - 4 * s), H - hP - 4 * s)];
+      // the menu keeps clear of the right-hand column: to its left, or below it where there is no room to the left
+      const place = (wP, hP) => {
+        let x = clamp(Math.round(p.x - wP / 2), 4 * s, W - wP - 4 * s), y = clamp(Math.round(p.y - hP - 7 * s), Math.min(y0 + topH + 4 * s, H - hP - 4 * s), H - hP - 4 * s);
+        const col = U.col;
+        if (col && x < col.x + col.w && x + wP > col.x && y < col.y + col.h && y + hP > col.y) { if (col.x - wP - 4 * s >= 4 * s) x = col.x - wP - 4 * s; else y = Math.min(col.y + col.h + 4 * s, H - hP - 4 * s); }
+        return [x, y];
+      };
       c.globalAlpha = a;
       if (!m.tower) {
         const bwid = 31 * s, bh = 35 * s, gapb = 3 * s, rowW = 4 * bwid + 3 * gapb;

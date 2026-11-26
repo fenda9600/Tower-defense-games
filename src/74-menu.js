@@ -2,7 +2,7 @@
 // The menu's backbone is the line of beacons: the ten battlefields stand along a wall as ten beacon towers, lit where the pass was held,
 // waiting where the next fight is, dark beyond. It is the progress bar and the stage picker in one.
 const MENU = (() => {
-  const M = { card: null, swap: null, rects: [], gp: { prev: [], t: 0 }, peek: null, focusSkill: -1, enterT: 0 };
+  const M = { card: null, swap: null, rects: [], gp: { prev: [], t: 0 }, peek: null, gpeek: null, gHover: -1, focusSkill: -1, enterT: 0 };
   const inMenu = () => G.phase === 'menu';
   const cardUp = () => !!(M.card && M.card.shown);
   // when each battlefield was fought, for the stage card
@@ -34,7 +34,8 @@ const MENU = (() => {
   }
   // a grade is chosen here and nowhere else; the battlefield selected falls back to the last one open on it
   function grade(i) {
-    if (!gradeOpen(i)) { deny(); return false; }
+    if (!gradeOpen(i)) { deny(); if (i >= 0 && i < DIFF.list.length) M.gpeek = { i, t: 1.6 }; return false; }
+    M.gpeek = null;
     if (i === DIFF.cur) return true;
     DIFF.cur = i; sfx('uiHover', CAM.x, CAM.z, .7);
     let k = CAMPAIGN.sel; while (k > 0 && !stageOpen(k)) k--;
@@ -76,7 +77,8 @@ const MENU = (() => {
     box(x + 2 * s, y + s, w - 4 * s, h - 2 * s, bg); box(x + s, y + 2 * s, w - 2 * s, h - 4 * s, bg);
   }
   const NOHEAD = '，。、；：！？」』）·';
-  function wrap(str, maxW, k = s) { const out = []; let line = ''; for (const ch of str) { if (line && tw(line + ch, k) > maxW && NOHEAD.indexOf(ch) < 0) { out.push(line); line = ch === ' ' ? '' : ch; } else line += ch; } if (line) out.push(line); return out; }
+  function wrap(str, maxW, k = s) { const out = []; let line = ''; for (const ch of str) { if (line && tw(line + ch, k) > maxW && NOHEAD.indexOf(ch) < 0 && !(/[\d%]/.test(ch) && /\d/.test(line[line.length - 1]))) { out.push(line); line = ch === ' ' ? '' : ch; } else line += ch; } if (line) out.push(line); return out; }
+  function wrapAt(str, maxW) { if (str.indexOf('  ') < 0) return wrap(str, maxW); const out = []; let line = ''; for (const seg of str.split('  ')) { const t = line ? line + '  ' + seg : seg; if (line && tw(t) > maxW) { out.push(line); line = '   ' + seg; } else line = t; } if (line) out.push(line); return out; }
   function btn(x, y, w, h, fn, id) { M.rects.push({ x, y, w, h, fn, id }); return hot(x, y, w, h); }
   const hot = (x, y, w, h) => UI.inside && UI.mx >= x && UI.mx <= x + w && UI.my >= y && UI.my <= y + h;
   const flick = (t, k) => .5 + .5 * Math.sin(t * 9.1 + k * 2.3) * Math.sin(t * 5.3 + k * 1.7);
@@ -88,8 +90,9 @@ const MENU = (() => {
     if (inMenu()) { M.enterT += R.frameDt; drawMenu(); }
     else if (M.card && (G.phase === 'clear' || G.phase === 'defeat') && G.phaseT > (M.card.won ? 1.3 : 2.2)) { if (!M.card.shown) { M.card.shown = true; M.card.t0 = performance.now(); UI.msg = null; UI.lore = null; } drawCard(); }
     if (M.swap) {
-      const S = M.swap; S.t += R.frameDt; const a = S.done ? sat(1 - (S.t - .09) / .13) : sat(S.t / .09);
-      if (!S.done && S.t >= .09) { raise(CAMPAIGN.sel); S.done = true; S.t = .09; }
+      // a quick dip to black around the rebuild, which itself takes about 0.2 s (buildBoard)
+      const S = M.swap; S.t += R.frameDt; const a = S.done ? sat(1 - (S.t - .06) / .1) : sat(S.t / .06);
+      if (!S.done && S.t >= .06) { raise(CAMPAIGN.sel); S.done = true; S.t = .06; }
       if (S.done && a <= 0) M.swap = null;
       c.fillStyle = 'rgba(4,5,8,' + (a * .85).toFixed(3) + ')'; c.fillRect(0, 0, W, H);
     }
@@ -136,7 +139,7 @@ const MENU = (() => {
   function drawLine(L) {
     const n = stageCount(), held = CAMPAIGN.held[diffNow().key], all = CAMPAIGN.all;
     const xs = []; for (let i = 0; i < n; i++) xs.push(L.x0 + L.gap * i);
-    const wallY = L.y, u = L.u, wh = 3 * u, ext = L.gap * .5;
+    const wallY = L.y, u = L.u, wh = 3 * u, ext = Math.min(L.gap * .5, 12 * s);
     // the wall, brighter where the beacons on it are lit
     box(xs[0] - ext, wallY, xs[n - 1] - xs[0] + ext * 2, wh, K.dark);
     const litTo = Math.min(n - 1, all ? n - 1 : held - 1);
@@ -157,7 +160,7 @@ const MENU = (() => {
   }
 
   // ---- the stage card: which battlefield, when it was fought, why it stands where it does, and whether it is held on this grade ----
-  function stageCard(i, ax, axTop, box0) {
+  function stageCard(i, ax, axTop, box0, dry) {
     const k = CAMPAIGN.order[i], b = BIOMES.find(q => q.key === k), held = CAMPAIGN.held[diffNow().key], open = stageOpen(i), won = CAMPAIGN.all || i < held, pad = 7 * s;
     const t1 = stageLabel(i), t2 = b ? b.name : '', sc = s + 1;
     const status = !open ? '未至' : won ? diffNow().name + ' · 已守住' : diffNow().name + ' · 未守住';
@@ -165,6 +168,7 @@ const MENU = (() => {
     const wText = box0.w - pad * 2, note = wrap(CAMPAIGN.note[k] || '', wText), era = ERA[k] || '';
     const two = tw(era) + tw(status) + 8 * s > wText;
     const h = pad * 2 + PX.LINE * sc + 4 * s + LH * (two ? 2 : 1) + 6 * s + s + note.length * (LH + s) + (reason ? LH + 6 * s : 0);
+    if (dry) return h;
     const x = box0.x, y = box0.bottom - h;
     // a thin bronze leader from the card down to its beacon
     if (ax !== null) { const lx = Math.round(clamp(ax, x + 6 * s, x + box0.w - 6 * s)); box(lx, y + h, s, Math.max(0, axTop - y - h), K.bronzeD); if (lx !== Math.round(ax)) box(Math.min(lx, ax), axTop - s, Math.abs(ax - lx) + s, s, K.bronzeD); }
@@ -184,6 +188,7 @@ const MENU = (() => {
     const n = DIFF.list.length, gap = 4 * s, lh = PX.LINE * k, tw0 = Math.max(tw('困', k) + 12 * s, Math.floor((Math.min(w, 120 * s) - gap * (n - 1)) / n)), th = lh * 2 + 13 * s;
     DIFF.list.forEach((d, i) => {
       const bx = x + i * (tw0 + gap), on = i === DIFF.cur, open = gradeOpen(i), over = btn(bx, y, tw0, th, () => grade(i), 'grade' + i);
+      if (over) M.gHover = i;
       const bg = on ? K.zhu : open ? (over ? 'rgba(40,32,24,0.95)' : K.inkS) : 'rgba(14,13,12,0.9)';
       panel(bx, y, tw0, th, on ? K.zhuL : open ? (over ? K.gold : K.bronze) : '#2e2822', bg);
       const cx = bx + tw0 / 2, chars = Array.from(d.name);
@@ -209,17 +214,17 @@ const MENU = (() => {
   }
 
   // ---- the general: who rides out, his three skills and the merit to raise them ----
-  function generalCard(x, y, w, brief) {
+  function generalCard(x, y, w, brief, maxH) {
     const S = HERO.save, key = S.pick, d = HEROES[key], pad = 7 * s, sc = s + 1, rowH = LH + 6 * s, nameH = PX.LINE * sc;
-    const fsk = M.focusSkill >= 0 ? M.focusSkill : -1, hovered = { i: -1 };
-    const descW = w - pad * 2;
-    let rows = 0; const lines = []; const sk = fsk >= 0 ? d.skills[fsk] : null;
-    let h = pad * 2 + nameH + 4 * s + LH + 9 * s + 3 * rowH + 4 * s;
-    // the skill under the pointer (or last raised) explains itself under the rows
-    const explainI = M._skillHover >= 0 ? M._skillHover : fsk;
-    if (explainI >= 0) { const q = d.skills[explainI], lv = S.lv[key][explainI]; lines.push(...wrap(lv ? HERO.fxText(q, lv) : '尚未习得。', descW).map(t => ({ t, col: '#d9cdb4' }))); if (lv < 3) lines.push(...wrap((lv ? '下一级：' : '一级：') + HERO.fxText(q, lv + 1), descW).map(t => ({ t, col: K.ok }))); }
-    else if (!brief) lines.push(...wrap(d.bio, descW).map(t => ({ t, col: K.dim })));
-    rows = Math.min(lines.length, 4); h += 4 * s + rows * (LH + s) + LH + 4 * s;
+    const fsk = M.focusSkill >= 0 ? M.focusSkill : -1, descW = w - pad * 2;
+    let h = pad * 2 + nameH + 4 * s + LH + 9 * s + 3 * rowH + 4 * s + LH + 8 * s;
+    // the skill under the pointer (or last raised) explains itself under the rows: this level, then the next. Short of room,
+    // whole paragraphs go from the end, never half a sentence.
+    const explainI = M._skillHover >= 0 ? M._skillHover : fsk, para = [];
+    if (explainI >= 0) { const q = d.skills[explainI], lv = S.lv[key][explainI]; para.push(wrap(lv ? HERO.fxText(q, lv) : '尚未习得。', descW).map(t => ({ t, col: '#d9cdb4' }))); if (lv < 3) para.push(wrap((lv ? '下一级：' : '一级：') + HERO.fxText(q, lv + 1), descW).map(t => ({ t, col: K.ok }))); }
+    else if (!brief) para.push(wrap(d.bio, descW).map(t => ({ t, col: K.dim })));
+    while (para.length && h + para.flat().length * (LH + s) > maxH) para.pop();
+    const lines = para.flat(), rows = lines.length; h += rows * (LH + s);
     panel(x, y, w, h, K.bronzeD, K.inkS);
     // the two arrows that change who rides out
     const aw = 10 * s, ay = y + pad - 2 * s, ah = nameH + 4 * s;
@@ -246,7 +251,7 @@ const MENU = (() => {
       text(label, bx + bw / 2, ry + 2 * s, can ? K.bone : K.faint, { align: 'c' });
     });
     yy += 3 * rowH + 4 * s;
-    lines.slice(0, rows).forEach(l => { text(l.t, x + pad, yy, l.col); yy += LH + s; });
+    lines.forEach(l => { text(l.t, x + pad, yy, l.col); yy += LH + s; });
     // give all merit back, to spend again
     const rt = '重新分配', rw = tw(rt) + 6 * s, ro2 = btn(x + pad - 3 * s, y + h - pad - LH, rw, LH + 2 * s, () => { if (HERO.refund()) sfx('uiClick', CAM.x, CAM.z, .7); }, 'refund');
     text(rt, x + pad, y + h - pad - LH + s, ro2 ? K.bone : K.faint);
@@ -264,34 +269,35 @@ const MENU = (() => {
     if (M.peek && !M.peek.hover) { M.peek.t -= R.frameDt; if (M.peek.t <= 0) M.peek = null; }
     if (M.peek && M.peek.hover) M.peek = null;
     const n = stageCount(), wide = W >= H * 1.15, m = (wide ? 14 : 8) * s, sc = s + 1;
-    const btnH = PX.LINE * sc + 12 * s, btnW = Math.max(tw('出征', sc) + 40 * s, wide ? 0 : W - m * 2);
-    // bottom band: the beacon line, its numerals, the sortie
-    const gapMax = 64 * s, span = Math.min(W - m * 2 - 24 * s, gapMax * (n - 1)), gap = span / (n - 1), u = Math.max(s, Math.min(2 * s, Math.round(gap / 30))), L = { gap, x0: W / 2 - span / 2, u };
-    const bottom = H - m, btnY = bottom - btnH;
-    L.y = Math.round(btnY - (wide ? 10 * s : 8 * s) - LH - 10 * s - 4 * s);
+    const btnH = PX.LINE * sc + 12 * s, btnW = Math.max(tw('出征', sc) + 40 * s, wide ? 0 : W - m * 2), tall = H >= 380 * s;
+    // bottom band: the beacon line and its numerals. On a wide screen the sortie stands at the line's right end (the help line under it
+    // when there is height to spare); on a narrow one it runs full width beneath.
+    const room = wide ? W - m * 2 - btnW - 16 * s : W - m * 2, gapMax = 64 * s, span = Math.min(room - 24 * s, gapMax * (n - 1)), gap = span / (n - 1);
+    const u = Math.max(s, Math.min(2 * s, Math.round(gap / 30))), L = { gap, x0: (wide ? m + room / 2 : W / 2) - span / 2, u };
+    const help = '方向键选关与难度 · Q E 换将 · 1 2 3 加点 · 回车出征', helpRow = wide && tall && tw(help) < W - m * 2;
+    const bottom = H - m - (helpRow ? LH + 6 * s : 0);
+    L.y = Math.round(wide ? bottom - LH - 12 * s - 3 * u : bottom - btnH - 8 * s - LH - 14 * s);
     const line = drawLine(L);
-    if (wide) {
-      goButton(W - m - btnW, btnY, btnW, btnH);
-      const help = '方向键选关与难度 · Q E 换将 · 1 2 3 加点 · 回车出征';
-      if (tw(help) < W - btnW - m * 3) text(help, m, btnY + (btnH - LH) / 2 + s, K.faint);
-    } else goButton(m, btnY, W - m * 2, btnH);
+    if (wide) { goButton(W - m - btnW, Math.round(L.y - 9 * u + 3 * u / 2 - btnH / 2), btnW, btnH); if (helpRow) text(help, m, H - m - LH, K.faint); }
+    else goButton(m, bottom - btnH, W - m * 2, btnH);
     // top: the title at the left; the grades and the general at the right (wide) or below the title (narrow)
     const tk = wide ? s * 4 : s * 3, T = drawTitle(m, m, tk);
     let colX, colW, gy;
     if (wide) { colW = Math.min(Math.max(150 * s, W * .3), 190 * s, W - m * 3 - T.w); colX = W - m - colW; gy = m; }
     else { colX = m + T.w + 10 * s; colW = W - colX - m; gy = m; }
-    const gt = grades(colX, gy, colW, wide ? s + 1 : s);
+    M.gHover = -1; if (M.gpeek && (M.gpeek.t -= R.frameDt) <= 0) M.gpeek = null;
+    const gt = grades(colX, gy, colW, wide && tall ? s + 1 : s), gi = M.gHover >= 0 ? M.gHover : M.gpeek ? M.gpeek.i : DIFF.cur;
     let yy = gy + gt.h + 6 * s;
-    for (const l of gradeLines(DIFF.cur)) for (const t of wrap(l.t, colW)) { text(t, colX, yy, l.col); yy += LH + s; }
+    for (const l of gradeLines(gi)) for (const t of wrapAt(l.t, colW)) { text(t, colX, yy, l.col); yy += LH + s; }
     yy = Math.max(yy + 8 * s, wide ? 0 : m + T.h + 8 * s);
     const gx = wide ? colX : m, gw = wide ? colW : W - m * 2;
-    const gh = generalCard(gx, yy, gw, !wide), genBottom = yy + gh;
-    // the stage card hangs over its beacon; on a wide screen it keeps clear of the right-hand column
+    // the stage card hangs over its beacon; on a wide screen it keeps clear of the right-hand column, on a narrow one the general card stops above it
     const i = M.peek ? M.peek.i : CAMPAIGN.sel, ax = M.peek ? line.peekX : line.xs[CAMPAIGN.sel];
     let cw = wide ? Math.min(150 * s, Math.max(135 * s, W * .28)) : W - m * 2, cx = wide ? clamp(ax - cw / 2, m, W - m - cw) : m;
-    const cardBottom = line.top - 6 * s;
-    if (wide && cx + cw > colX - 8 * s && cardBottom - 120 * s < genBottom) cx = Math.max(m, colX - 8 * s - cw);
-    stageCard(i, ax, line.top, { x: cx, w: cw, bottom: cardBottom });
+    const cardBottom = line.top - 6 * s, card = { x: cx, w: cw, bottom: cardBottom }, ch = stageCard(i, ax, line.top, card, true);
+    const gh = generalCard(gx, yy, gw, !wide, (wide ? line.top - 8 * s : cardBottom - ch - 6 * s) - yy), genBottom = yy + gh;
+    if (wide && cx + cw > colX - 8 * s && cardBottom - ch < genBottom) card.x = Math.max(m, colX - 8 * s - cw);
+    stageCard(i, ax, line.top, card);
   }
 
   // ---- the after-action card ----
@@ -364,7 +370,8 @@ const MENU = (() => {
     const D = () => R.dpr || 1, ours = () => inMenu() || cardUp();
     window.addEventListener('keydown', e => {
       if (!ours() || CHEAT.owns(e.target)) return;
-      e.stopImmediatePropagation(); e.preventDefault(); if (e.repeat && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      // the battle's handlers never see a key here; one with a modifier still reaches the browser (reload, zoom)
+      e.stopImmediatePropagation(); if (e.ctrlKey || e.metaKey || e.altKey) return; e.preventDefault(); if (e.repeat && e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
       if (!AU.ready) AU.unlock(); onKey(e.key);
     }, true);
     window.addEventListener('pointerdown', e => {
