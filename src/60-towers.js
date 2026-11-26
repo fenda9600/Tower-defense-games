@@ -8,10 +8,14 @@ const TOWER = {
   bombard: { name: '砲车台', short: '砲车', icon: 'bombard', cost: [120, 100, 130, 180], range: [7.4, 7.7, 8.1, 8.6], minRange: 2.3, dmg: [36, 50, 68, 104], splash: [1.55, 1.7, 1.85, 2.1], rate: [2.9, 2.8, 2.65, 2.5], air: false, ground: true, light: [46, 50, 62, 80], desc: ['汉 · 发石机：装填慢，', '落石砸伤一片，只打地面。'], tiers: [['汉 · 发石机', '汉代以机发石，重十二斤，行二百步。'], ['三国 · 霹雳车', '官渡之战，曹操造发石车击袁绍楼橹，号霹雳车。'], ['唐 · 抛车', '唐军攻辽东，抛车飞大石过三百步。'], ['宋 · 霹雳火砲', '宋《武经总要》霹雳火球，以砲抛出。']] },
   spire: { name: '床弩台', short: '床弩', icon: 'spire', cost: [110, 90, 120, 170], range: [5.5, 5.8, 6.1, 6.5], dmg: [17, 22, 28, 37], jumps: [3, 4, 5, 6], rate: [2.3, 2.2, 2.05, 1.9], slow: [.36, .4, .44, .48], slowT: [1.3, 1.4, 1.55, 1.7], air: true, ground: true, light: [34, 40, 52, 66], desc: ['秦 · 连弩：一发贯数敌，', '中者迟滞，可射飞敌。'], tiers: [['秦 · 连弩', '《史记》：始皇于之罘以连弩射杀巨鱼。'], ['汉 · 大黄弩', '李广以大黄弩射杀匈奴裨将。'], ['唐 · 车弩', '唐《通典》车弩以绞轴张弦，中垒即摧。'], ['宋 · 三弓床弩', '宋三弓床弩七十人张发，射三百步。']] },
   guard: { name: '戍卒营', short: '戍卒', icon: 'guard', cost: [80, 70, 100, 140], range: [3.4, 3.6, 3.8, 4.0], n: [2, 2, 3, 3], hp: [62, 82, 100, 140], dmg: [7, 9, 11, 15], rate: [7, 6.5, 6, 5], air: false, ground: true, light: [50, 58, 72, 90], desc: ['秦 · 锐士：出营拦路，', '与敌近身搏杀。'], tiers: [['秦 · 锐士', '秦兵俑所见：铆钉札甲、右侧发髻，持青铜戈。'], ['汉 · 戍卒', '汉代边郡戍卒，铁札甲、环首刀与盾。'], ['唐 · 陌刀手', '唐陌刀手披明光铠，列阵如墙破骑。'], ['宋 · 步人甲', '宋步人甲重约二十九公斤，斩马刀破骑。']] },
+  // The kinds of work the harder grades bring (26-diff.js). Each tier has a model of its own (stages: 4).
+  // gunner: three ranks fire one after another (gap seconds apart), then all reload together. men: guns in each rank. pierce: the share of armour a ball goes through.
+  // cav: damage against horse and elephant, which also shy at the noise for shy seconds.
+  gunner: { name: '神机铳台', short: '铳台', icon: 'gunner', stages: 4, cost: [100, 90, 130, 170], range: [5.8, 6.1, 6.5, 7.0], dmg: [8, 10, 14, 18], men: [2, 2, 3, 3], ranks: 3, gap: .24, reload: [2.9, 2.7, 2.7, 2.5], pierce: [.5, .6, .65, .75], cav: 1.5, shy: [.45, .9], air: false, ground: true, light: [44, 52, 64, 80], desc: ['元 · 火铳手：三行轮放，', '铳弹破甲，惊乱骑兵与象。'], tiers: [['元 · 火铳手', '元代已有铜火铳，持铳近射，装填颇慢。'], ['明初 · 神机营', '永乐设神机营；沐英列火铳为三行迭射。'], ['嘉靖 · 鸟铳手', '鸟铳嘉靖间传入，戚继光《纪效新书》专论其法。'], ['万历 · 鲁密铳手', '赵士桢《神器谱》载鲁密铳，万历间献于朝。']] },
 };
 const TOWER_KINDS = ['archer', 'bombard', 'spire', 'guard'];
 // Which update runs each kind of work.
-const TOWER_ACT = { archer: 'updArcher', bombard: 'updBombard', spire: 'updSpire', guard: 'updGuard' };
+const TOWER_ACT = { archer: 'updArcher', bombard: 'updBombard', spire: 'updSpire', guard: 'updGuard', gunner: 'updGunner' };
 // A work or a troop type that a grade of difficulty brings (26-diff.js) takes the field only on that grade and the harder ones.
 // Asked afresh every time: the grade can change between battles.
 function fielded(key) { return diffHas(key) || !DIFF.list.some(d => d.works.indexOf(key) >= 0 || d.foes.indexOf(key) >= 0); }
@@ -148,6 +152,55 @@ function blueprint(kind, lvl) {
     piece('fire', 3, S => brazier(S, fx, H + .1, fz, bs));
     if (lvl >= 1) piece('flag', 4, S => { cnBanner(S, -W / 2 + .1, H + .1, H + 2.2 + lvl * .3, W / 2 - .1, COL.clothD, rng, { w: .34, len: .9, col2: mulC(COL.lacqL, 1.1) }); });
     mounts.flame = [fx, H + .1 + bs * .72, fz]; mounts.flameSize = bs; mounts.top = H + 1.3; mounts.gun = [0, H + .1, 0]; mounts.bows = lvl + 1;
+  } else if (kind === 'gunner') {
+    // Gun platform: a square stage with a breastwork on the road side and a slow-match brazier. Yuan: a timber stage on an earth bank behind stakes.
+    // Early Ming: a rammed earth platform with a low battlement. Jiajing: brick, battlements on three sides. Wanli: higher, with a tiled powder shed at the back.
+    const H = [.6, .95, 1.25, 1.5][lvl], W = 1.8, brick = lvl >= 2, earth = brick ? st : COL.ram, lay = brick ? L_MASON : L_DIRT;
+    piece('base', 0, S => {
+      S.box(W + .3, .18, W + .3, 0, .09, 0, sdk, { l: L_MASON });
+      if (lvl === 0) {
+        S.cyl(W * .62, .32, 0, .34, 0, COL.ram, { n: 4, l: L_DIRT, rt: .85, r: [0, PI / 4, 0], jit: .04 });
+        for (const [a, b] of corners) S.box(.14, H, .14, a * (W / 2 - .12), H / 2, b * (W / 2 - .12), wd, { l: L_WOOD });
+        for (const sg of [-1, 1]) S.seg([sg * (W / 2 - .12), .2, -W / 2 + .12], [-sg * (W / 2 - .12), H - .05, -W / 2 + .12], .035, .035, w, { l: L_WOOD, n: 4 });
+      } else {
+        S.cyl(W * .72, H - .18, 0, .18 + (H - .18) / 2, 0, earth, { n: 4, l: lay, rt: .93, r: [0, PI / 4, 0], jit: .03 });
+        for (let y = .42; y < H - .1; y += .3) S.box(W * 1.0 - y * .07, .04, W * 1.0 - y * .07, 0, y, 0, mulC(earth, .8), { l: lay, jit: 0 });
+      }
+      // steps up the back
+      for (let k = 0; k < 4; k++) S.box(.5, .1, .24, -W / 2 + .45, .14 + k * (H - .1) / 4, -W / 2 - .36 + k * .1, lvl ? sl : wl, { l: lvl ? L_MASON : L_WOOD });
+    });
+    piece('deck', 1, S => {
+      S.box(W + .1, .1, W + .1, 0, H + .05, 0, lvl ? sl : wd, { l: lvl ? L_MASON : L_WOOD });
+      if (!lvl) for (const x of [-.6, -.2, .2, .6]) S.box(.36, .03, W, x, H + .11, 0, w, { l: L_WOOD });
+    });
+    piece('wall', 2, S => {
+      const y0 = H + .1, fz = W / 2 + .02;
+      if (lvl === 0) {
+        // sharpened stakes along the front
+        for (let i = 0; i < 9; i++) { const x = -W / 2 + .1 + i * (W - .2) / 8; S.seg([x, y0 - .05, fz], [x, y0 + .55 + (i & 1) * .08, fz + .12], .045, .02, w, { l: L_WOOD, n: 4 }); }
+        S.box(W, .06, .06, 0, y0 + .25, fz + .04, wd, { l: L_WOOD });
+      } else {
+        const hgt = [0, .34, .4, .46][lvl], side = lvl >= 2;
+        for (const [ang, len] of side ? [[0, W], [HPI, W], [-HPI, W]] : [[0, W]]) {
+          const cs = Math.cos(ang), sn = Math.sin(ang), at = (u, y, ww, hh, c) => S.box(ww, hh, .16, u * cs + fz * sn, y, -u * sn + fz * cs, c, { l: lay, r: [0, ang, 0] });
+          at(0, y0 + hgt / 2, len, hgt, earth);
+          for (let u = -len / 2 + .2; u < len / 2 - .1; u += .42) at(u, y0 + hgt + .11, .24, .22, mixC(earth, sl, .3));
+        }
+      }
+    });
+    piece('kegs', 3, S => {
+      PROP.barrel(S, W / 2 - .3, H + .1, -W / 2 + .32, .6, rng); PROP.barrel(S, W / 2 - .62, H + .1, -W / 2 + .3, .55, rng);
+      // ramrods in a rack
+      S.box(.06, .06, .5, W / 2 - .12, H + .5, 0, wd, { l: L_WOOD }); for (const z of [-.15, 0, .15]) S.seg([W / 2 - .14, H + .1, z], [W / 2 - .1, H + .95, z - .05], .012, .012, wl, { l: L_WOOD, n: 3 });
+    });
+    const fx = -W / 2 + .26, fz = -W / 2 + .3, bs = [.3, .34, .38, .42][lvl];
+    piece('fire', 4, S => brazier(S, fx, H + .1, fz, bs));
+    if (lvl >= 1) piece('flag', 5, S => { cnBanner(S, -W / 2 + .08, H + .1, H + 2.1 + lvl * .25, W / 2 - .1, lvl >= 2 ? COL.clothR : COL.clothD, rng, { w: .36, len: .95, col2: mulC(COL.gold, .7) }); });
+    if (lvl === 3) piece('shed', 6, S => {
+      for (const a of [-1, 1]) for (const z of [-W / 2 + .1, -.55]) S.seg([a * (W / 2 - .12), H + .1, z], [a * (W / 2 - .12), H + 1.3, z], .05, .045, red, { l: L_WOOD, n: 5 });
+      cnRoof(S, { y: H + 1.33, z: -.72, a: W / 2 + .12, b: .3, h: .32, ridge: W / 2, lift: .12, n: 3, m: 3, rr: .035 });
+    });
+    mounts.flame = [fx, H + .1 + bs * .72, fz]; mounts.flameSize = bs; mounts.top = H + (lvl === 3 ? 1.9 : 1.5); mounts.gun = [0, H + .1, 0];
   } else {
     // Garrison hall: rammed earth or brick walls under a tiled roof, a halberd rack and a corner tower at the top level.
     const W = [1.5, 1.7, 1.9][lvl], D = [1.3, 1.4, 1.5][lvl], wh = [1.05, 1.25, 1.5][lvl], brick = lvl === 2;
@@ -208,6 +261,13 @@ function findTarget(x, z, range, air, ground, minRange = 0) {
   }
   return best;
 }
+// up to n ground targets in range, the furthest along the road first; fewer if fewer are there
+const _fts = [];
+function findTargets(x, z, range, n) {
+  _fts.length = 0; const r2 = range * range;
+  for (const m of G.mons) { if (m.dead || m.hp <= 0 || !m.vis || m.fly) continue; if (dist2(x, z, m.x, m.z) <= r2) _fts.push(m); }
+  _fts.sort((a, b) => b.prog - a.prog); if (_fts.length > n) _fts.length = n; return _fts;
+}
 function aimPoint(m, dt, out) {
   if (m.fly || m.wallSt) { out.x = m.x + (m.vx || 0) * dt; out.y = m.y + (m.fly ? 0 : m.hitH); out.z = m.z + (m.vz || 0) * dt; return out; }
   const B = G.B, adv = m.blocked ? 0 : m.spdNow * dt, s2 = Math.min(B.L - .1, m.s + adv);
@@ -264,6 +324,7 @@ class Tower {
     if (this.kind === 'bombard') this.makeGun();
     if (this.kind === 'spire') this.makeBow();
     if (this.kind === 'guard') { this.respawn = .2; }
+    if (this.kind === 'gunner') this.makeRanks();
     if (this.mended) this.mended = false; else if (lvl > 0) { const tr = d.tiers[lvl]; UI.banner(d.name + ' · ' + tr[0], 3.6, false, tr[1]); }
     this.state = 'active'; this.appear = 0;
     fxDust(this.x, this.y + .2, this.z, 10, 1.3, { speed: 2.2 });
@@ -412,6 +473,43 @@ class Tower {
       sfx('zap', this.x, this.z, 1, lvl / 3); FX.shake = Math.min(1, FX.shake + .05);
     }
   }
+  makeRanks() {
+    // the gunners: d.ranks ranks of d.men each, kept in this.archers so that the model's teardown clears them with the bowmen
+    if (!KIT.gun) gradeKits();
+    const d = this.def, lvl = this.lvl, n = d.men[lvl];
+    for (let r = 0; r < d.ranks; r++) for (let j = 0; j < n; j++) this.archers.push({ rank: r, j, n, fire: 0, e: { scale: .8, ph: 0, mv: 0, atk: -1, bow: true, gun: KIT.gun[this.vl], draw: 0, pitch: .7, tint: [1, .9, .7], x: 0, y: 0, z: 0, yaw: this.yaw, flash: 0 } });
+    this.vol = { rank: -1, t: .6 }; this.gunYaw = this.yaw;
+  }
+  updGunner(dt, d, lvl) {
+    const V = this.vol, tgt = findTarget(this.x, this.z, d.range[lvl], false, true), reload = d.reload[lvl] * crewRate(this);
+    if (tgt) this.gunYaw = angDamp(this.gunYaw, Math.atan2(tgt.x - this.x, tgt.z - this.z), 9, dt); else this.gunYaw = angDamp(this.gunYaw, this.yaw, 1.5, dt);
+    V.t -= dt;
+    // reloaded, with something to shoot at: the first rank fires at once, the second and third follow a beat apart, then all reload
+    if (V.rank < 0 && V.t <= 0 && tgt) V.rank = 0;
+    if (V.rank >= 0 && V.t <= 0 && tgt) {
+      const foes = findTargets(this.x, this.z, d.range[lvl], d.men[lvl]), y = this.mounts.gun[1];
+      let k = 0;
+      for (const a of this.archers) {
+        if (a.rank !== V.rank) continue; const m = foes[k++ % foes.length], e = a.e, fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);
+        const mx = e.x + fx * .78 * e.scale, my = e.y + 1.02 * e.scale, mz = e.z + fz * .78 * e.scale;
+        shootBall(mx, my, mz, m, ownDmg(d.dmg[lvl]), this, d.pierce[lvl]); a.fire = 1;
+        fxTimed(2, mx, my, mz, 1.2, 1.2, 3.2, 2.3, 1.1, 1, .09); fxSparks(mx, my, mz, 4, 3.5, 3, 2, .8, { size: .04, grav: 3 });
+        for (let i = 0; i < 3; i++) fxSmoke(mx + fx * i * .15, my, mz + fz * i * .15, fx * rr(.6, 1.4) + rr(-.2, .2), rr(.1, .4), fz * rr(.6, 1.4) + rr(-.2, .2), rr(1.4, 2.2), .2, .8, .72, .71, .68, .5, { drag: 2.2, rise: .25 });
+      }
+      const p = this.w([0, y + 1, .5], _ap); lightFlash(p.x, p.y, p.z, 0xffc070, 120, .12, 9); sfx('musket', this.x, this.z, .9, rnd());
+      if (++V.rank >= d.ranks) { V.rank = -1; V.t = reload; } else V.t = d.gap;
+    }
+    this.charge = V.rank < 0 ? sat(1 - V.t / reload) : 1;
+    // three ranks across the platform, square to the line of fire; the rank about to fire levels its guns, the others hold them at the port
+    const rot = this.gunYaw - this.yaw, cr = Math.cos(rot), sr = Math.sin(rot), y = this.mounts.gun[1];
+    for (const a of this.archers) {
+      const lx = (a.j - (a.n - 1) / 2) * .5, lz = .55 - a.rank * .45, p = this.w([lx * cr + lz * sr, y, -lx * sr + lz * cr], _ap), e = a.e;
+      e.x = p.x; e.y = p.y - (1 - easeOut(this.appear)) * .5; e.z = p.z; e.scale = .8 * (.3 + .7 * this.appear); e.yaw = this.gunYaw;
+      const ready = tgt && (V.rank === a.rank || (V.rank < 0 && V.t < .5));
+      a.fire = Math.max(0, a.fire - dt * 4); a.aim = damp(a.aim === undefined ? .7 : a.aim, ready ? .1 : .7, 10, dt); e.pitch = a.aim - a.fire * .3;
+      rigHuman(KIT.foot, SPEC.foot, e);
+    }
+  }
   updGuard(dt, d, lvl) {
     for (let i = this.men.length - 1; i >= 0; i--) if (this.men[i].gone) this.men.splice(i, 1);
     if (this.men.length < crewMen(this)) { this.respawn -= dt; if (this.respawn <= 0) { this.respawn = this.men.length === 0 && G.t < 4 ? .5 : d.rate[lvl]; spawnFootman(this); } }
@@ -424,6 +522,11 @@ function shootArrow(x, y, z, m, dmg, tower, o = {}) {
   const dist = Math.hypot(m.x - x, m.z - z), T = clamp(dist / (o.fast ? 24 : 14), o.fast ? .12 : .22, .62), q = aimPoint(m, T, _ap2);
   G.arrows.push({ x0: x, y0: y, z0: z, tx: q.x, ty: q.y, tz: q.z, t: 0, T, m, dmg, tower, x, y, z, dx: 0, dy: 0, dz: 1, arc: o.fast ? .05 + dist * .02 : .25 + dist * .07, alive: true, lI: o.fast ? 0 : 22, lCol: 0xff9040, lx: x, ly: y, lz: z, lseed: rnd() * 9, ember: 0, kind: o.kind || 'arrow', slow: o.slow || null, plain: !!o.fast });
 }
+// A gun ball: flat and too quick to see, drawn as a tracer streak. pierce is the share of armour it goes through.
+function shootBall(x, y, z, m, dmg, tower, pierce) {
+  const dist = Math.hypot(m.x - x, m.z - z), T = clamp(dist / 45, .05, .2), q = aimPoint(m, T, _ap2);
+  G.arrows.push({ x0: x, y0: y, z0: z, tx: q.x + rr(-.12, .12), ty: q.y + rr(-.1, .1), tz: q.z + rr(-.12, .12), t: 0, T, m, dmg, tower, x, y, z, dx: 0, dy: 0, dz: 1, arc: .02, alive: true, lI: 0, lCol: 0xff9040, lx: x, ly: y, lz: z, lseed: 0, ember: 0, kind: 'ball', slow: null, plain: true, ball: true, pierce });
+}
 function arrowMatrix(x, y, z, dx, dy, dz) { _tq.setFromUnitVectors(_tz, _tv.set(dx, dy, dz).normalize()); return _tm.compose(_tv.set(x, y, z), _tq, _ts.set(1, 1, 1)); }
 function updateProjectiles(dt) {
   const A = G.arrows, B = G.B;
@@ -434,14 +537,16 @@ function updateProjectiles(dt) {
     a.x = lerp(a.x0, a.tx, u); a.z = lerp(a.z0, a.tz, u); a.y = lerp(a.y0, a.ty, u) + a.arc * 4 * u * (1 - u);
     const dx = a.x - px, dy = a.y - py, dz = a.z - pz, l = Math.hypot(dx, dy, dz) || 1; a.dx = dx / l; a.dy = dy / l; a.dz = dz / l;
     a.lx = a.x; a.ly = a.y; a.lz = a.z;
-    KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, a.dx, a.dy, a.dz), 0, null);
+    if (!a.ball) KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, a.dx, a.dy, a.dz), 0, null);
     const hx = a.x + a.dx * .25, hy = a.y + a.dy * .25, hz = a.z + a.dz * .25;
-    if (a.plain) FX.segs.push(hx, hy, hz, .04, hx - a.dx * 1.4, hy - a.dy * 1.4, hz - a.dz * 1.4, .0, .9, .85, .7, .5);
+    if (a.ball) FX.segs.push(hx, hy, hz, .035, hx - a.dx * .9, hy - a.dy * .9, hz - a.dz * .9, .0, 3, 2.4, 1.3, .9);
+    else if (a.plain) FX.segs.push(hx, hy, hz, .04, hx - a.dx * 1.4, hy - a.dy * 1.4, hz - a.dz * 1.4, .0, .9, .85, .7, .5);
     else { FX.segs.push(hx, hy, hz, .055, hx - a.dx * .95, hy - a.dy * .95, hz - a.dz * .95, .0, 2.6, 1.05, .25, .85);
     FX.add.push(hx, hy, hz, .3, .3, 0, 0, 3.6, 1.9, .5, 1, 0, 0, 0, 0); FX.add.push(hx, hy, hz, 1.0, 1.0, 0, 0, 1, .45, .12, .22, 2, 0, 0, 0); }
     if (!a.plain) a.ember += dt * 26; while (a.ember > 1) { a.ember -= 1; fxPart(hx, hy, hz, rr(-.4, .4), rr(-.1, .6), rr(-.4, .4), rr(.25, .6), .05, 2.6, 1.1, .2, { drag: 1.5, rise: .6 }); }
     if (u >= 1) {
       a.alive = false; swapRemove(A, i);
+      if (a.ball) { gunHit(a, m); continue; }
       if (m && !m.dead && m.hp > 0 && dist2(a.tx, a.tz, m.x, m.z) < 1.0) {
         fxSparks(a.x, a.y, a.z, 5, 3, 3, 1.5, .4, { size: .055, grav: 6 }); fxTimed(2, a.x, a.y, a.z, .9, .9, 1.6, .8, .25, .8, .12);
         sfx('arrowHit', a.x, a.z, .55, rnd()); if (a.slow) slowMonster(m, a.slow[0], a.slow[1]); hitMonster(m, a.dmg, a.kind, a.dx, a.dz, a.tower);
@@ -467,6 +572,14 @@ function updateProjectiles(dt) {
     if (s.fire) s.sm += dt * 30; while (s.sm > 1) { s.sm -= 1; fxSmoke(s.x, s.y, s.z, rr(-.1, .1), rr(0, .2), rr(-.1, .1), rr(.5, .9), .16, .3, .26, .25, .25, .32, { drag: 1 }); if (rnd() < .5) fxPart(s.x, s.y, s.z, rr(-.5, .5), rr(-.2, .5), rr(-.5, .5), .4, .05, 2.5, 1.1, .2, { grav: 2 }); }
     if (u >= 1) { swapRemove(Sh, i); explodeAt(s.tx, s.ty, s.tz, s.dmg, s.splash, s.tower, !s.fire); }
   }
+}
+// A ball arrives. Horses and elephants take more from it and shy at the noise (Mu Ying's guns broke an elephant line, 1388).
+function gunHit(a, m) {
+  if (!m || m.dead || m.hp <= 0 || dist2(a.tx, a.tz, m.x, m.z) > 1.2) { const gy = G.B.heightAt(a.x, a.z); if (Math.abs(a.y - gy) < 1) fxDust(a.x, gy + .05, a.z, 2, .3, { speed: .8, a: .35 }); return; }
+  const d = TOWER.gunner; let dmg = a.dmg;
+  fxSparks(a.x, a.y, a.z, 4, 3, 3, 2, .8, { size: .045, grav: 6 }); sfx('arrowHit', a.x, a.z, .45, rnd());
+  if (m.def.death === 'horse' || m.def.death === 'beast') { dmg *= d.cav; slowMonster(m, d.shy[0], d.shy[1]); m.flinch = 1; }
+  hitMonster(m, dmg, 'ball', a.dx, a.dz, a.tower, a.pierce);
 }
 function explodeAt(x, y, z, dmg, splash, tower, stone) {
   const sc = splash / 1.7;

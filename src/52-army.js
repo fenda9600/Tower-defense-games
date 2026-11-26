@@ -237,6 +237,21 @@ function initArmy() {
   };
 }
 
+// Parts for the troops and works that only the harder grades bring. Built on first use, so that an easy game never builds them
+// (building draws on the shared geometry jitter stream, and the easy board must come out exactly as it always has).
+function gradeKits() {
+  const I = KIT.item, Z = [HPI, 0, 0], brz = mulC(COL.bronze, 1.1), irn = mulC(COL.iron, 1.1), stock = C(0x4a2e1c), stockL = C(0x6a4428), band = mulC(COL.brass, 1.05);
+  // guns, gripped by the forward hand at the origin, muzzle along +z: the Yuan bronze hand gun and the early Ming iron one on a wooden tiller,
+  // the Jiajing fowling piece with its bent stock and serpentine, and the longer, darker Rumi gun
+  const tube = (S, c, r, z0, z1, l) => S.cyl(r, z1 - z0, 0, 0, (z0 + z1) / 2, c, { n: 7, r: Z, l });
+  KIT.gun = [
+    new PartBatch(S => { tube(S, brz, .045, .02, .4, L_METAL); S.sph(.068, 0, 0, .02, brz, { l: L_METAL, w: 7, h: 5, smooth: false }); S.cyl(.055, .04, 0, 0, .39, brz, { n: 7, r: Z, l: L_METAL }); S.box(.04, .04, .62, 0, -.01, -.32, stock, { l: L_WOOD }); }, 30, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, irn, .04, -.02, .5, L_METAL); S.sph(.06, 0, 0, -.02, irn, { l: L_METAL, w: 7, h: 5, smooth: false }); for (const z of [.15, .3, .48]) S.cyl(.048, .03, 0, 0, z, band, { n: 7, r: Z, l: L_METAL }); S.box(.045, .045, .66, 0, -.01, -.38, stock, { l: L_WOOD }); }, 30, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, irn, .022, -.1, .72, L_METAL); S.box(.055, .06, .62, 0, -.035, .05, stockL, { l: L_WOOD }); S.box(.06, .11, .32, 0, -.085, -.38, stockL, { l: L_WOOD, r: [-.28, 0, 0] }); S.box(.012, .07, .04, .03, .05, -.14, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.2, .45]) S.cyl(.03, .02, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); }, 40, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, mulC(irn, .8), .025, -.12, .86, L_METAL); S.box(.055, .06, .7, 0, -.035, .08, stock, { l: L_WOOD }); S.box(.06, .12, .34, 0, -.09, -.42, stock, { l: L_WOOD, r: [-.3, 0, 0] }); S.box(.012, .08, .04, .03, .05, -.16, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.1, .34, .6, .84]) S.cyl(.033, .025, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); S.cone(.012, .03, 0, .03, .8, band, { n: 4 }); }, 40, { rad: .2, shadow: false }),
+  ];
+}
+
 function rigRider(m, M0, kit, sy, sz) {
   // A rider sits in the saddle at (0, sy, sz) of the mount; he swings when his mount fights.
   const r = m.rider || (m.rider = { ph: 0, mv: 0, ride: true });

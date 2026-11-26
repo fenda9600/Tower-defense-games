@@ -5,7 +5,7 @@
 // until it is rebuilt for a part of what it cost. A chief who is tied up by the garrison's foot has no time for the towers.
 const RAID = {
   // strength of each work at each tier
-  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310] },
+  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310], gunner: [120, 160, 210, 270] },
   calm: 6, mend: .05, rebuild: .3, ruinRefund: .3, lvDmg: .12,
   // how each chief goes about it; README.md gives the source for each
   by: {
@@ -19,7 +19,8 @@ const RAID = {
   shots: [], ruined: 0, rebuilt: 0,
 };
 function raidWarn(type) { const r = RAID.by[type]; return r ? r.warn : undefined; }
-function towerMaxHp(t) { return Math.round(RAID.hp[t.kind][t.lvl] * crewHp(t)); }
+// the works a harder grade brings are scaled by the grade here (26-diff.js); the four old kinds are scaled where the grade is wired in
+function towerMaxHp(t) { const h = RAID.hp[t.kind][t.lvl]; return Math.round((TOWER_KINDS.indexOf(t.kind) < 0 ? ownHp(h) : h) * crewHp(t)); }
 function rebuildCost(t) { return Math.round(t.spent * RAID.rebuild); }
 function towerRefund(t) { return Math.round(t.spent * (t.ruin ? RAID.ruinRefund : .6)); }
 
