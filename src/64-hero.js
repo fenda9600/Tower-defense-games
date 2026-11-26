@@ -79,9 +79,11 @@ const HERO = (() => {
   const lvOf = (i, key) => H.save.lv[key || H.save.pick][i];
   // 第 n 级花 n 转；每位名将的第一项技能自带一级
   const costOf = lv => lv + 1;
-  function spend(key, i) { const lv = H.save.lv[key][i]; if (lv >= 3 || H.save.pts < costOf(lv)) return false; H.save.pts -= costOf(lv); H.save.lv[key][i] = lv + 1; store(); return true; }
-  function refund() { for (const k of HERO_KEYS) H.save.lv[k].forEach((lv, i) => { const base = i === 0 ? 1 : 0; for (let l = base; l < lv; l++) H.save.pts += costOf(l); H.save.lv[k][i] = base; }); store(); }
-  function pick(key) { if (!HEROES[key] || H.save.pick === key) return; H.save.pick = key; store(); if (G.phase === 'play' && !H.down) deploy(true); }
+  // 选将与加点只在主界面：战事中这几个入口一律拒绝，名将在 beginBattle 时按 save.pick 出战，整关不变
+  const editable = () => G.phase === 'menu';
+  function spend(key, i) { if (!editable() || !H.save.lv[key]) return false; const lv = H.save.lv[key][i]; if (lv >= 3 || H.save.pts < costOf(lv)) return false; H.save.pts -= costOf(lv); H.save.lv[key][i] = lv + 1; store(); return true; }
+  function refund() { if (!editable()) return false; for (const k of HERO_KEYS) H.save.lv[k].forEach((lv, i) => { const base = i === 0 ? 1 : 0; for (let l = base; l < lv; l++) H.save.pts += costOf(l); H.save.lv[k][i] = base; }); store(); return true; }
+  function pick(key) { if (!editable() || !HEROES[key]) return false; H.save.pick = key; store(); return true; }
 
   const zoneMin = () => G.B.L * .34, homeS = () => G.B.L * .74;
   const scaleDmg = () => 1 + .15 * G.level;
@@ -395,63 +397,58 @@ const HERO = (() => {
     c.fillStyle = bd; c.fillRect(x + s, y, w - 2 * s, h); c.fillRect(x, y + s, w, h - 2 * s);
     c.fillStyle = bg; c.fillRect(x + 2 * s, y + s, w - 4 * s, h - 2 * s); c.fillRect(x + s, y + 2 * s, w - 2 * s, h - 4 * s);
   }
-  // 每帧在 UI.draw 之后调用
+  // 每帧在 UI.draw 之后调用：名将头顶的名号与血条
   function draw() {
     if (!H.save || !H.u || !UI.ctx) return;
-    const c = UI.ctx, s = UI.s, u = H.u, d = u.d, LH = PX.LINE * s, pad = 5 * s, W = R.dw, tw = t => PX.measure(t, s) * s;
-    if (H.open && !H.evalMode && G.phase !== 'play' && G.phase !== 'clear') closePanel();
+    const c = UI.ctx, s = UI.s, u = H.u, d = u.d, LH = PX.LINE * s;
+    if (H.open && !H.evalMode && G.phase !== 'menu') closePanel();
     const live = G.phase === 'play' || G.phase === 'clear' || G.phase === 'defeat';
-    const dn = H.down;
-    if (live && !dn) {
+    if (live && !H.down) {
       const p = UI.proj(u.x, u.y + (d.mount ? 2.75 : 2.05) * u.scale, u.z), talk = u.sayT > 0 && u.say, px = Math.round(p.x), py = Math.round(p.y);
       PX.text(c, talk ? u.say : d.name, px, py - LH, s, talk ? '#ffd9a8' : H.sel ? '#ffffff' : '#e8b04a', { align: 'c', outline: '#0b0d14' });
       const bw = 22 * s, f = sat(u.hp / u.maxHp); c.fillStyle = '#0b0d14'; c.fillRect(px - bw / 2 - s, py - s, bw + 2 * s, 4 * s); c.fillStyle = f > .5 ? '#9fd08a' : f > .25 ? '#e0762c' : '#e04a32'; c.fillRect(px - bw / 2, py, Math.max(s, Math.round(bw * f)), 2 * s);
       H.unitPos = { x: px, y: py + 14 * s };
     } else H.unitPos = null;
-    if (!live) { H.rect = null; H.reviveRect = null; return; }
-    const cr = UI.cmdRect; if (!cr) return;
-    const t1 = d.name + ' · ' + d.title, chips = d.skills.map((sk, i) => { const lv = lvOf(i); return { t: sk.name, lv, cd: sk.cd && lv ? u.cds[i] : 0, max: sk.cd && lv ? sk.cd[lv - 1] : 1 }; });
+  }
+  // 亲自督战时右栏里的名将状态牌（UI.draw 排版时调用）。只供查看，不可点击：下令、吹角、复活都用 Q/E/B/V 或点名将本人。
+  // right 为右边缘，y 为上边缘，w0 为右栏宽度；返回所占区域。
+  function status(right, y, w0) {
+    const u = H.u; if (!u || !UI.ctx) return null;
+    const c = UI.ctx, s = UI.s, d = u.d, LH = PX.LINE * s, pad = 5 * s, tw = t => PX.measure(t, s) * s, dn = H.down;
+    const t1 = d.name + ' · ' + d.title, chips = d.skills.map((sk, i) => { const lv = lvOf(i); return { t: sk.name, lv, cd: sk.cd && lv ? u.cds[i] : 0, max: sk.cd && lv ? sk.cd[lv - 1] : 1, keep: !sk.cd }; });
     chips.push({ t: HERO_HORN.name + ' B', lv: 1, cd: H.horn.t > 0 ? 0 : H.horn.cd, max: HERO_HORN.cd, horn: true });
-    const t3 = H.save.pts > 0 ? 'H 名将 · 勋 ' + H.save.pts + ' 转可加点' : 'H 名将与技能';
-    const t4 = dn ? '阵亡 · ' + Math.ceil(dn.t) + ' 秒后归队' : u.mode === 'hold' ? '听令驻守 · E 交还军师' : H.sel ? '已选中 · 点大路下令' : 'Q 选中下令 · 军师调度';
+    const t4 = dn ? '阵亡 · ' + Math.ceil(dn.t) + ' 秒后归队' : u.mode === 'hold' ? '听令驻守 · E 交还军师' : H.sel ? '已选中 · 点大路下令' : 'Q 选中 · 点大路下令';
     const t5 = dn ? 'V 复活 · ' + reviveCost() + ' 金' : '';
-    const cw = Math.max(...chips.map(k => tw(k.t))) + 4 * s, w = Math.max(tw(t1), tw(t3), tw(t4), tw(t5) + 8 * s, cw + tw('00 秒') + 4 * s) + pad * 2, h = LH * (dn ? 8 : 7) + pad * 2 + (dn ? 10 : 6) * s;
-    const x = W - w - 5 * s, y = cr.y + cr.h + 3 * s, hot = UI.inside && UI.mx >= x && UI.mx <= x + w && UI.my >= y && UI.my <= y + h;
-    H.rect = { x, y, w, h };
-    plate(c, x, y, w, h, s, dn ? '#e5553c' : hot || H.sel || H.save.pts > 0 ? '#e8b04a' : '#5d4c35', hot ? 'rgba(24,27,38,0.94)' : 'rgba(9,11,17,0.86)');
+    const cw = Math.max(...chips.map(k => tw(k.t))) + 4 * s, w = Math.max(w0 || 0, Math.max(tw(t1), tw(t4), tw(t5), cw + tw('集结 00')) + pad * 2), h = LH * (dn ? 7 : 6) + pad * 2 + 6 * s;
+    const x = right - w;
+    plate(c, x, y, w, h, s, dn ? '#e5553c' : H.sel || u.mode === 'hold' ? '#e8b04a' : '#5d4c35', 'rgba(9,11,17,0.86)');
     PX.text(c, t1, x + pad, y + pad - s, s, dn ? '#a79e8a' : '#e8b04a');
     { const f = dn ? 0 : sat(u.hp / u.maxHp), yy = y + pad + LH; c.fillStyle = '#2a2620'; c.fillRect(x + pad, yy, w - pad * 2, 2 * s); c.fillStyle = f > .5 ? '#9fd08a' : f > .25 ? '#e0762c' : '#e04a32'; c.fillRect(x + pad, yy, Math.round((w - pad * 2) * f), 2 * s); }
     chips.forEach((k, i) => {
-      const yy = y + pad + LH * (i + 1) + 5 * s, ready = k.lv && k.cd <= 0 && !dn; if (dn) k.lv = k.lv && -1;
-      PX.text(c, k.t, x + pad, yy, s, !k.lv ? '#6f685b' : ready ? '#efe4cd' : '#a79e8a');
-      const r = !k.lv ? '未习得' : dn ? '' : k.horn && H.horn.t > 0 ? '集结 ' + Math.ceil(H.horn.t) : !k.horn && !d.skills[i].cd ? '常驻' : k.cd > 0 ? Math.ceil(k.cd) + ' 秒' : '待发';
+      const yy = y + pad + LH * (i + 1) + 5 * s, ready = k.lv && k.cd <= 0 && !dn;
+      PX.text(c, k.t, x + pad, yy, s, !k.lv || dn ? '#6f685b' : ready ? '#efe4cd' : '#a79e8a');
+      const r = !k.lv ? '未习得' : dn ? '' : k.horn && H.horn.t > 0 ? '集结 ' + Math.ceil(H.horn.t) : k.keep ? '常驻' : k.cd > 0 ? Math.ceil(k.cd) + ' 秒' : '待发';
       PX.text(c, r, x + w - pad, yy, s, !k.lv ? '#6f685b' : r === '待发' ? '#9fd08a' : '#a79e8a', { align: 'r' });
-      if (k.lv > 0 && k.cd > 0) { c.fillStyle = '#2a2620'; c.fillRect(x + pad, yy + LH - s, w - pad * 2, s); c.fillStyle = '#e8b04a'; c.fillRect(x + pad, yy + LH - s, Math.round((w - pad * 2) * (1 - k.cd / k.max)), s); }
+      if (k.lv && !dn && k.cd > 0) { c.fillStyle = '#2a2620'; c.fillRect(x + pad, yy + LH - s, w - pad * 2, s); c.fillStyle = '#e8b04a'; c.fillRect(x + pad, yy + LH - s, Math.round((w - pad * 2) * (1 - k.cd / k.max)), s); }
     });
     PX.text(c, t4, x + pad, y + pad + LH * 5 + 6 * s, s, dn ? '#e5553c' : u.mode === 'hold' || H.sel ? '#8fc7ff' : '#a79e8a');
-    PX.text(c, t3, x + pad, y + pad + LH * 6 + 6 * s, s, H.save.pts > 0 ? '#9fd08a' : '#a79e8a');
-    if (dn) {
-      const by = y + pad + LH * 7 + 8 * s, bh = LH + 3 * s, can = G.gold >= reviveCost(), over = UI.inside && UI.mx >= x + pad && UI.mx <= x + w - pad && UI.my >= by && UI.my <= by + bh;
-      plate(c, x + pad, by, w - pad * 2, bh, s, over && can ? '#e8b04a' : can ? '#5d4c35' : '#3a342c', over ? 'rgba(34,38,54,0.96)' : 'rgba(16,18,27,0.96)');
-      PX.text(c, t5, x + w / 2, by + s, s, can ? '#efe4cd' : '#e5553c', { align: 'c' }); H.reviveRect = { x: x + pad, y: by, w: w - pad * 2, h: bh };
-    } else H.reviveRect = null;
+    if (dn) PX.text(c, t5, x + pad, y + pad + LH * 6 + 6 * s, s, G.gold >= reviveCost() ? '#efe4cd' : '#e5553c');
+    return { x, y, w, h };
   }
   function init() {
+    H.save = load();
     window.addEventListener('pointerdown', e => {
-      const r = H.rect, D = R.dpr || 1, mx = e.clientX * D, my = e.clientY * D, inR = q => q && mx >= q.x && mx <= q.x + q.w && my >= q.y && my <= q.y + q.h, eat = () => { e.stopPropagation(); e.preventDefault(); };
+      const D = R.dpr || 1, mx = e.clientX * D, my = e.clientY * D, inR = q => q && mx >= q.x && mx <= q.x + q.w && my >= q.y && my <= q.y + q.h, eat = () => { e.stopPropagation(); e.preventDefault(); };
       if (H.open || e.button) return;
-      if (inR(H.reviveRect)) { eat(); if (!revive(true)) sfx('uiDeny', CAM.x, CAM.z, .6); return; }
-      if (inR(r)) { eat(); toggle(); return; }
       if (G.phase !== 'play' || H.down || !H.u || CHEAT.owns(e.target)) return;
       const up = H.unitPos; if (up && Math.hypot(mx - up.x, my - up.y) < 15 * UI.s) { eat(); H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); return; }
-      if (!H.sel || UI.hotBtn || [UI.statsRect, UI.cmdRect, UI.speedRect, UI.soundRect, UI.wallBox, UI.loreRect].some(inR)) return;
+      if (!H.sel || UI.hotBtn || [UI.statsRect, UI.cmdRect, UI.speedRect, UI.pauseRect, UI.soundRect, UI.wallBox, UI.heroBox, UI.loreRect].some(inR)) return;
       if (orderAt(mx, my)) eat(); else H.sel = false;
     }, { capture: true, passive: false });
     window.addEventListener('keydown', e => {
       if (e.repeat || CHEAT.owns(e.target)) return;
       const k = e.key.toLowerCase();
-      if (k === 'h') toggle();
-      else if (H.open) { if (e.key === 'Escape') { closePanel(); e.stopPropagation(); } }
+      if (H.open) { if (e.key === 'Escape') { closePanel(); e.stopPropagation(); } }
       else if (k === 'q') { if (!H.down && G.phase === 'play') { H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); } }
       else if (k === 'e') setAuto();
       else if (k === 'b') { UI.setManual(true); if (!blowHorn()) sfx('uiDeny', CAM.x, CAM.z, .5); }
@@ -460,6 +457,6 @@ const HERO = (() => {
       else if (e.key === 'Escape' && H.open) { closePanel(); e.stopPropagation(); }
     }, true);
   }
-  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
+  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, status, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf });
   return H;
 })();

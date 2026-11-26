@@ -47,7 +47,8 @@ const UI = (() => {
     const war = wrap(d.war, n * cw), land = wrap(d.land, n * cw), rank = wrap(CAMPAIGN.note[L.bio.key] || '', n * cw), foot = '点击收起';
     const w = Math.max(bodyW(), PX.measure(title, sc) * sc + mp * 2), lh = LH + s;
     const h = mp * 2 + PX.LINE * sc + gap + (d.place ? lh : 0) + gap + (war.length + land.length + rank.length) * lh + gap * (rank.length ? 3 : 2) + lh;
-    const x = 5 * s, y = clamp(yTop, 5 * s, Math.max(5 * s, H - h - 30 * s));
+    let x = 5 * s, y = clamp(yTop, 5 * s, Math.max(5 * s, H - h - 30 * s));
+    const col = U.col; if (col && x + w > col.x - 3 * s) y = Math.max(y, Math.min(col.y + col.h + 4 * s, H - h - 5 * s));
     c.globalAlpha = a * (U.menu ? .35 : 1);
     plate(x, y, w, h, { bd: COLR.bdHi });
     let yy = y + mp - s;
@@ -142,6 +143,7 @@ const UI = (() => {
     const cr = U.cmdRect; if (cr && U.mx >= cr.x && U.mx <= cr.x + cr.w && U.my >= cr.y && U.my <= cr.y + cr.h) { toggleCommand(); return; }
     if (U.hotBtn) { touchInput(); U.press = U.hotBtn.id; U.hotBtn.fn(); return; }
     for (const r of U.wallRects) if (U.mx >= r.x && U.mx <= r.x + r.w && U.my >= r.y && U.my <= r.y + r.h) { r.fn(); return; }
+    if (inR(U.wallBox) || inR(U.heroBox)) return;
     const h = pickPad(U.mx, U.my);
     if (h) {
       touchInput();
@@ -203,7 +205,7 @@ const UI = (() => {
   function draw() {
     const c = U.ctx, s = U.s, W = R.dw, H = R.dh, pad = 5 * s, LH = PX.LINE * s;
     c.clearRect(0, 0, W, H); U.btns.length = 0; let hot = null;
-    if (G.phase === 'menu') { U.statsRect = U.cmdRect = U.speedRect = U.pauseRect = U.soundRect = U.wallBox = U.loreRect = null; U.wallRects.length = 0; U.hotBtn = null; return; } // the menu draws itself (74-menu.js)
+    if (G.phase === 'menu') { U.statsRect = U.cmdRect = U.speedRect = U.pauseRect = U.soundRect = U.wallBox = U.heroBox = U.loreRect = U.col = null; U.wallRects.length = 0; U.hotBtn = null; return; } // the menu draws itself (74-menu.js)
     const pix = Math.max(1, Math.round(R.dh / R.ih));
     for (const b of G.hbars) {
       const p = proj(b.x, b.y, b.z), w = (b.boss ? 34 : b.wide ? 16 : b.man ? 8 : 9) * pix, h = (b.boss ? 2 : 1) * pix, x = Math.round(p.x - w / 2), y = Math.round(p.y);
@@ -230,7 +232,11 @@ const UI = (() => {
     else sub = G.phase === 'defeat' ? '关城失守' : G.phase === 'clear' ? '首领已诛' : '转战下一关';
     const bw = PX.iconSize('banner')[0] * s, wW = Math.max(bw + 3 * s + tw(wn), tw(sub), tw('下一波 00 秒')) + pad * 2 + 4 * s, hW = LH * 2 + pad * 2 + s;
     const you = U.playerActive(), ct = you ? '亲自督战' : '军师代守', cs = you ? '点此交还军师' : '点击塔基即可接管';
-    const ic = you ? 'hand' : 'helm', icw = PX.iconSize(ic)[0] * s, cW = Math.max(icw + 3 * s + tw(ct), tw(cs)) + pad * 2 + 2 * s, xc = W - cW - 5 * s, g3 = 3 * s;
+    const ic = you ? 'hand' : 'helm', icw = PX.iconSize(ic)[0] * s, g3 = 3 * s;
+    // the right-hand column: the command plate, under it the wall garrison, under that the general while the player commands in person.
+    // One width for all, measured on fixed templates so the column does not jump as the numbers change.
+    const wallBtn = (Math.max(tw('R 增兵 ' + WALL.addCost), tw('G 升级 000'), tw('升级未解锁')) + 8 * s) * 2 + 3 * s;
+    const cW = Math.max(icw + 3 * s + tw('亲自督战'), tw('点击塔基即可接管'), tw('点此交还军师'), tw(WALL.name + ' · ' + WALL.tiers.reduce((a, t) => tw(t[0]) > tw(a) ? t[0] : a, '')), tw('城门已破 · 守军 8/8 · 伤害 00'), wallBtn) + pad * 2, xc = W - cW - 5 * s;
     const xw = Math.round(W / 2 - wW / 2);
     let yc = y0, yw = y0;
     if (xc < x0 + wS + g3) yc = y0 + hS + g3;
@@ -242,6 +248,7 @@ const UI = (() => {
     PX.icon(c, 'banner', tx0, yw + pad - s, s); text(wn, tx0 + bw + 3 * s, yw + pad, COLR.amber);
     text(sub, W / 2, yw + pad + LH + s, COLR.dim, { align: 'c' });
     if (frac >= 0) { c.fillStyle = '#2a2620'; c.fillRect(xw + 3 * s, yw + hW - 3 * s, wW - 6 * s, s); c.fillStyle = COLR.amber; c.fillRect(xw + 3 * s, yw + hW - 3 * s, Math.round((wW - 6 * s) * sat(frac)), s); }
+    let colY = (xw + wW > xc - g3 ? Math.max(yc, yw) : yc) + hW + g3;
     const hotC = U.inside && U.mx >= xc && U.mx <= xc + cW && U.my >= yc && U.my <= yc + hW; U.cmdRect = { x: xc, y: yc, w: cW, h: hW, hot: hotC };
     plate(xc, yc, cW, hW, hotC ? { bd: COLR.bdHi, bg: COLR.bg2 } : you ? { bd: COLR.bdHi } : {});
     PX.icon(c, ic, xc + pad, yc + pad - s, s); text(ct, xc + pad + icw + 3 * s, yc + pad, you ? COLR.amber : COLR.tx); text(cs, xc + pad, yc + pad + LH + s, COLR.dim);
@@ -256,15 +263,14 @@ const UI = (() => {
       plate(pxp, ys, pw, h, hotP ? { bd: COLR.bdHi, bg: COLR.bg2 } : G.paused ? { bd: COLR.ember } : {}); text(G.paused ? '继续' : '暂停', pxp + pw / 2, ys + pad - s, G.paused ? COLR.amber : COLR.dim, { align: 'c' });
       U.pauseRect = { x: pxp, y: ys, w: pw, h, hot: hotP };
       if (G.paused) { const t = '已暂停', ts = s + 2, pw2 = PX.measure(t, ts) * ts + pad * 4, ph = PX.LINE * ts + pad * 2, px2 = Math.round(W / 2 - pw2 / 2), py2 = Math.round(H * .42); plate(px2, py2, pw2, ph, { bd: COLR.ember }); PX.text(c, t, W / 2, py2 + pad, ts, COLR.amber, { align: 'c' }); } }
-    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · U 升级 · T 添兵 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && !(U.wallBox && U.wallBox.y + U.wallBox.h > H - h - 8 * s && U.wallBox.x + U.wallBox.w > W - w - 8 * s)) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
     // the wall: its garrison, the reinforce skill and the garrison upgrade
     U.wallRects.length = 0; U.wallBox = null;
     if (G.phase === 'play' && G.wall && U.titleT >= 7) {
       const Wl = G.wall, lv = Wl.lvl, maxed = lv >= WALL.tiers.length - 1, locked = !maxed && lv >= tierCap(), full = Wl.n >= WALL.max, upc = maxed ? 0 : WALL.cost[lv + 1];
       const t1 = WALL.name + ' · ' + WALL.tiers[lv][0], t2 = (Wl.open ? '城门已破' : '城门 ' + Math.ceil(Wl.gate)) + ' · 守军 ' + Wl.n + '/' + WALL.max + ' · 伤害 ' + Math.round(ownDmg(WALL.dmg[lv]));
       const la = full ? '守军已满' : 'R 增兵 ' + WALL.addCost, lu = maxed ? '已满级' : locked ? '升级未解锁' : 'G 升级 ' + upc;
-      const bh = LH + 4 * s, w = Math.max(tw(t1), tw(t2), (Math.max(tw(la), tw(lu)) + 8 * s) * 2 + 3 * s) + pad * 2, h = LH * 2 + bh + pad * 2 + 3 * s;
-      const xp = Math.round(W / 2 - w / 2), sr = U.speedRect || U.soundRect; let yp = H - h - 5 * s; if (sr && xp < sr.x + sr.w + 3 * s) yp = sr.y - h - 3 * s;
+      const bh = LH + 4 * s, w = Math.max(cW, tw(t1) + pad * 2, tw(t2) + pad * 2), h = LH * 2 + bh + pad * 2 + 3 * s;
+      const xp = W - w - 5 * s, yp = colY; colY += h + g3;
       plate(xp, yp, w, h, Wl.siegeN ? { bd: COLR.ember } : {}); U.wallBox = { x: xp, y: yp, w, h };
       text(t1, xp + pad, yp + pad - s, COLR.amber); text(t2, xp + pad, yp + pad + LH, Wl.open || Wl.stormN || !Wl.n ? COLR.red : Wl.siegeN ? COLR.ember : COLR.dim);
       const by = yp + pad + LH * 2 + 2 * s, bw2 = Math.floor((w - pad * 2 - 3 * s) / 2);
@@ -275,6 +281,10 @@ const UI = (() => {
         U.wallRects.push({ x: bx, y: by, w: bw2, h: bh, fn, hot: over });
       });
     }
+    U.heroBox = G.phase === 'play' && U.playerActive() ? HERO.status(W - 5 * s, colY, cW) : null;
+    if (U.heroBox) colY += U.heroBox.h + g3;
+    U.col = { x: xc, y: yc, w: cW, h: colY - g3 - yc };
+    { const a = sat(Math.min(U.titleT - 1.5, 3 - Math.min(U.moved, U.idle > 20 ? U.moved : 0) + (U.titleT < 14 ? 8 : 0))); if (a > .02) { const l = '点击塔基建造 · 1-4 选塔 · U 升级 · T 添兵 · R 增兵 · F 快进 · P 暂停 · 空格提前迎敌', l2 = '右键拖动地图 · 滚轮缩放 · 0 键复位', w = Math.max(tw(l), tw(l2)) + pad * 2, h = LH * 2 + pad * 2 - s; if (w < W * .62 && colY - g3 < H - h - 8 * s) { c.globalAlpha = a; plate(W - w - 5 * s, H - h - 5 * s, w, h); text(l, W - w - 5 * s + pad, H - h - 5 * s + pad - s, COLR.dim); text(l2, W - w - 5 * s + pad, H - h - 5 * s + pad - s + LH, COLR.dim); c.globalAlpha = 1; } } }
     for (let i = U.coins.length - 1; i >= 0; i--) {
       const q = U.coins[i]; q.t += R.frameDt; const u = sat(q.t / q.T), e = u * u * (3 - 2 * u), a = 1 - e;
       const px = a * a * q.sx + 2 * a * e * q.cx + e * e * goldPos.x, py = a * a * q.sy + 2 * a * e * q.cy + e * e * goldPos.y;
@@ -284,7 +294,7 @@ const UI = (() => {
     if (U.lore) drawLore(y0 + topH + 4 * s); else U.loreRect = null;
     if (U.msg) {
       const m = U.msg; m.t += R.frameDt; const a = sat(Math.min(m.t * 3, (m.dur - m.t) * 2));
-      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; const yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
+      if (m.t >= m.dur) U.msg = null; else { const sc = s + (m.big ? 2 : 1), w = Math.max(PX.measure(m.text, sc) * sc, m.sub ? tw(m.sub) : 0) + pad * 4, h = PX.LINE * sc + pad * 2 + (m.sub ? LH + 2 * s : 0); c.globalAlpha = a; let yb = Math.max(Math.round(H * .2), y0 + topH + 4 * s); { const col = U.col; if (col && W / 2 + w / 2 > col.x - 3 * s && yb < col.y + col.h) yb = col.y + col.h + 4 * s; } plate(Math.round(W / 2 - w / 2), yb, w, h, { bd: m.big ? COLR.ember : COLR.bdHi }); PX.text(c, m.text, W / 2, yb + pad, sc, m.big ? '#ffd9a8' : COLR.tx, { align: 'c' }); if (m.sub) text(m.sub, W / 2, yb + pad + PX.LINE * sc + 2 * s, COLR.dim, { align: 'c' }); c.globalAlpha = 1; }
     }
     if (U.menu && G.phase === 'play') {
       const m = U.menu, p = proj(m.pad.x, m.pad.y + (m.tower ? Math.min(3.6, m.tower.mounts.top) : 1.2), m.pad.z), a = sat(m.t * 8), mp = 6 * s;
