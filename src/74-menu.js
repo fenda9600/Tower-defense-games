@@ -86,7 +86,7 @@ const MENU = (() => {
     s = UI.s; W = R.dw; H = R.dh; LH = PX.LINE * s; M.rects.length = 0;
     pollPad();
     if (inMenu()) { M.enterT += R.frameDt; drawMenu(); }
-    else if (M.card && (G.phase === 'clear' || G.phase === 'defeat') && G.phaseT > (M.card.won ? 1.3 : 2.2)) { if (!M.card.shown) { M.card.shown = true; M.card.t0 = performance.now(); } drawCard(); }
+    else if (M.card && (G.phase === 'clear' || G.phase === 'defeat') && G.phaseT > (M.card.won ? 1.3 : 2.2)) { if (!M.card.shown) { M.card.shown = true; M.card.t0 = performance.now(); UI.msg = null; UI.lore = null; } drawCard(); }
     if (M.swap) {
       const S = M.swap; S.t += R.frameDt; const a = S.done ? sat(1 - (S.t - .09) / .13) : sat(S.t / .09);
       if (!S.done && S.t >= .09) { raise(CAMPAIGN.sel); S.done = true; S.t = .09; }
@@ -302,7 +302,11 @@ const MENU = (() => {
       lines.push({ t: '斩敌 ' + e.kills + '，抵城之敌 ' + e.leaks + '，拒敌于城外 ' + Math.floor(e.held * 100) + '%', col: K.bone });
       lines.push({ t: '城防余 ' + e.lives + '/' + G.maxLives + '，城门' + (e.breaks ? '被破 ' + e.breaks + ' 次' : '未破') + '，守军阵亡 ' + e.lost, col: K.dim });
       lines.push({ t: HERO_ZHEN[e.zhen] + HERO_HUO[e.huo] + (e.whole ? '，城防无损加一转' : ''), col: K.dim });
-    } else if (!won) lines.push({ t: '斩敌 ' + Math.max(0, G.slain - (HERO.stats ? HERO.stats.slain0 : 0)) + '，关城失守不叙功', col: K.dim });
+      lines.push({ t: HERO_RULE + '。', col: K.faint });
+    } else if (!won) {
+      lines.push({ t: '守至第 ' + Math.max(1, G.k) + ' 波（共 5 波），斩敌 ' + Math.max(0, G.slain - (HERO.stats ? HERO.stats.slain0 : 0)), col: K.bone });
+      lines.push({ t: '关城失守不叙功。此关仍可再战，已得军备不会收回。', col: K.dim });
+    }
     const news = [];
     if (won && CAMPAIGN.news) news.push({ t: '新军备 · ' + CAMPAIGN.news.name, sub: CAMPAIGN.news.sub });
     if (won && CAMPAIGN.grade) { const g = CAMPAIGN.grade, adds = g.works.concat(g.foes).map(nameOf).filter(Boolean).map(q => q.name); news.push({ t: '新难度 · ' + g.name + (g.era ? '（' + g.era + '）' : ''), sub: adds.length ? '带来 ' + adds.join('、') : '在主界面选择' }); }

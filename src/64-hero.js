@@ -2,7 +2,7 @@
 // 技能点叫「勋」，以「转」计：只有打完一关，按战后策勋评定才能得到（仿《唐六典》兵部叙勋之制，见 HERO_RULE）。
 // 存档放在 localStorage，勋转与加点跨局保留。
 const HERO_SAVE = 'fengsui.heroes.v1';
-const HERO_RULE = '仿唐代军功叙勋：《唐六典·尚书兵部》以敌我众寡分上阵、中阵、下阵，以杀获多少分上获、中获、下获，两项合计酬勋若干转。此处为简化。';
+const HERO_RULE = '叙勋仿《唐六典·尚书兵部》：以敌我众寡分阵，以杀获多少分获，合计酬勋';
 const HERO_ZHEN = ['上阵', '中阵', '下阵'], HERO_HUO = ['上获', '中获', '下获'];
 // 每项技能：v 为各级数值，cd 为各级冷却秒数（没有 cd 的是常驻效果），fx 把数值写成说明。
 const HEROES = {
@@ -66,7 +66,7 @@ const HERO_DOWN = { wait: 150, cost: 100, costLv: 40, regen: .025, calm: 6, flee
 const HERO_HORN = { name: '集合号角', cd: 75, last: 40, src: '《孙子·军争》引《军政》：「言不相闻，故为金鼓；视不相见，故为旌旗。」军中以鼓角旌旗聚众，号角一响，各营向主将所在集结。' };
 
 const HERO = (() => {
-  const H = { save: null, u: null, wallRef: null, phase: '', stats: null, eval: null, panel: null, open: false, tab: 'huo', evalMode: false, holdT0: 0, rect: null, pending: null, dealt: 0, recent: 0, kills: 0, down: null, sel: false, horn: { cd: 0, t: 0 }, reviveRect: null, deaths: 0 };
+  const H = { save: null, u: null, wallRef: null, phase: '', stats: null, eval: null, dealt: 0, recent: 0, kills: 0, down: null, sel: false, horn: { cd: 0, t: 0 }, deaths: 0 };
   const _p = { x: 0, y: 0, z: 0, tx: 0, tz: 0 }, _hv = new THREE.Vector3(), _hd = new THREE.Vector3();
   function load() {
     let d = null; try { d = JSON.parse(localStorage.getItem(HERO_SAVE)); } catch (e) { d = null; }
@@ -311,87 +311,8 @@ const HERO = (() => {
     drawUnit();
   }
 
-  // ---- 界面：战场上的名将牌（画在 HUD 画布上）与名将榜（DOM 面板）----
-  const CSS = `
-#hero{position:fixed;z-index:9;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,94vw);max-height:90vh;overflow:auto;padding:14px 16px 16px;background:rgba(9,11,17,.96);border:2px solid #e8b04a;color:#efe4cd;font:14px/1.55 "PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;box-shadow:0 6px 28px rgba(0,0,0,.7);user-select:none;-webkit-user-select:none;touch-action:pan-y;box-sizing:border-box}
-#hero h2{margin:0;font-size:18px;font-weight:600;color:#ffd9a8;letter-spacing:2px}
-#hero .hd{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}
-#hero .pts{color:#e8b04a;white-space:nowrap}
-#hero .pts b{font-size:18px}
-#hero button{padding:5px 12px;background:#181b26;border:1px solid #5d4c35;color:#efe4cd;font:inherit;cursor:pointer;border-radius:0}
-#hero button:hover:not(:disabled){border-color:#e8b04a;background:#222636}
-#hero button:disabled{color:#6f685b;border-color:#3a342c;cursor:default}
-#hero button.go{border-color:#e8b04a;color:#e8b04a}
-#hero .ev{border:1px solid #5d4c35;background:rgba(24,27,38,.8);padding:10px 12px;margin-bottom:12px}
-#hero .ev .t{color:#ff8a3c;margin-bottom:4px}
-#hero .ev table{border-collapse:collapse;width:100%}
-#hero .ev td{padding:2px 8px 2px 0;vertical-align:top}
-#hero .ev td:first-child{color:#a79e8a;white-space:nowrap}
-#hero .ev td:last-child{text-align:right;color:#e8b04a;white-space:nowrap}
-#hero .ev .sum{margin-top:6px;padding-top:6px;border-top:1px solid #5d4c35;display:flex;justify-content:space-between;align-items:baseline}
-#hero .ev .sum b{font-size:20px;color:#ffd9a8}
-#hero .note{color:#6f685b;font-size:12px;margin-top:6px}
-#hero .tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px}
-#hero .tabs button{padding:6px 4px;text-align:center}
-#hero .tabs button small{display:block;color:#a79e8a;font-size:12px}
-#hero .tabs button.on{border-color:#e8b04a;background:#222636}
-#hero .tabs button.out b::after{content:" · 出战";color:#9fd08a;font-weight:400;font-size:12px}
-#hero .who{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:8px}
-#hero .who .nm{font-size:16px;color:#e8b04a}
-#hero .who p{margin:2px 0 0;color:#cfc5ae}
-#hero .src{color:#a79e8a;font-size:12px}
-#hero .sk{border:1px solid #3a342c;padding:8px 10px;margin-top:8px;display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:start}
-#hero .sk .n{color:#ffd9a8}
-#hero .sk .n i{font-style:normal;color:#e8b04a;letter-spacing:2px;margin-left:8px}
-#hero .sk .n em{font-style:normal;color:#a79e8a;font-size:12px;margin-left:8px}
-#hero .sk .nx{color:#9fd08a;font-size:13px}
-#hero .sk .off{color:#a79e8a}
-#hero .ft{display:flex;justify-content:space-between;gap:8px;margin-top:14px}`;
-  const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+  // ---- 界面：名将头顶的名号、亲自督战时的状态牌（画在 HUD 画布上）；选将与加点在主界面（74-menu.js）----
   const fxText = (sk, lv) => sk.fx(sk.v[lv - 1], sk.w ? sk.w[lv - 1] : 0) + (sk.cd ? '冷却 ' + sk.cd[lv - 1] + ' 秒。' : '');
-  function build() {
-    const st = document.createElement('style'); st.textContent = CSS; document.head.appendChild(st);
-    const el = H.panel = document.createElement('div'); el.id = 'hero'; el.style.display = 'none'; document.body.appendChild(el);
-    for (const ev of ['pointerdown', 'pointermove', 'pointerup', 'wheel', 'contextmenu', 'touchstart']) el.addEventListener(ev, e => e.stopPropagation());
-    el.addEventListener('click', e => {
-      const t = e.target.closest('[data-a]'); if (!t || t.disabled) return; const a = t.dataset.a;
-      if (a === 'tab') H.tab = t.dataset.k;
-      else if (a === 'pick') pick(H.tab);
-      else if (a === 'up') { if (spend(H.tab, +t.dataset.i)) sfx('buildDone', CAM.x, CAM.z, .7); }
-      else if (a === 'refund') refund();
-      else if (a === 'close') { closePanel(); return; }
-      sfx('uiClick', CAM.x, CAM.z, .7); render();
-    });
-  }
-  function render() {
-    const S = H.save, d = HEROES[H.tab], out = S.pick === H.tab, e = H.evalMode ? H.eval : null; let h = '';
-    h += '<div class="hd"><h2>' + (e ? '战后策勋' : '名将') + '</h2><span class="pts">可用之勋 <b>' + S.pts + '</b> 转</span></div>';
-    if (e) {
-      h += '<div class="ev"><div class="t">' + esc(e.bio) + ' · 关隘无恙' + (e.hero ? ' · 出战名将 ' + esc(e.hero) : '') + '</div><table>' +
-        '<tr><td>阵</td><td>敌势 ' + e.press.toFixed(2) + ' 倍' + (e.zhen === 0 ? '，以少击多' : e.zhen === 1 ? '，众寡相当' : '，敌势已衰') + '</td><td>' + HERO_ZHEN[e.zhen] + '</td></tr>' +
-        '<tr><td>获</td><td>斩敌 ' + e.kills + '，抵城之敌 ' + e.leaks + '，拒敌于城外 ' + Math.floor(e.held * 100) + '%</td><td>' + HERO_HUO[e.huo] + '</td></tr>' +
-        '<tr><td>全城</td><td>城防余 ' + e.lives + '/' + G.maxLives + '，城门' + (e.breaks ? '被破 ' + e.breaks + ' 次' : '未破') + '，守军阵亡 ' + e.lost + '</td><td>' + (e.whole ? '加一转' : '不加') + '</td></tr>' +
-        '</table><div class="sum"><span>' + HERO_ZHEN[e.zhen] + HERO_HUO[e.huo] + (e.whole ? '，城防无损' : '') + '</span><span>酬勋 <b>' + e.zhuan + '</b> 转</span></div>' +
-        '<div class="note">' + HERO_RULE + '敌势随你守得越稳而越强，满 2 倍为上阵，1.5 倍为中阵；拒敌于城外 99% 为上获，96% 为中获；城防无损且城门未破，另加一转。关城失守不叙功。</div></div>';
-    }
-    h += '<div class="tabs">' + HERO_KEYS.map(k => '<button data-a="tab" data-k="' + k + '" class="' + (k === H.tab ? 'on ' : '') + (k === S.pick ? 'out' : '') + '"><b>' + HEROES[k].name + '</b><small>' + HEROES[k].era + '</small></button>').join('') + '</div>';
-    h += '<div class="who"><div><span class="nm">' + d.name + ' · ' + d.title + '</span><p>' + esc(d.bio) + '</p><div class="src">' + esc(d.src) + '</div></div><button data-a="pick" class="go"' + (out ? ' disabled' : '') + '>' + (out ? '出战中' : '派其出战') + '</button></div>';
-    d.skills.forEach((sk, i) => {
-      const lv = S.lv[H.tab][i], c = costOf(lv), max = lv >= 3;
-      h += '<div class="sk"><div><div class="n">' + sk.name + '<i>' + '●'.repeat(lv) + '○'.repeat(3 - lv) + '</i><em>' + (sk.cd ? '自动施放' : '常驻') + '</em></div>' +
-        '<div class="' + (lv ? '' : 'off') + '">' + (lv ? esc(fxText(sk, lv)) : '尚未习得。') + '</div>' +
-        (max ? '' : '<div class="nx">' + (lv ? '下一级：' : '一级：') + esc(fxText(sk, lv + 1)) + '</div>') +
-        '<div class="src">史料：' + esc(sk.src) + '</div></div>' +
-        '<button data-a="up" data-i="' + i + '"' + (max || S.pts < c ? ' disabled' : '') + '>' + (max ? '已满级' : '加点 · ' + c + ' 转') + '</button></div>';
-    });
-    h += '<div class="sk"><div><div class="n">' + HERO_HORN.name + '<em>人人皆有 · 按 B</em></div><div>名将在场时吹角，各戍卒营的士卒沿大路赶到城墙下，与攻城之敌厮杀 ' + HERO_HORN.last + ' 秒，然后各归本营。冷却 ' + HERO_HORN.cd + ' 秒。军师代守时，敌军攻城即自动吹角。</div><div class="src">史料：' + esc(HERO_HORN.src) + '</div></div><span></span></div>';
-    h += '<div class="note">操控：按 Q 或点名将选中，再点大路上一处，名将就去那里驻守；按 E 交还军师调度。名将会被敌军围攻，生命耗尽即阵亡：按 V 花 ' + reviveCost() + ' 金立刻复活，或等 ' + HERO_DOWN.wait + ' 秒自动归队，过关后下一关照常出战。</div>';
-    h += '<div class="ft"><button data-a="refund">重新分配（退还全部勋转）</button><button data-a="close" class="go">' + (e ? '继续，转战下一关' : '关闭') + '</button></div>';
-    H.panel.innerHTML = h;
-  }
-  function openPanel(evalMode) { if (!H.save) H.save = load(); if (!H.panel) build(); H.open = true; H.evalMode = !!evalMode; H.tab = H.save.pick; H.panel.style.display = ''; H.panel.scrollTop = 0; render(); }
-  function closePanel() { if (H.evalMode) { H.pending = false; H.holdT0 = 0; } H.open = false; H.evalMode = false; if (H.panel) H.panel.style.display = 'none'; }
-  function toggle() { if (H.open) closePanel(); else { openPanel(false); sfx('uiHover', CAM.x, CAM.z, .8); } }
 
   function plate(c, x, y, w, h, s, bd, bg) {
     c.fillStyle = bd; c.fillRect(x + s, y, w - 2 * s, h); c.fillRect(x, y + s, w, h - 2 * s);
@@ -401,7 +322,6 @@ const HERO = (() => {
   function draw() {
     if (!H.save || !H.u || !UI.ctx) return;
     const c = UI.ctx, s = UI.s, u = H.u, d = u.d, LH = PX.LINE * s;
-    if (H.open && !H.evalMode && G.phase !== 'menu') closePanel();
     const live = G.phase === 'play' || G.phase === 'clear' || G.phase === 'defeat';
     if (live && !H.down) {
       const p = UI.proj(u.x, u.y + (d.mount ? 2.75 : 2.05) * u.scale, u.z), talk = u.sayT > 0 && u.say, px = Math.round(p.x), py = Math.round(p.y);
@@ -439,7 +359,7 @@ const HERO = (() => {
     H.save = load();
     window.addEventListener('pointerdown', e => {
       const D = R.dpr || 1, mx = e.clientX * D, my = e.clientY * D, inR = q => q && mx >= q.x && mx <= q.x + q.w && my >= q.y && my <= q.y + q.h, eat = () => { e.stopPropagation(); e.preventDefault(); };
-      if (H.open || e.button) return;
+      if (e.button) return;
       if (G.phase !== 'play' || H.down || !H.u || CHEAT.owns(e.target)) return;
       const up = H.unitPos; if (up && Math.hypot(mx - up.x, my - up.y) < 15 * UI.s) { eat(); H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); return; }
       if (!H.sel || UI.hotBtn || [UI.statsRect, UI.cmdRect, UI.speedRect, UI.pauseRect, UI.soundRect, UI.wallBox, UI.heroBox, UI.loreRect].some(inR)) return;
@@ -448,15 +368,13 @@ const HERO = (() => {
     window.addEventListener('keydown', e => {
       if (e.repeat || CHEAT.owns(e.target)) return;
       const k = e.key.toLowerCase();
-      if (H.open) { if (e.key === 'Escape') { closePanel(); e.stopPropagation(); } }
-      else if (k === 'q') { if (!H.down && G.phase === 'play') { H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); } }
+      if (k === 'q') { if (!H.down && G.phase === 'play') { H.sel = !H.sel; sfx('uiHover', CAM.x, CAM.z, .8); } }
       else if (k === 'e') setAuto();
       else if (k === 'b') { UI.setManual(true); if (!blowHorn()) sfx('uiDeny', CAM.x, CAM.z, .5); }
       else if (k === 'v') { if (H.down && !revive(true)) sfx('uiDeny', CAM.x, CAM.z, .6); }
       else if (e.key === 'Escape' && H.sel) H.sel = false;
-      else if (e.key === 'Escape' && H.open) { closePanel(); e.stopPropagation(); }
     }, true);
   }
-  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, status, init, openPanel, closePanel, toggle, spend, refund, pick, load, judge, lvOf, costOf, fxText });
+  Object.assign(H, { revive, blowHorn, orderAt, setAuto, die, reviveCost, update, draw, status, init, spend, refund, pick, load, judge, lvOf, costOf, fxText });
   return H;
 })();

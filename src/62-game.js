@@ -167,7 +167,7 @@ function aiThink(dt) {
 
 function setPhase(p) {
   G.phase = p; G.phaseT = 0;
-  if (p === 'clear') { G.advance = true; const nw = campaignCleared(), last = (G.level + 1) % stageCount() === 0; UI.banner('关隘无恙', nw || last ? 4.2 : 3.2, false, nw ? '解锁 · ' + nw.name : last ? STAGE_ORD[stageCount() - 1] + '关皆守 · 再战更强之敌' : undefined); UI.closeMenu(); }
+  if (p === 'clear') { G.advance = true; const nw = campaignCleared(), last = FLOW.rounds && (G.level + 1) % stageCount() === 0; UI.banner('关隘无恙', nw || last ? 4.2 : 3.2, false, nw ? '解锁 · ' + nw.name : last ? STAGE_ORD[stageCount() - 1] + '关皆守 · 再战更强之敌' : undefined); UI.closeMenu(); }
   if (p === 'defeat') { UI.banner('关城失守', 4.2, true, '烽火熄灭'); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
   if (p === 'clear' || p === 'defeat') MENU.settle(p === 'clear');
   if (p === 'crumble') startCrumble();

@@ -77,12 +77,13 @@ function campaignSave() {
 // How a session runs. The campaign is the game a player gets: the menu, one battlefield per sortie, the after-action card, back to the menu.
 // Any tool parameter in the address (#seed, #manual, #level, #biome, #k, #ff, #phase, or a bare #auto) runs it the way the simulators and
 // recorders were written for instead: straight into battle, battlefield after battlefield, on into later rounds.
-// `card` says after which ends of a battle the after-action card holds the field; `lapse` lets an unattended card close itself.
+// `card` says after which ends of a battle the after-action card holds the field; `lapse` lets an unattended card close itself;
+// `rounds` is whether holding the tenth battlefield leads on into a harder round of the same ten.
 const FLOW = (() => {
   const auto = ['auto', 'seed', 'manual', 'level', 'biome', 'k', 'ff', 'phase'].some(k => HASH[k] !== undefined);
   const MODES = {
     auto: {
-      card: { clear: true, defeat: false }, lapse: true,
+      card: { clear: true, defeat: false }, lapse: true, rounds: true,
       start() {
         campaignLoad(); G.level = HASH.level !== undefined ? +HASH.level : CAMPAIGN.sel;
         // #biome=<key|name|campaign position> previews one battlefield without changing the level
@@ -94,7 +95,7 @@ const FLOW = (() => {
       after() { setPhase('crumble'); },
     },
     campaign: {
-      card: { clear: true, defeat: true }, lapse: false,
+      card: { clear: true, defeat: true }, lapse: false, rounds: false,
       start() { campaignLoad(); MENU.enter(null); },
       after(won) { MENU.enter(won); },
     },
