@@ -287,8 +287,9 @@ const HERO = (() => {
   function judge() {
     const W = G.wall, st = H.stats || { slain0: G.slain }, kills = Math.max(0, G.slain - st.slain0), leaks = G.leaks, held = kills + leaks > 0 ? kills / (kills + leaks) : 1;
     const zhen = G.press >= 2 ? 0 : G.press >= 1.5 ? 1 : 2, huo = held >= .99 ? 0 : held >= .96 ? 1 : 2, whole = G.lives >= G.maxLives && !W.breaks;
-    const zhuan = 5 - zhen - huo + (whole ? 1 : 0);
-    H.eval = { level: G.level, bio: G.B.bio.name, press: G.press, kills, leaks, held, zhen, huo, whole, zhuan, lives: G.lives, lost: W.lost, breaks: W.breaks, topped: W.topped, hero: H.u ? H.u.d.name : '', heroKills: H.kills };
+    // a battlefield already held on this grade pays half (rounded up), so merit cannot be farmed on the easiest field
+    const full = 5 - zhen - huo + (whole ? 1 : 0), replay = CAMPAIGN.replay, zhuan = replay ? Math.ceil(full / 2) : full;
+    H.eval = { level: G.level, bio: G.B.bio.name, press: G.press, kills, leaks, held, zhen, huo, whole, zhuan, full, replay, lives: G.lives, lost: W.lost, breaks: W.breaks, topped: W.topped, hero: H.u ? H.u.d.name : '', heroKills: H.kills };
     H.save.pts += zhuan; H.save.won++; store();
   }
 

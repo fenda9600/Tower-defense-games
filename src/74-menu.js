@@ -1,6 +1,6 @@
 // The main menu and the after-action card. Both are drawn on the HUD canvas in the pixel font, over the battlefield itself.
 const MENU = (() => {
-  const M = { sel: 0, card: null, swap: null, rects: [], gp: { prev: [], t: 0 } };
+  const M = { card: null, swap: null, rects: [], gp: { prev: [], t: 0 } };
   const inMenu = () => G.phase === 'menu';
   const cardUp = () => !!(M.card && M.card.shown);
 
@@ -10,19 +10,32 @@ const MENU = (() => {
     const B = G.B = buildBoard(G.boardSeed++, i); R.scene.add(B.group); activateBoard(B, true);
   }
   function enter(won) {
-    const n = stageCount();
-    if (won !== null) M.sel = won ? Math.min(G.level + 1, n - 1) : G.level;
+    const C = CAMPAIGN;
+    if (won !== null) C.sel = won ? Math.min(G.level + 1, stageCount() - 1) : G.level;
+    while (C.sel > 0 && !stageOpen(C.sel)) C.sel--;
+    campaignSave(); C.news = null; C.grade = null;
     G.phase = 'menu'; G.phaseT = 0; G.paused = false; G.speed = 1; M.card = null; M.swap = null;
     UI.setManual(false); UI.closeMenu(); UI.lore = null; UI.msg = null;
-    raise(M.sel);
+    raise(C.sel);
   }
+  const deny = () => sfx('uiDeny', CAM.x, CAM.z, .6);
   function choose(i) {
-    if (i === M.sel || i < 0 || i >= stageCount()) return;
-    M.sel = i; M.swap = { t: 0, done: false };
-    sfx('uiHover', CAM.x, CAM.z, .7);
+    if (!stageOpen(i)) { deny(); return false; }
+    if (i === CAMPAIGN.sel) return true;
+    CAMPAIGN.sel = i; campaignSave(); M.swap = { t: 0, done: false };
+    sfx('uiHover', CAM.x, CAM.z, .7); return true;
+  }
+  // a grade is chosen here and nowhere else; the battlefield selected falls back to the last one open on it
+  function grade(i) {
+    if (!gradeOpen(i)) { deny(); return false; }
+    if (i === DIFF.cur) return true;
+    DIFF.cur = i; sfx('uiHover', CAM.x, CAM.z, .7);
+    let k = CAMPAIGN.sel; while (k > 0 && !stageOpen(k)) k--;
+    if (k !== CAMPAIGN.sel) choose(k); else campaignSave();
+    return true;
   }
   function go() {
-    if (!inMenu() || M.swap) return;
+    if (!inMenu() || M.swap || !stageOpen(CAMPAIGN.sel) || !gradeOpen(DIFF.cur)) { deny(); return; }
     UI.titleT = 7; UI.showLore(G.B.bio); beginBattle(true);
     UI.banner(stageLabel(G.level) + ' · ' + G.B.bio.name, 3.2, false);
     sfx('horn', CAM.x, CAM.z, 1);
@@ -48,7 +61,7 @@ const MENU = (() => {
     else if (M.card && (G.phase === 'clear' || G.phase === 'defeat') && G.phaseT > (M.card.won ? 1.3 : 2.2)) { if (!M.card.shown) { M.card.shown = true; M.card.t0 = performance.now(); } drawCard(c, s, W, H); }
     if (M.swap) {
       const S = M.swap; S.t += R.frameDt; const a = S.done ? sat(1 - (S.t - .09) / .13) : sat(S.t / .09);
-      if (!S.done && S.t >= .09) { raise(M.sel); S.done = true; S.t = .09; }
+      if (!S.done && S.t >= .09) { raise(CAMPAIGN.sel); S.done = true; S.t = .09; }
       if (S.done && a <= 0) M.swap = null;
       c.fillStyle = 'rgba(4,5,8,' + a.toFixed(3) + ')'; c.fillRect(0, 0, W, H);
     }
@@ -59,11 +72,14 @@ const MENU = (() => {
     PX.text(c, '烽燧', W / 2, H * .12, s * 3, '#ffd9a8', { align: 'c' });
     const gap = Math.min(70 * s, (W - 20 * s) / n), x0 = W / 2 - gap * (n - 1) / 2, y = H * .45;
     for (let i = 0; i < n; i++) {
-      const x = x0 + gap * i, open = i <= CAMPAIGN.best, on = i === M.sel;
+      const x = x0 + gap * i, open = stageOpen(i), on = i === CAMPAIGN.sel;
       c.fillStyle = on ? COL.gold : open ? COL.tx : COL.faint; c.fillRect(Math.round(x - 4 * s), Math.round(y - 4 * s), 8 * s, 8 * s);
-      btn(x - gap / 2, y - 12 * s, gap, 24 * s, () => { if (open) choose(i); else sfx('uiDeny', CAM.x, CAM.z, .6); }, 'stage' + i);
+      btn(x - gap / 2, y - 12 * s, gap, 24 * s, () => choose(i), 'stage' + i);
     }
-    PX.text(c, stageLabel(M.sel) + ' · ' + stageName(M.sel), W / 2, y + 14 * s, s, COL.tx, { align: 'c' });
+    PX.text(c, stageLabel(CAMPAIGN.sel) + ' · ' + stageName(CAMPAIGN.sel), W / 2, y + 14 * s, s, COL.tx, { align: 'c' });
+    DIFF.list.forEach((d, i) => { const gx = Math.round(W / 2 + (i - 1) * 40 * s - 18 * s), gy = Math.round(H * .58), on = i === DIFF.cur, open = gradeOpen(i);
+      btn(gx, gy, 36 * s, LH + 6 * s, () => grade(i), 'grade' + i); c.fillStyle = on ? COL.gold : open ? COL.bd : '#2a2620'; c.fillRect(gx, gy, 36 * s, LH + 6 * s);
+      PX.text(c, d.name, gx + 18 * s, gy + 3 * s, s, open ? COL.tx : COL.faint, { align: 'c' }); });
     const bw = 60 * s, bh = LH + 8 * s, bx = Math.round(W / 2 - bw / 2), by = Math.round(H * .7);
     const hot = btn(bx, by, bw, bh, go, 'go');
     c.fillStyle = hot ? COL.gold : COL.red; c.fillRect(bx, by, bw, bh);
@@ -83,8 +99,10 @@ const MENU = (() => {
   function onKey(e) {
     const k = e.key;
     if (cardUp()) { if (k === 'Enter' || k === ' ' || k === 'Escape') dismiss(); return; }
-    if (k === 'ArrowLeft') { let i = M.sel - 1; if (i >= 0) choose(i); }
-    else if (k === 'ArrowRight') { const i = M.sel + 1; if (i <= Math.min(CAMPAIGN.best, stageCount() - 1)) choose(i); else sfx('uiDeny', CAM.x, CAM.z, .5); }
+    if (k === 'ArrowLeft') choose(CAMPAIGN.sel - 1);
+    else if (k === 'ArrowRight') choose(CAMPAIGN.sel + 1);
+    else if (k === 'ArrowUp') grade(DIFF.cur - 1);
+    else if (k === 'ArrowDown' || k === 'Tab') grade(DIFF.cur + 1 < DIFF.list.length || k !== 'Tab' ? DIFF.cur + 1 : 0);
     else if (k === 'Enter' || k === ' ') go();
     else if (k === 'm' || k === 'M') AU.setMuted(!AU.muted);
   }
@@ -118,6 +136,6 @@ const MENU = (() => {
     }, { capture: true, passive: false });
     window.addEventListener('wheel', e => { if (inMenu()) { e.stopImmediatePropagation(); e.preventDefault(); } }, { capture: true, passive: false });
   }
-  Object.assign(M, { init, enter, settle, holding, dismiss, draw, go, choose });
+  Object.assign(M, { init, enter, settle, holding, dismiss, draw, go, choose, grade });
   return M;
 })();
