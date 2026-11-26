@@ -2,7 +2,7 @@
 const R = {
   renderer: null, scene: null, cam: null, canvas: null,
   dw: 2, dh: 2, iw: 2, ih: 2, maxIH: 1080, quality: 1,
-  viewH: 30, fitW: 50, shiftY: 0, px: 0.04,
+  viewH: 27, fitW: 45, shiftY: 0, px: 0.04,
   sub: new THREE.Vector2(), ditherOfs: new THREE.Vector2(),
   fade: 0, exposure: 1.0,
   rt: {}, mats: {}, fsScene: null, fsCam: null, fsMesh: null,

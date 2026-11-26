@@ -1,8 +1,8 @@
 
-// The board is 2 * BH on a side. It was 36 (BH 18) and is now 48: a third longer each way, 78 % more ground.
+// The board is 2 * BH on a side: 36, the original size. (It was tried at 48 and put back.) To resize it change BH and NCH.
 // Everything that hugs an edge is written relative to it: BW / BN are the west and north edges the road enters and the pass
 // stands on, BE is the far (east / south) limit, and AREA scales anything scattered by count so the density stays put.
-const BH = 24, CHUNK = 6, NCH = 8, CELL = 0.5, ROAD_HALF = 1.25, PATH_STEP = 0.3;
+const BH = 18, CHUNK = 6, NCH = 6, CELL = 0.5, ROAD_HALF = 1.25, PATH_STEP = 0.3;
 const BW = -BH, BN = -BH, BE = BH, AREA = (BH / 18) * (BH / 18), LIN = BH / 18;
 
 function segDist(px, pz, ax, az, bx, bz) {
@@ -58,14 +58,14 @@ function polyMinDist(poly, x, z, i0 = 0, i1 = poly.length - 1) {
   return [best, bi];
 }
 
-// road length: 58 to 92 on the old board, stretched with the board's side
-const ROAD_MIN = Math.round(58 * LIN + 4), ROAD_MAX = Math.round(92 * LIN + 6);
+// road length: 58 to 92 on the 36 board, stretched with the board's side if it is ever resized
+const ROAD_MIN = Math.round(58 * LIN), ROAD_MAX = Math.round(92 * LIN);
 function tryRoad(rng) {
-  const zc = rng.range(BN + 11.5, BE - 9), kx = rng.range(BW + 16, BE - 7.5);
+  const zc = rng.range(BN + 11.5, BE - 9), kx = rng.range(BW + 18.5, BE - 7.5);
   const way = [[BW + .4, zc], [BW + 6, zc]];
   const endA = [kx, BN + 11.8], endB = [kx, BN + 6.6];
   let cur = way[1], dir = 0;
-  const nMid = rng.int(6, 10);
+  const nMid = rng.int(4, 7);
   const clearOf = (p, upto) => { for (let i = 0; i < upto; i++) if (segDist(p[0], p[1], way[i][0], way[i][1], way[i + 1][0], way[i + 1][1]) < 6.2) return false; return true; };
   for (let k = 0; k < nMid; k++) {
     let ok = false;
@@ -111,12 +111,12 @@ function tryRoad(rng) {
 function tryStream(rng, road) {
   const { poly, L, kx } = road;
   for (let t = 0; t < 60; t++) {
-    const sx = rng.range(BW + 8, BE - 6), sz = rng.range(BN + 5.5, 4);
+    const sx = rng.range(BW + 8, BE - 6), sz = rng.range(BN + 5.5, 2);
     if (Math.abs(sx - kx) < 7 && sz < BN + 11) continue;
     if (polyMinDist(poly, sx, sz)[0] < 3.6) continue;
     const front = rng.chance(0.6);
     const ex = front ? rng.range(BW + 5, BE - 5) : BH + 0.6, ez = front ? BH + 0.6 : rng.range(BN + 11, BE - 5);
-    const mx = (sx + ex) / 2 + rng.range(-7, 7), mz = (sz + ez) / 2 + rng.range(-7, 7);
+    const mx = (sx + ex) / 2 + rng.range(-5, 5), mz = (sz + ez) / 2 + rng.range(-5, 5);
     const raw = [];
     for (let k = 0; k <= 40; k++) { const u = k / 40, a = (1 - u) * (1 - u), b = 2 * u * (1 - u), c = u * u; raw.push([a * sx + b * mx + c * ex, a * sz + b * mz + c * ez]); }
     const sp = resample(raw, 0.5);
@@ -147,8 +147,8 @@ function tryStream(rng, road) {
   return null;
 }
 
-// 8 to 11 tower bases on the old board; the longer road carries 11 to 15
-const PADS_MIN = 11, PADS_MAX = 15;
+// 8 to 11 tower bases
+const PADS_MIN = 8, PADS_MAX = 11;
 function choosePads(rng, road, stream) {
   const { poly, L, kx } = road, cand = [];
   const off = ROAD_HALF + 2.0;
