@@ -574,7 +574,7 @@ class Tower {
         const mx = e.x + fx * .78 * e.scale, my = e.y + 1.02 * e.scale, mz = e.z + fz * .78 * e.scale;
         shootBall(mx, my, mz, m, ownDmg(d.dmg[lvl]), this, d.pierce[lvl]); a.fire = 1;
         fxTimed(2, mx, my, mz, 1.2, 1.2, 3.2, 2.3, 1.1, 1, .09); fxSparks(mx, my, mz, 4, 3.5, 3, 2, .8, { size: .04, grav: 3 });
-        for (let i = 0; i < 3; i++) fxSmoke(mx + fx * i * .15, my, mz + fz * i * .15, fx * rr(.6, 1.4) + rr(-.2, .2), rr(.1, .4), fz * rr(.6, 1.4) + rr(-.2, .2), rr(1.4, 2.2), .2, .8, .72, .71, .68, .5, { drag: 2.2, rise: .25 });
+        for (let i = 0; i < 5; i++) fxSmoke(mx + fx * i * .15, my, mz + fz * i * .15, fx * rr(.6, 1.6) + rr(-.3, .3), rr(.1, .5), fz * rr(.6, 1.6) + rr(-.3, .3), rr(1.8, 2.8), .28, .9, .85, .84, .8, .7, { drag: 2, rise: .3 });
       }
       const p = this.w([0, y + 1, .5], _ap); lightFlash(p.x, p.y, p.z, 0xffc070, 120, .12, 9); sfx('musket', this.x, this.z, .9, rnd());
       if (++V.rank >= d.ranks) { V.rank = -1; V.t = reload; } else V.t = d.gap;

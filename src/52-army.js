@@ -247,8 +247,8 @@ function gradeKits() {
   KIT.gun = [
     new PartBatch(S => { tube(S, brz, .045, .02, .4, L_METAL); S.sph(.068, 0, 0, .02, brz, { l: L_METAL, w: 7, h: 5, smooth: false }); S.cyl(.055, .04, 0, 0, .39, brz, { n: 7, r: Z, l: L_METAL }); S.box(.04, .04, .62, 0, -.01, -.32, stock, { l: L_WOOD }); }, 100, { rad: .2, shadow: false }),
     new PartBatch(S => { tube(S, irn, .04, -.02, .5, L_METAL); S.sph(.06, 0, 0, -.02, irn, { l: L_METAL, w: 7, h: 5, smooth: false }); for (const z of [.15, .3, .48]) S.cyl(.048, .03, 0, 0, z, band, { n: 7, r: Z, l: L_METAL }); S.box(.045, .045, .66, 0, -.01, -.38, stock, { l: L_WOOD }); }, 100, { rad: .2, shadow: false }),
-    new PartBatch(S => { tube(S, irn, .022, -.1, .72, L_METAL); S.box(.055, .06, .62, 0, -.035, .05, stockL, { l: L_WOOD }); S.box(.06, .11, .32, 0, -.085, -.38, stockL, { l: L_WOOD, r: [-.28, 0, 0] }); S.box(.012, .07, .04, .03, .05, -.14, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.2, .45]) S.cyl(.03, .02, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); }, 100, { rad: .2, shadow: false }),
-    new PartBatch(S => { tube(S, mulC(irn, .8), .025, -.12, .86, L_METAL); S.box(.055, .06, .7, 0, -.035, .08, stock, { l: L_WOOD }); S.box(.06, .12, .34, 0, -.09, -.42, stock, { l: L_WOOD, r: [-.3, 0, 0] }); S.box(.012, .08, .04, .03, .05, -.16, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.1, .34, .6, .84]) S.cyl(.033, .025, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); S.cone(.012, .03, 0, .03, .8, band, { n: 4 }); }, 100, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, irn, .032, -.1, .72, L_METAL); S.box(.055, .06, .62, 0, -.035, .05, stockL, { l: L_WOOD }); S.box(.06, .11, .32, 0, -.085, -.38, stockL, { l: L_WOOD, r: [-.28, 0, 0] }); S.box(.012, .07, .04, .03, .05, -.14, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.2, .45]) S.cyl(.03, .02, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); }, 100, { rad: .2, shadow: false }),
+    new PartBatch(S => { tube(S, mulC(irn, .8), .036, -.12, .86, L_METAL); S.box(.055, .06, .7, 0, -.035, .08, stock, { l: L_WOOD }); S.box(.06, .12, .34, 0, -.09, -.42, stock, { l: L_WOOD, r: [-.3, 0, 0] }); S.box(.012, .08, .04, .03, .05, -.16, band, { l: L_METAL, r: [.6, 0, 0] }); for (const z of [.1, .34, .6, .84]) S.cyl(.033, .025, 0, 0, z, band, { n: 6, r: Z, l: L_METAL }); S.cone(.012, .03, 0, .03, .8, band, { n: 4 }); }, 100, { rad: .2, shadow: false }),
   ];
   // the Mongol helmet of the tammachi riders: a tall iron bowl with a spike and a plume, and a leather neck guard
   I.mgHelm = new PartBatch(S => {
@@ -296,9 +296,9 @@ function rigDunche(m) {
   const s = m.scale || 1, fl = m.flash || 0, ph = m.ph, M0 = xf(_M[14], null, m.x, m.y + .02, m.z, -(m.flinch || 0) * .05, m.yaw, Math.sin(ph * 1.3) * .015 * m.mv, s, s, s);
   KIT.dunche.put(M0, fl, m.tint);
   let i = 15; for (const sg of [-1, 1]) for (const z of [-.6, .45]) KIT.wheel.put(xf(_M[i++], M0, sg * .6, .3, z, ph * 1.6, 0, 0), fl, m.tint);
-  // two men lean into the push bars behind it
+  // two men lean into the push bars behind it; when the cart breaks up they are not debris, they walk on (its split)
   const P = m.pushers || (m.pushers = [0, 1].map(k => ({ scale: .95, ph: k * 1.7, mv: 1, atk: -1, shamble: true, weapon: null, tint: null, x: 0, y: 0, z: 0, yaw: 0, flash: 0 })));
-  for (let k = 0; k < 2; k++) { const e = P[k]; _rv.set((k ? .42 : -.42), 0, -1.38).applyMatrix4(M0); e.x = _rv.x; e.y = m.y; e.z = _rv.z; e.yaw = m.yaw; e.ph = ph * 2.2 + k * 1.7; e.mv = m.mv; e.flash = fl; e.flinch = m.flinch; rigHuman(KIT.foe, SPEC.crouch, e); }
+  if (!RIG_CAPTURE) for (let k = 0; k < 2; k++) { const e = P[k]; _rv.set((k ? .42 : -.42), 0, -1.38).applyMatrix4(M0); e.x = _rv.x; e.y = m.y; e.z = _rv.z; e.yaw = m.yaw; e.ph = ph * 2.2 + k * 1.7; e.mv = m.mv; e.flash = fl; e.flinch = m.flinch; rigHuman(KIT.foe, SPEC.crouch, e); }
   return M0;
 }
 function rigHuihui(m) {

@@ -174,7 +174,7 @@ const RIGS = {
   wolf(m) { m.weapon = KIT.item.saber; m.hat = KIT.item.furHat; m.riderKit = KIT.hu; return rigHorse(m); },
   golem(m) { m.weapon = KIT.item.spear; m.helm = true; m.plate = true; m.riderKit = KIT.foe; return rigHorse(m); },
   jotun(m) { m.weapon = KIT.item.spear; m.wScale = 1.2; m.helm = true; m.plate = true; m.riderKit = KIT.chief; return rigHorse(m); },
-  tammachi(m) { if (!KIT.gun) gradeKits(); m.weapon = KIT.item.spear; m.wScale = 1.15; m.plate = true; m.helm = false; m.hat = KIT.item.mgHelm; m.riderKit = KIT.hu; m.horseTint = [1.35, 1.25, 1.15]; return rigHorse(m); },
+  tammachi(m) { if (!KIT.gun) gradeKits(); m.weapon = KIT.item.spear; m.wScale = 1.15; m.plate = true; m.helm = false; m.hat = KIT.item.mgHelm; m.riderKit = KIT.hu; m.horseTint = [1.9, 1.8, 1.65]; return rigHorse(m); },
   huihui: m => rigHuihui(m),
   dunche: m => rigDunche(m),
   sibing(m) { if (!KIT.gun) gradeKits(); m.weapon = KIT.item.spear; m.wScale = 1.1; m.plate = true; m.back = KIT.item.sbJia; m.skirt = KIT.item.sbSkirt; m.hat = KIT.item.jinHelm; return rigHuman(KIT.foe, SPEC.foot, m); },
