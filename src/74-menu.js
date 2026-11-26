@@ -209,7 +209,9 @@ const MENU = (() => {
     }
     // what this grade brings onto the field, by the names the arsenal gives them
     const add = d.works.map(nameOf).filter(Boolean).map(q => q.name), foes = d.foes.map(nameOf).filter(Boolean).map(q => q.name);
-    if (add.length || foes.length) out.push({ t: d.era + '：' + (add.length ? '我增 ' + add.join('、') : '') + (add.length && foes.length ? '；' : '') + (foes.length ? '敌增 ' + foes.join('、') : ''), col: K.gold });
+    // one line each, so neither side's list breaks off mid-name at the column's edge
+    if (add.length) out.push({ t: d.era + '：我增 ' + add.join('、'), col: K.gold });
+    if (foes.length) out.push({ t: (add.length ? '' : d.era + '：') + '敌增 ' + foes.join('、'), col: K.gold });
     return out;
   }
 
