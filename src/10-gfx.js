@@ -173,7 +173,7 @@ float cwRipple(vec2 p, float t, float flow) {
       .replace('#include <color_fragment>', `#include <color_fragment>
 float cwL = floor(vSurf.x + 0.5);
 ${water ? `vec4 cwT = vec4(0.5);
-float wMask = 0.0, wHeat = 0.0, wFlow = uTime * uWat.y;
+float wMask = 0.0, wFlow = uTime * uWat.y;
 float wn1 = cwN(vTuv * vec2(1.6, 0.8) + 3.0), wn2 = cwN(vTuv * vec2(5.0, 2.6) + 11.0);
 diffuseColor.rgb = uWatA;
 if (uWat.x > 0.5 && uWat.x < 1.5) {
@@ -181,13 +181,6 @@ if (uWat.x > 0.5 && uWat.x < 1.5) {
   float ck = smoothstep(0.035, 0.0, abs(cwN(vTuv * vec2(2.3, 1.2) + 40.0) - 0.5)) + smoothstep(0.03, 0.0, abs(cwN(vTuv * vec2(1.2, 2.7) + 71.0) - 0.48));
   wMask = clamp(frost * 0.85 + ck * 0.7, 0.0, 1.0);
   diffuseColor.rgb = mix(uWatA * (0.7 + 0.6 * wn2), uWatB, wMask);
-} else if (uWat.x > 1.5 && uWat.x < 2.5) {
-  float t = wFlow * (0.16 + 0.34 * min(vSurf.z, 1.0));
-  float c1 = cwN(vec2(vTuv.x * 2.1, vTuv.y * 1.1 - t)), c2 = cwN(vec2(vTuv.x * 4.6 + 7.0, vTuv.y * 2.4 - t * 1.7)), c3 = cwN(vec2(vTuv.x * 9.0 - 3.0, vTuv.y * 5.0 - t * 2.3));
-  float ra = 1.0 - abs(2.0 * c1 - 1.0), rb = 1.0 - abs(2.0 * c2 - 1.0);
-  float crack = max(pow(ra, 3.2), pow(rb, 4.4) * 0.8), pool = smoothstep(0.56, 0.74, c1 * 0.55 + c3 * 0.45);
-  wHeat = clamp(crack * 0.85 + pool, 0.0, 1.0); wMask = 1.0 - smoothstep(0.38, 0.7, wHeat);
-  diffuseColor.rgb = mix(uWatA, uWatB * (0.6 + 0.8 * c3), wMask);
 } else if (uWat.x > 2.5) {
   wMask = smoothstep(0.56, 0.68, wn1 * 0.55 + wn2 * 0.45 + 0.12 * (1.0 - min(vSurf.z, 1.0))) * step(0.01, vSurf.z);
   diffuseColor.rgb = mix(uWatA, uWatB * (0.75 + 0.5 * wn2), wMask);
@@ -195,7 +188,6 @@ if (uWat.x > 0.5 && uWat.x < 1.5) {
       .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
 roughnessFactor = clamp(vSurf.y * (1.15 - 0.3 * cwT.a), 0.045, 1.0);
 ${water ? `if (uWat.x > 0.5 && uWat.x < 1.5) roughnessFactor = mix(0.09, 0.62, wMask);
-else if (uWat.x > 1.5 && uWat.x < 2.5) roughnessFactor = mix(0.55, 0.96, wMask);
 else if (uWat.x > 2.5) roughnessFactor = mix(roughnessFactor, 0.9, wMask);` : ''}`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
 ${water ? `{
@@ -222,7 +214,6 @@ ${world ? `if (uCover.x > 0.001) {
 }` : ''}`}`)
       .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
 totalEmissiveRadiance += diffuseColor.rgb * vSurf.w * 6.0;
-${water ? 'if (uWat.x > 1.5 && uWat.x < 2.5) totalEmissiveRadiance += mix(vec3(0.7, 0.07, 0.008), vec3(1.45, 0.42, 0.05), wHeat * wHeat) * (1.0 - wMask) + vec3(0.1, 0.012, 0.0) * wMask * (0.3 + wn2);' : ''}
 ${inst ? 'totalEmissiveRadiance += vec3(1.0, 0.8, 0.55) * vFlash * 0.55;' : ''}`)
       .replace('#include <opaque_fragment>', `${water ? 'outgoingLight += uSky * (0.4 + 4.0 * pow(1.0 - clamp(normal.z, 0.0, 1.0), 2.0)) * (1.5 - 0.6 * min(vSurf.z, 1.0)) * (1.0 - wMask * 0.8);' : ''}
 #include <opaque_fragment>`);

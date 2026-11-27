@@ -5,7 +5,7 @@
 // until it is rebuilt for a part of what it cost. A chief who is tied up by the garrison's foot has no time for the towers.
 const RAID = {
   // strength of each work at each tier
-  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310] },
+  hp: { archer: [90, 120, 160, 210], bombard: [130, 170, 220, 290], spire: [110, 145, 190, 250], guard: [140, 180, 240, 310], gunner: [120, 160, 210, 270], cannon: [150, 200, 260, 330] },
   calm: 6, mend: .05, rebuild: .3, ruinRefund: .3, lvDmg: .12,
   // how each chief goes about it; README.md gives the source for each
   by: {
@@ -19,7 +19,7 @@ const RAID = {
   shots: [], ruined: 0, rebuilt: 0,
 };
 function raidWarn(type) { const r = RAID.by[type]; return r ? r.warn : undefined; }
-function towerMaxHp(t) { return Math.round(RAID.hp[t.kind][t.lvl] * crewHp(t)); }
+function towerMaxHp(t) { return Math.round(ownHp(RAID.hp[t.kind][t.lvl] * crewHp(t))); }
 function rebuildCost(t) { return Math.round(t.spent * RAID.rebuild); }
 function towerRefund(t) { return Math.round(t.spent * (t.ruin ? RAID.ruinRefund : .6)); }
 
@@ -48,7 +48,7 @@ function raidTend(t, dt) {
 function damageTower(t, dmg, dx, dz, fire) {
   if (!t.alive || t.ruin || G.phase !== 'play') return;
   if (t.hp === undefined) raidTend(t, 0);
-  t.hp -= dmg; t.hitT = G.t; t.shk = Math.min(1.4, (t.shk || 0) + (fire ? .35 : 1));
+  t.hp -= foeMulDmg(dmg); t.hitT = G.t; t.shk = Math.min(1.4, (t.shk || 0) + (fire ? .35 : 1));
   const top = Math.min(3, t.mounts.top), n = fire ? 1 : 4;
   for (let i = 0; i < n; i++) { _tm.compose(_tv.set(t.x + rr(-.6, .6), t.y + rr(.4, top), t.z + rr(-.6, .6)), _tq.set(rr(-1, 1), rr(-1, 1), rr(-1, 1), 1).normalize(), _ts.set(1, 1, 1)); addDebris(t.kind === 'bombard' || rnd() < .3 ? KIT.rubble : KIT.plank, _tm, null, rr(-2, 2) + (dx || 0) * 2, rr(1.5, 4), rr(-2, 2) + (dz || 0) * 2, rr(3, 9), rr(1.6, 2.6)); }
   if (t.hp <= 0) ruinTower(t);
@@ -123,6 +123,13 @@ function updateRaid(dt) {
     const u = Math.min(1, a.t / a.T), px = a.x, py = a.y, pz = a.z;
     a.x = lerp(a.x0, a.tx, u); a.z = lerp(a.z0, a.tz, u); a.y = lerp(a.y0, a.ty, u) + a.arc * 4 * u * (1 - u);
     const dx = a.x - px, dy = a.y - py, dz = a.z - pz, l = Math.hypot(dx, dy, dz) || 1, ux = dx / l, uy = dy / l, uz = dz / l;
+    if (a.stone) {
+      // a trebuchet stone (65-foe.js): a big rock trailing dust
+      _tm.compose(_tv.set(a.x, a.y, a.z), _tq.setFromAxisAngle(_tz, a.t * 5), _ts.set(1.7, 1.7, 1.7)); KIT.stoneShot.put(_tm, 0, null);
+      if (rnd() < .5) fxSmoke(a.x, a.y, a.z, 0, .1, 0, rr(.4, .7), .14, .3, .4, .36, .32, .3, { drag: 1 });
+      if (u >= 1) { swapRemove(A, i); foeStoneLands(a); }
+      continue;
+    }
     KIT.arrow.put(arrowMatrix(a.x, a.y, a.z, ux, uy, uz), 0, null);
     FX.segs.push(a.x, a.y, a.z, .055, a.x - ux * .95, a.y - uy * .95, a.z - uz * .95, .0, 2.6, 1.05, .25, .85);
     FX.add.push(a.x, a.y, a.z, .3, .3, 0, 0, 3.6, 1.9, .5, 1, 0, 0, 0, 0);

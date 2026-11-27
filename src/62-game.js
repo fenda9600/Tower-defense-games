@@ -10,19 +10,22 @@ const ROSTER = {
   slime: [9.5, 1, 3, .9, 3, 2], spider: [3, 3, 6, .25, 3, 2], scarab: [1.9, 5, 8, .18, 2, 0], knight: [12.5, 1, 3, .5, 4, 2], wolf: [5.5, 2, 4, .35, 4, 1.6], bomber: [6, 1, 2, .8, 4, 1.2],
   wraith: [9, 1, 3, .7, 5, 1.4], toad: [8, 1, 3, .7, 5, .7], wisp: [3.4, 3, 5, .25, 5, .45], drummer: [13, 1, 1, 1, 6, .9], gargoyle: [14, 1, 2, .6, 6, .6],
   ladder: [8, 1, 2, .9, 3, .8], necro: [18, 1, 1, 1.2, 7, .9], mummy: [15, 1, 2, .9, 7, .9], brute: [32, 1, 1, 2, 8, .7], golem: [40, 1, 1, 2, 8, .7], brood: [30, 1, 1, 2, 9, .6],
+  // brought by the harder grades only (26-diff.js)
+  tammachi: [11, 2, 3, .35, 4, .9], huihui: [24, 1, 1, 3, 7, .5], dunche: [26, 1, 1, 2.5, 5, .55], sibing: [12, 1, 3, .7, 12, .7],
 };
 function waveMenu(k, level) {
   const w = level * 5 + k, bio = G.B.bio, menu = [];
   for (const ty in ROSTER) {
+    if (!fielded(ty)) continue;
     const r = ROSTER[ty], mul = bio.mobs[ty] === undefined ? 1 : bio.mobs[ty], un = Math.min(r[4], bio.early[ty] || 99), wt = r[5] ? r[5] * mul : (bio.mobs[ty] || 0);
     if (w >= un && wt > 0) menu.push([ty, wt * (w === un && w > 1 ? 2.2 : 1)]);
   }
   return menu;
 }
-function bossType() { const b = G.B.bio.boss; return b[Math.floor(G.level / BIOMES.length) % b.length]; }
+function bossType() { const b = G.B.bio.boss; return b[Math.floor(G.level / stageCount()) % b.length]; }
 function buildWave(k, level) {
   const q = [], boss = k === 5, lv = 1 + .15 * level, ez = campaignEase(level);
-  let budget = (34 + 25 * (k - 1)) * lv * G.press * (boss ? FOE.muster.budget : 1) * ez[0] - foeVanCost(k, level), heavy = 0, air = budget * .2;
+  let budget = foeMulN((34 + 25 * (k - 1)) * lv * G.press * (boss ? FOE.muster.budget : 1) * ez[0]) - foeVanCost(k, level), heavy = 0, air = budget * .2;
   const hpMul = (1 + .13 * (k - 1)) * (1 + .22 * level) * (.85 + .15 * G.press) * ez[1];
   const menu = waveMenu(k, level), tot = menu.reduce((a, b) => a + b[1], 0);
   let t = .6;
@@ -67,7 +70,7 @@ function updateWaves(dt) {
       G.bossAlive = G.mons.some(m => m.def.boss && !m.dead);
       if (G.bossWave && G.bossAlive) {
         G.trickle -= dt;
-        if (G.trickle <= 0 && G.trickleN < FOE.call.trickle) { G.trickleN++; G.trickle = rr(3.2, 4.6); const tm = waveMenu(5, G.level).filter(e => ROSTER[e[0]][0] < 13), ty = tm[Math.floor(rnd() * tm.length)][0], n = Math.max(1, Math.min(5, Math.round(8 / ROSTER[ty][0]))), hpMul = (1 + .5) * (1 + .22 * G.level) * campaignEase(G.level)[1]; for (let i = 0; i < n; i++) G.queue.push({ t: G.waveT + i * .4, type: ty, hpMul }); }
+        if (G.trickle <= 0 && G.trickleN < FOE.call.trickle) { G.trickleN++; G.trickle = rr(3.2, 4.6); const tm = waveMenu(5, G.level).filter(e => ROSTER[e[0]][0] < 13), ty = tm[Math.floor(rnd() * tm.length)][0], n = Math.max(1, Math.min(5, Math.round(foeMulN(8 / ROSTER[ty][0])))), hpMul = (1 + .5) * (1 + .22 * G.level) * campaignEase(G.level)[1]; for (let i = 0; i < n; i++) G.queue.push({ t: G.waveT + i * .4, type: ty, hpMul }); }
       } else { G.spawning = false; endWave(); G.nextIn = G.bossWave ? -1 : 6.5; G.clearT = 0; }
     }
   } else if (G.bossWave) {
@@ -87,7 +90,7 @@ function padCoverage(pad, range, air) {
   return c;
 }
 function buildTower(pad, kind, byPlayer) {
-  const def = TOWER[kind]; if (pad.tower || !kindUnlocked(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
+  const def = TOWER[kind]; if (pad.tower || !kindOpen(kind) || G.gold < def.cost[0] || G.phase !== 'play') return null;
   G.gold -= def.cost[0]; UI.goldShown = Math.min(UI.goldShown, G.gold);
   const t = new Tower(pad, kind, G.B.pads.indexOf(pad)); G.towers.push(t); UI.ping(pad.x, pad.y, pad.z, byPlayer); return t;
 }
@@ -100,22 +103,25 @@ function sellTower(t) {
   G.gold += refund; t.sell(); const i = G.towers.indexOf(t); if (i >= 0) G.towers.splice(i, 1); return true;
 }
 
-const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7 };
+const AI = { think: .15, wait: 0, last: '', wall: [4, .15, .35, .06], crew: .7, ideal: { archer: .36, bombard: .22, spire: .2, guard: .22, gunner: .18, cannon: .14 } };
 function aiThink(dt) {
   if (G.phase !== 'play' || UI.playerActive()) return;
   AI.think -= dt; if (AI.think > 0) return; AI.think = .5;
   const B = G.B, towers = G.towers.filter(t => t.alive), empty = B.pads.filter(p => !p.tower), N = towers.length;
-  const cnt = { archer: 0, bombard: 0, spire: 0, guard: 0 }; for (const t of towers) cnt[t.kind]++;
-  const ideal = { archer: .36, bombard: .22, spire: .2, guard: .22 };
-  const lt = G.leakTypes; let air = 0, armor = 0, swarm = 0; for (const ty in lt) { const c = MON[ty].cat; if (c === 'air') air += lt[ty]; else if (c === 'armor') armor += lt[ty]; else if (c === 'swarm') swarm += lt[ty]; }
+  // the share of the bases each kind should hold: the kinds a grade brings take theirs out of the four old ones
+  const kinds = towerKinds(), cnt = {}, ideal = {}; for (const k in TOWER) cnt[k] = 0; for (const t of towers) cnt[t.kind]++;
+  let fresh = 0; for (const k of kinds) if (TOWER_KINDS.indexOf(k) < 0) fresh += AI.ideal[k];
+  for (const k of kinds) ideal[k] = TOWER_KINDS.indexOf(k) < 0 ? AI.ideal[k] : AI.ideal[k] * (1 - fresh);
+  const lt = G.leakTypes; let air = 0, armor = 0, swarm = 0, cart = 0; for (const ty in lt) { const c = MON[ty].cat; if (c === 'air') air += lt[ty]; else if (c === 'armor') armor += lt[ty]; else if (c === 'swarm') swarm += lt[ty]; if (MON[ty].cart || MON[ty].engine) cart += lt[ty]; }
   const gatePress = sat(G.leaks / 8);
   const opts = [];
   const cap = tierCap();
-  for (const kind of TOWER_KINDS) {
+  for (const kind of kinds) {
     if (!kindUnlocked(kind)) continue;
     const def = TOWER[kind];
     let need = ideal[kind] * (N + 1.6) - cnt[kind] + .35;
     if (kind === 'archer') need += air * .2 + (N === 0 ? 1 : 0); if (kind === 'spire') need += air * .12 + armor * .1; if (kind === 'bombard') need += armor * .08 + swarm * .06 + (N >= 2 && cnt.bombard === 0 ? .5 : 0); if (kind === 'guard') need += swarm * .04 + (N >= 1 && cnt.guard === 0 ? .9 : 0);
+    if (kind === 'gunner') need += armor * .1; if (kind === 'cannon') need += armor * .06 + cart * .15;
     if (need <= 0) continue;
     for (const pad of empty) {
       const cov = padCoverage(pad, def.range[0]) / (def.range[0] * 2);
@@ -134,7 +140,7 @@ function aiThink(dt) {
     if (t.state !== 'active' || t.lvl >= Math.min(t.maxLvl, cap)) continue;
     const c = upgradeCost(t), use = sat(t.recent / 60);
     let sc = (.5 + use * .9 + (t.lvl === 0 ? .12 : 0)) * (N >= 4 ? 1.25 : .7) * (empty.length === 0 ? 1.6 : 1) * (110 / c);
-    if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05;
+    if (t.kind === 'archer') sc *= 1 + air * .06; if (t.kind === 'spire') sc *= 1 + armor * .05; if (t.kind === 'gunner' || t.kind === 'cannon') sc *= 1 + armor * .05;
     opts.push({ sc, cost: c, act: 'up', t });
   }
   // the lesser upgrade: more men for a work that is seeing action (66-crew.js). A new work covers more road than more men in an old one,
@@ -167,8 +173,9 @@ function aiThink(dt) {
 
 function setPhase(p) {
   G.phase = p; G.phaseT = 0;
-  if (p === 'clear') { G.advance = true; const nw = campaignCleared(), last = (G.level + 1) % stageCount() === 0; UI.banner('关隘无恙', nw || last ? 4.2 : 3.2, false, nw ? '解锁 · ' + nw.name : last ? '五关皆守 · 再战更强之敌' : undefined); UI.closeMenu(); }
+  if (p === 'clear') { G.advance = true; const nw = campaignCleared(), last = FLOW.rounds && (G.level + 1) % stageCount() === 0; UI.banner('关隘无恙', nw || last ? 4.2 : 3.2, false, nw ? '解锁 · ' + nw.name : last ? STAGE_ORD[stageCount() - 1] + '关皆守 · 再战更强之敌' : undefined); UI.closeMenu(); }
   if (p === 'defeat') { UI.banner('关城失守', 4.2, true, '烽火熄灭'); UI.closeMenu(); sfx('beaconOut', G.B.beacon.x, G.B.beacon.z, 1.2); fxEmbers(G.B.beacon.x, G.B.beacon.y, G.B.beacon.z, 60, .8); for (let i = 0; i < 14; i++) fxSmoke(G.B.beacon.x + rr(-.4, .4), G.B.beacon.y + rr(0, 1), G.B.beacon.z + rr(-.4, .4), rr(-.3, .3), rr(.8, 2), rr(-.3, .3), rr(2, 4), 1, 2, .2, .2, .22, .6, { drag: .5, rise: .2 }); }
+  if (p === 'clear' || p === 'defeat') MENU.settle(p === 'clear');
   if (p === 'crumble') startCrumble();
   if (p === 'rise') startRise();
 }
@@ -204,12 +211,22 @@ function activateBoard(B, lit) {
   LT.beaconPos = b; LT.beaconOn = lit ? 1 : 0; LT.beaconLevel = 1; LT.envSrc = B.env.slice(0, LT.env.length); LT.envK = lit ? 1 : 0; setBiomeLook(B, lit);
   FX.groundAt = B.heightAt;
   G.padCov = null;
-  UI.showLore(B.bio);
+  if (G.phase !== 'menu') UI.showLore(B.bio);
+}
+// Takes the battle off the field at once, with none of the crumble: the menu raises its battlefields on a clear field.
+function clearField() {
+  for (const m of G.mons) removeMonster(m);
+  for (const f of G.men) { f.dead = f.gone = true; f.alive = false; if (f.flame) removeFlame(f.flame); }
+  G.mons.length = 0; G.men.length = 0; G.arrows.length = 0; G.shells.length = 0; G.stuck.length = 0; G.queue = []; G.spawning = false;
+  for (const t of G.towers) t.dispose(); G.towers.length = 0;
+  if (G.B) { for (const f of G.B.flames) removeFlame(f); G.B.flames.length = 0; wallDouse(); disposeBoard(G.B); }
+  for (let i = 0; i < LT.emitters.length; i++) LT.emitters[i] = null;
+  clearDebris(); clearFX(); RAID.shots.length = 0; G.advance = false;
 }
 function beginBattle(first) {
   const B = G.B;
-  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = 1.55 + .2 * G.level; G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall(); RAID.shots.length = 0; RAID.ruined = RAID.rebuilt = 0; foeReset();
-  const n = 4 + Math.min(3, G.level);
+  G.lives = G.maxLives; G.gold = 300 + 110 * G.level; G.bountyMul = 1 + .3 * G.level; G.dmgMul = foeMulDmg(1.55 + .2 * G.level); G.press = lerp(G.press, 1, .5); UI.goldShown = G.gold; G.k = 0; G.leaks = 0; G.leakTypes = {}; G.spawning = false; G.bossWave = false; G.nextIn = first ? .9 : 1.6; G.queue = []; AI.think = .15; AI.wait = 0; resetWall(); RAID.shots.length = 0; RAID.ruined = RAID.rebuilt = 0; foeReset();
+  const n = Math.round(foeMulN(4 + Math.min(3, G.level)));
   for (let i = 0; i < n; i++) spawnMonster(i === n - 1 && G.level > 0 ? 'knight' : 'skel', { s: B.cave.s + 2.2 + i * 1.15, lat: rr(-.7, .7), hpMul: 1 + .22 * G.level });
   G.phase = 'play'; G.phaseT = 0;
 }
@@ -221,10 +238,10 @@ function updatePhase(dt) {
   LT.beaconLevel = damp(LT.beaconLevel, G.lives / G.maxLives, 3, dt);
   if (B.beaconFlame) { const f = B.beaconFlame, lv = LT.beaconLevel; f.on = LT.beaconOn; f.size = 2.35 * (.42 + .58 * lv) * (1 - .32 * LT.beaconGutter); f.embers = 1 + 2 * lv + 6 * LT.beaconGutter; }
   for (let i = 1; i < B.flames.length; i++) B.flames[i].on = LT.beaconOn;
-  if (G.phase === 'clear') { if (t > 2.6 && !HERO.hold()) setPhase('crumble'); } // the post-battle merit roll (64-hero.js) holds the stage until it is dismissed
+  if (G.phase === 'clear') { if (t > 2.6 && !MENU.holding()) FLOW.after(true); } // the after-action card (74-menu.js) holds the field until it is dismissed
   else if (G.phase === 'defeat') {
     for (const tw of G.towers) { tw.em.on = damp(tw.em.on, 0, 1.5 + tw.idx * .15, dt); if (tw.flame) tw.flame.on = tw.em.on; if (tw.flame2) tw.flame2.on = tw.em.on; }
-    if (t > 4.4) { G.press = Math.max(.8, G.press * .85); G.run++; setPhase('crumble'); }
+    if (t > 4.4 && !MENU.holding()) { G.press = Math.max(.8, G.press * .85); G.run++; FLOW.after(false); }
   } else if (G.phase === 'crumble') {
     let done = true;
     for (const p of B.pieces) {
